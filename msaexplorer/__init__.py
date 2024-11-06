@@ -1,3 +1,3 @@
 """create alignment plots"""
-_program = "alignplot"
+_program = "msaexplorer"
 __version__ = "0.1"
