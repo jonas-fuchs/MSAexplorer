@@ -486,7 +486,7 @@ class Alignment:
         :return:
         """
         pass
-    # TODO fix positions for reverse complement
+
     def get_conserved_orfs(self, min_length:int=500) -> dict:
         """
         conserved ORF definition:
@@ -509,28 +509,71 @@ class Alignment:
         :return: ORF positions and internal ORF positions
         """
 
+        starts = config.start_codons[self.aln_type]
+        stops = config.stop_codons[self.aln_type]
+
+        def determine_conserved_start_stops(alignment:dict, alignment_length:int, identity_dict) -> tuple:
+            """
+            Determine all start and stop codons within an alignment.
+            :param alignment: alignment
+            :param alignment_length: length of alignment
+            :param identity_dict: identity dictionary
+            :return: start and stop codon positions
+            """
+
+            list_of_starts, list_of_stops = [], []
+            seq = alignment[list(alignment.keys())[0]]
+            for nt_position in range(alignment_length):
+                if seq[nt_position:nt_position + 3] in starts and np.nansum(identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
+                    list_of_starts.append(nt_position)
+                if seq[nt_position:nt_position + 3] in stops and np.nansum(identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
+                    list_of_stops.append(nt_position)
+
+            return list_of_starts, list_of_stops
+
+
+        def get_ungapped_sliced_seqs(alignment:dict, start_pos:int, stop_pos:int) -> list:
+            """
+            get ungapped sequences starting and stop codons and eliminate gaps
+            :param alignment: alignment
+            :param start_pos: start codon
+            :param stop_pos: stop codon
+            :return: sliced sequences
+            """
+            ungapped_seqs = []
+            for seq_id in alignment:
+                ungapped_seqs.append(alignment[seq_id][start_pos:stop_pos+3].replace('-', ''))
+
+            return ungapped_seqs
+
+
+        def additional_stops(ungapped_seqs:list) -> bool:
+            """
+            Checks for the presence of a stop codon
+            :param ungapped_seqs: list of ungapped sequences
+            :return: Additional stop codons (True/False)
+            """
+            for sliced_seq in ungapped_seqs:
+                for position in range(0, len(sliced_seq)-3, 3):
+                    if sliced_seq[position:position + 3] in stops:
+                        return True
+            return False
+
+
         if self.aln_type == 'AS':
             raise TypeError('ORF search only for RNA/DNA alignments')
 
-        starts = config.start_codons[self.aln_type]
-        stops = config.stop_codons[self.aln_type]
-        seq = self.alignment[list(self.alignment.keys())[0]]
+        # ini
         identities = self.calc_identity_alignment()
         alignments = [self.alignment, self.calc_reverse_complement_alignment()]
         aln_len = self.length
 
-        # ini
         orf_counter = 0
         orf_dict = {}
 
         for aln, direction in zip(alignments, ['+', '-']):
             # check for starts and stops in the first seq and then check if these are present in all seqs
-            conserved_starts, conserved_stops = [], []
-            for pos in range(aln_len):
-                if seq[pos:pos+3] in starts and np.nansum(identities[:,[x for x in range(pos,pos+3)]]) == 0:
-                    conserved_starts.append(pos)
-                if seq[pos:pos+3] in stops and np.nansum(identities[:,[x for x in range(pos,pos+3)]]) == 0:
-                    conserved_stops.append(pos)
+            conserved_starts, conserved_stops = determine_conserved_start_stops(aln, aln_len, identities)
             # check each frame
             for frame in (0, 1, 2):
                 potential_starts = [x for x in conserved_starts if x % 3 == frame]
@@ -538,33 +581,22 @@ class Alignment:
                 last_stop = -1
                 for start in potential_starts:
                     # go to the next stop that is sufficiently far away in the alignment
-                    next_stops = [x for x in potential_stops if x+2 >= start + min_length]
+                    next_stops = [x for x in potential_stops if x+3 >= start + min_length]
                     if not next_stops:
                         continue
                     next_stop = next_stops[0]
+                    ungapped_sliced_seqs = get_ungapped_sliced_seqs(aln, start, next_stop)
                     # re-check the lengths of all ungapped seqs
-                    ungapped_seq_lengths = [len(aln[x][start:next_stop+2].replace('-', '')) >= min_length for x in aln.keys()]
+                    ungapped_seq_lengths = [len(x) >= min_length for x in ungapped_sliced_seqs]
                     if not all(ungapped_seq_lengths):
                         continue
-                    # set checker if any seq has an additional stop
-                    additional_stop = False
-                    # re-check every single ungapped seq for the presence of an in-frame stop
-                    for seq_id in aln:
-                        sliced_seq = aln[seq_id][start:next_stop].replace('-', '')
-                        for pos in range(0, len(sliced_seq), 3):
-                            if sliced_seq[pos:pos + 3] in stops:
-                                additional_stop = True
-                                break
-                        if additional_stop:
-                            break
                     # if no stop codon between start and stop --> write to dictionary
-                    if not additional_stop:
+                    if not additional_stops(ungapped_sliced_seqs):
+                        if direction == '+':
+                            positions = [start, next_stop + 3]
+                        else:
+                            positions = [aln_len - next_stop - 3, aln_len - start]
                         if last_stop != next_stop:
-                            if direction == '+':
-                                positions = [start, next_stop + 3]
-                            else:
-                                positions = [aln_len - next_stop - 3, aln_len - start]
-
                             orf_dict[f'ORF_{orf_counter}'] = {'positions': positions,
                                                               'frame': frame,
                                                               'strand': direction,
@@ -573,7 +605,7 @@ class Alignment:
                             orf_counter += 1
                             last_stop = next_stop
                         else:
-                            orf_dict[f'ORF_{orf_counter - 1}']['internal'].append((start, next_stop))
+                            orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
 
         return orf_dict
 
