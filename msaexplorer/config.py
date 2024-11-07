@@ -1,4 +1,10 @@
-AMBIG_NUCS = {
+POSSIBLE_CHARS = [
+        'A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*', 'X',  #AS
+        'A', 'T','U', 'C', 'G', 'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V','N',  #RNA/DNA
+        '-'  #GAP
+]
+
+AMBIG_CHARS = {
         'DNA': {
         'R': ['A', 'G'],
         'Y': ['C', 'T'],
@@ -24,6 +30,9 @@ AMBIG_NUCS = {
         'H': ['A', 'G', 'U'],
         'V': ['A', 'C', 'G'],
         'N': ['A', 'C', 'G', 'U']
+        },
+        'AS': {
+        'X': ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
         }
     }
 
@@ -34,9 +43,6 @@ COMPLEMENT = {
         'D': 'H', 'H': 'D', 'N': 'N', '-': '-',  # D = A/G/T, H = A/C/T, N = any base, '-' = gap
         'U': 'A'                                 # RNA
     }
-
-
-AMINO_ACIDS = ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
 
 START_CODONS = {
         'DNA': ['ATG'],

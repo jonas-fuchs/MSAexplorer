@@ -7,12 +7,13 @@ import math
 import re
 # installed
 import numpy as np
+from Bio.pairwise2 import align
 from numpy import ndarray
 # msaexplorer
 from msaexplorer import config
 
 
-class Alignment:
+class MSA:
     """
     An alignment class that allows computation of several stats
     """
@@ -24,7 +25,7 @@ class Alignment:
         :param reference_id: reference id
         :param zoom_range: start and stop positions to zoom into the alignment
         """
-        self._alignment = Alignment._read_alignment(alignment_path)
+        self._alignment = self._read_alignment(alignment_path)
         self._reference_id = self._validate_ref(reference_id, self._alignment)
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
@@ -38,8 +39,27 @@ class Alignment:
         :return: dictionary with ids as keys and sequences as values
         """
 
+        def add_seq(aln:dict, sequence_id:str, seq_list:list):
+            """
+            Add a complete sequence and check for non-allowed chars
+            :param aln: alignment dictionary to build
+            :param sequence_id: sequence id to add
+            :param seq_list: sequences to add
+            :return: alignment with added sequences
+            """
+            final_seq = ''.join(seq_list).upper()
+            # Check for non-allowed characters
+            invalid_chars = set(final_seq) - set(config.POSSIBLE_CHARS)
+            if invalid_chars:
+                raise ValueError(
+                    f"{sequence_id} contains invalid characters: {', '.join(invalid_chars)}. Allowed chars are: {config.POSSIBLE_CHARS}"
+                )
+            aln[sequence_id] = final_seq
+
+            return aln
+
         alignment, seq_lines = {}, []
-        seq_id, expected_length = None, None
+        seq_id = None
 
         with open(file_path, 'r') as file:
             for i, line in enumerate(file):
@@ -49,27 +69,27 @@ class Alignment:
                     raise ValueError('Alignment has to be in fasta format starting with >SeqID.')
                 if line.startswith(">"):
                     if seq_id:
-                        sequence = ''.join(seq_lines).upper()
-                        if expected_length is None:
-                            expected_length = len(sequence)
-                        elif len(sequence) != expected_length:
-                            raise ValueError('All alignment sequences must have same lengths.')
-                        alignment[seq_id] = sequence
-                    # ini a new seq
-                    seq_id = line[1:]
-                    seq_lines = []
+                        alignment = add_seq(alignment, seq_id, seq_lines)
+                    # initialize a new sequence
+                    seq_id, seq_lines = line[1:], []
                 else:
                     seq_lines.append(line)
             # handle last sequence
             if seq_id:
-                sequence = ''.join(seq_lines).upper()
-                if expected_length is None:
-                    raise ValueError('Alignment must have more than one sequence.')
-                if len(sequence) != expected_length:
-                    raise ValueError('All alignment sequences must have same lengths.')
-                alignment[seq_id] = sequence
-
+                alignment = add_seq(alignment, seq_id, seq_lines)
+        # final sanity checks
         if alignment:
+            # alignment contains only one sequence:
+            if len(alignment) < 2:
+                raise ValueError("Alignment must contain more than one sequence.")
+            # alignment sequences are not same length
+            first_seq_len = len(next(iter(alignment.values())))
+            for sequence_id, sequence in alignment.items():
+                if len(sequence) != first_seq_len:
+                    raise ValueError(
+                        f"All alignment sequences must have the same length. Sequence '{sequence_id}' has length {len(sequence)}, expected {first_seq_len}."
+                    )
+            # all checks passed
             return alignment
         else:
             raise ValueError(f"Alignment file {file_path} does not contain any sequences in fasta format.")
@@ -228,7 +248,7 @@ class Alignment:
         :return: Entropies at each position.
         """
 
-        def shannons_entropy(chars: list, states: int, aln_type: str) -> float:
+        def shannons_entropy(character_list: list, states: int, aln_type: str) -> float:
             """
             Calculate the shannon's entropy of a sequence and
             normalized between 0 and 1.
@@ -236,40 +256,30 @@ class Alignment:
             :param states: number of potential characters that can be present
             :returns: entropy
             """
-            ent, n_chars = 0, len(chars)
+            ent, n_chars = 0, len(character_list)
             # only one char is in the list
             if n_chars <= 1:
                 return ent
             # calculate the number of unique chars and their counts
-            chars, char_counts = np.unique(chars, return_counts=True)
+            chars, char_counts = np.unique(character_list, return_counts=True)
             char_counts = char_counts.astype(float)
             # ignore gaps for entropy calc
             char_counts, chars = char_counts[chars != "-"], chars[chars != "-"]
-            # correctly handle ambiguous nucleotides
-            if states == 4:
-                index_to_drop = []
-                for index, char in enumerate(chars):
-                    if char in config.AMBIG_NUCS[aln_type]:
-                        index_to_drop.append(index)
-                        nucleotide, nt_counts = np.unique(config.AMBIG_NUCS[aln_type][char], return_counts=True)
-                        nt_counts = nt_counts / len(config.AMBIG_NUCS[aln_type][char])
-                        # add the proportionate numbers to initial array
-                        for nucleotide, nt_count in zip(nucleotide, nt_counts):
-                            if nucleotide in chars:
-                                char_counts[chars == nucleotide] += nt_count
-                            else:
-                                chars, char_counts = np.append(chars, nucleotide), np.append(char_counts, nt_count)
-                # drop the ambiguous characters from array
-                char_counts, chars = np.delete(char_counts, index_to_drop), np.delete(chars, index_to_drop)
-            # correctly handle 'X' in as:
-            if states == 20 and 'X' in chars:
-                temp_counts = char_counts[chars == 'X'] / states
-                char_counts, chars = char_counts[chars != 'X'], chars[chars != 'X']
-                char_counts += temp_counts
-                for amino_acid in config.AMINO_ACIDS:
-                    if amino_acid in chars:
-                        continue
-                    chars, char_counts = np.append(chars, amino_acid), np.append(char_counts, temp_counts)
+            # correctly handle ambiguous chars
+            index_to_drop = []
+            for index, char in enumerate(chars):
+                if char in config.AMBIG_CHARS[aln_type]:
+                    index_to_drop.append(index)
+                    amb_chars, amb_counts = np.unique(config.AMBIG_CHARS[aln_type][char], return_counts=True)
+                    amb_counts = amb_counts / len(config.AMBIG_CHARS[aln_type][char])
+                    # add the proportionate numbers to initial array
+                    for amb_char, amb_count in zip(amb_chars, amb_counts):
+                        if amb_char in chars:
+                            char_counts[chars == amb_char] += amb_count
+                        else:
+                            chars, char_counts = np.append(chars, amb_char), np.append(char_counts, amb_count)
+            # drop the ambiguous characters from array
+            char_counts, chars = np.delete(char_counts, index_to_drop), np.delete(chars, index_to_drop)
             # calc the entropy
             probs = char_counts / n_chars
             if np.count_nonzero(probs) <= 1:
@@ -304,7 +314,7 @@ class Alignment:
         if self.aln_type == 'AS':
             raise TypeError("GC computation is not possible for aminoacid alignment")
 
-        gc, aln, amb_nucs = [], self.alignment, config.AMBIG_NUCS[self.aln_type]
+        gc, aln, amb_nucs = [], self.alignment, config.AMBIG_CHARS[self.aln_type]
 
         for position in range(self.length):
             nucleotides = str()
@@ -644,20 +654,15 @@ class Alignment:
 
 
 def read_annotation():
+    def parse_bed():
+        pass
+
+    def parse_gff():
+        pass
+
+    def parse_genbank():
+        pass
     pass
-
-
-def parse_bed():
-    pass
-
-
-def parse_gff():
-    pass
-
-
-def parse_genbank():
-    pass
-
 
 # functions to save data in standard formats
 def dict_to_bed_file():
