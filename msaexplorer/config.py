@@ -27,7 +27,7 @@ AMBIG_NUCS = {
         }
     }
 
-complement = {
+COMPLEMENT = {
         'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C',
         'R': 'Y', 'Y': 'R', 'S': 'S', 'W': 'W',  # R = A/G, Y = C/T, S = G/C, W = A/T
         'K': 'M', 'M': 'K', 'B': 'V', 'V': 'B',  # K = G/T, M = A/C, B = C/G/T, V = A/C/G
@@ -36,14 +36,14 @@ complement = {
     }
 
 
-amino_acids = ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
+AMINO_ACIDS = ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
 
-start_codons = {
+START_CODONS = {
         'DNA': ['ATG'],
         'RNA': ['AUG'],
 }
 
-stop_codons = {
+STOP_CODONS = {
         'DNA': ['TAG', 'TGA', 'TAA'],
         'RNA': ['UAG', 'UGA', 'UAA'],
 }
