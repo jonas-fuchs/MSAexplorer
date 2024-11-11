@@ -5,10 +5,11 @@ This contains ...
 # built-in
 import math
 import re
+import collections
+from uu import Error
+
 # installed
 import numpy as np
-from Bio.pairwise2 import align
-from numpy import ndarray
 # msaexplorer
 from msaexplorer import config
 
@@ -248,6 +249,7 @@ class MSA:
         :return: Entropies at each position.
         """
 
+        # helper functions
         def shannons_entropy(character_list: list, states: int, aln_type: str) -> float:
             """
             Calculate the shannon's entropy of a sequence and
@@ -325,7 +327,6 @@ class MSA:
             to_count = {
                 'G': 1,
                 'C': 1,
-                '-': 0.5  # similar to 'N' its not clear what the freq is at a deletion
             }
             # handle ambig. nuc
             for char in amb_nucs:
@@ -348,32 +349,128 @@ class MSA:
 
         for nuc_pos in range(self.length):
             pos = str()
-            for record in aln:
+            for record in aln.keys():
                 pos = pos + aln[record][nuc_pos]
             coverage.append(1-pos.count('-')/len(pos))
 
         return coverage
-    # TODO more consensus options?
-    def get_consensus(self) -> str:
+
+    def get_consensus(self, threshold:float=None, use_ambig_nt:bool=False) -> str:
         """
-        Creates a non-gapped consensus sequence with the most freq
-        nucleotide.
+        Creates a non-gapped consensus sequence.
+
+        threshold: Threshold for consensus sequence. If use_ambig_nt = True the ambig. char that encodes
+        the nucleotides that reach a cumulative frequency >= threshold is used. Otherwise 'N' (for nt alignments)
+        or 'X' (for as alignments) is used if none of the characters reach a cumulative frequency >= threshold.
+
+        use_ambig_nt: Use ambiguous character nt if none of the possible nt at a alignment position
+        has a frequency above the defined threshold.
+
         :return: consensus sequence
         """
-        consensus, aln = "", self.alignment
 
-        for nuc_pos in range(self.length):
-            chars = []
-            for record in aln:
-                chars.append(aln[record][nuc_pos])
-            chars, values = np.unique(chars, return_counts=True)
-            chars, values = chars[chars != '-'], values[chars != '-']
-            possible_chars = chars[values == values.max()]
-            # if max function yields two or more values ensure that the one
-            # specified for the consensus is not an 'N'
-            if len(possible_chars) > 1:
-                possible_chars = possible_chars[possible_chars != 'N']
-            consensus = consensus + str(possible_chars[0])
+        # helper functions
+        def determine_counts(alignment_dict: dict, position: int) -> dict:
+            """
+            count the number of each char at
+            an idx of the alignment. return sorted dic.
+            handles ambiguous nucleotides in sequences.
+            also handles gaps.
+            """
+            nucleotide_list = []
+
+            # get all nucleotides
+            for sequence in alignment_dict.items():
+                nucleotide_list.append(sequence[1][position])
+            # count occurences of nucleotides
+            counter = dict(collections.Counter(nucleotide_list))
+            # get permutations of an ambiguous nucleotide
+            to_delete = []
+            temp_dict = {}
+            for nucleotide in counter:
+                if nucleotide in config.AMBIG_CHARS[self.aln_type]:
+                    to_delete.append(nucleotide)
+                    permutations = config.AMBIG_CHARS[self.aln_type][nucleotide]
+                    adjusted_freq = 1 / len(permutations)
+                    for permutation in permutations:
+                        if permutation in temp_dict:
+                            temp_dict[permutation] += adjusted_freq
+                        else:
+                            temp_dict[permutation] = adjusted_freq
+
+            # drop ambiguous entries and add adjusted freqs to
+            if to_delete:
+                for i in to_delete:
+                    counter.pop(i)
+                for nucleotide in temp_dict:
+                    if nucleotide in counter:
+                        counter[nucleotide] += temp_dict[nucleotide]
+                    else:
+                        counter[nucleotide] = temp_dict[nucleotide]
+
+            return dict(sorted(counter.items(), key=lambda x: x[1], reverse=True))
+
+        def get_consensus_char(counts: dict, cutoff: float) -> list:
+            """
+            get a list of nucleotides for the consensus seq
+            """
+            n = 0
+
+            consensus_chars = []
+            for char in counts:
+                n += counts[char]
+                consensus_chars.append(char)
+                if n >= cutoff:
+                    break
+
+            return consensus_chars
+
+        def get_ambiguous_char(nucleotides: list) -> str:
+            """
+            get ambiguous char from a list of nucleotides
+            """
+            for ambiguous, permutations in config.AMBIG_CHARS[self.aln_type].items():
+                if set(permutations) == set(nucleotides):
+                    return ambiguous
+
+        # check if params have been set correctly
+        if threshold is not None:
+            if threshold < 0 or threshold > 1:
+                raise ValueError('Threshold must be between 0 and 1.')
+        if self.aln_type == 'AS' and use_ambig_nt:
+            raise ValueError('Ambiguous characters can not be calculated for amino acid alignments.')
+        if threshold is None and use_ambig_nt:
+            raise ValueError('To calculate ambiguous nucleotides, set a threshold > 0.')
+
+        alignment = self.alignment
+        consensus = str()
+
+        if threshold is not None:
+            consensus_cutoff = len(alignment) * threshold
+        else:
+            consensus_cutoff = 0
+
+        # built consensus sequences
+        for idx in range(self.length):
+            char_counts = determine_counts(alignment, idx)
+            consensus_chars = get_consensus_char(
+                char_counts,
+                consensus_cutoff
+            )
+            if threshold != 0:
+                if len(consensus_chars) > 1:
+                    if use_ambig_nt:
+                        char = get_ambiguous_char(consensus_chars)
+                    else:
+                        if self.aln_type == 'AS':
+                            char = 'X'
+                        else:
+                            char = 'N'
+                    consensus = consensus + char
+                else:
+                    consensus = consensus + consensus_chars[0]
+            else:
+                consensus = consensus + consensus_chars[0]
 
         return consensus
 
@@ -393,7 +490,7 @@ class MSA:
 
         return reverse_complement_dict
 
-    def calc_identity_alignment(self) -> ndarray:
+    def calc_identity_alignment(self) -> np.ndarray:
         """
         Converts alignment to identity array compared to consensus or reference:\n
         nan: deletion \n
@@ -434,7 +531,7 @@ class MSA:
 
     def calc_percent_recovery(self) -> dict:
         """
-        Recovery per sequence either compared to a consensus seq
+        Recovery per sequence either compared to the majority consensus seq
         or the reference seq.\n
         Defined as:\n
         100 - (number of non-N and non-gap characters of non-gapped reference regions) / length of ungapped region * 100
@@ -446,7 +543,7 @@ class MSA:
         if self.reference_id is not None:
             ref = aln[self.reference_id]
         else:
-            ref = self.get_consensus()
+            ref = self.get_consensus()  # majority consensus
 
         # define positions in reference that are not gapped
         non_gaps = [(match.start(), match.end()) for match in re.finditer(r"[^-]+", ref)]
@@ -521,7 +618,7 @@ class MSA:
                     freqs['total'][char][value] = freqs['total'][char][value] / len(aln)
 
         return freqs
-    # TODO write the function
+    # TODO write function
     def calc_pairwise_distance(self):
         """
         score for each seq how many identical characters it has compared to each other seq
@@ -553,7 +650,7 @@ class MSA:
         if self.aln_type == 'AS':
             raise TypeError('ORF search only for RNA/DNA alignments')
 
-
+        # helper functions
         def determine_conserved_start_stops(alignment:dict, alignment_length:int, identity_dict) -> tuple:
             """
             Determine all start and stop codons within an alignment.
@@ -651,18 +748,40 @@ class MSA:
                             orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
 
         return orf_dict
+    # TODO write function
+    def get_snps(self):
+        pass
+    # TODO write function
+    def get_non_overlapping_orfs(self, min_length:int=500):
+        """
+        no overlap algorithm:\n
+        frame 1: -[M------*]--- ----[M--*]---------[M-----\n
+        frame 2: -------[M------*]---------[M---*]--------\n
+        frame 3: [M---*]-----[M----------*]----------[M---\n
+        \n
+        results: [M---*][M------*]--[M--*]-[M---*]-[M-----\n
+        frame:    3      2           1      2       1
+        :param min_length:
+        :return:
+        """
+        orf_dict = self.get_conserved_orfs(min_length)
 
 
-def read_annotation():
-    def parse_bed():
         pass
 
-    def parse_gff():
+class Annotation:
+    def __init__(self, annotation_path):
+        _annotation = self.read_annotation(annotation_path)
         pass
-
-    def parse_genbank():
+    @staticmethod
+    def read_annotation():
+        def parse_bed():
+            pass
+        def parse_gff():
+            pass
+        def parse_genbank():
+            pass
         pass
-    pass
 
 # functions to save data in standard formats
 def dict_to_bed_file():
