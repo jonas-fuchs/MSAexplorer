@@ -6,10 +6,11 @@ This contains ...
 import math
 import re
 import collections
-from uu import Error
 
 # installed
 import numpy as np
+from numpy import ndarray
+
 # msaexplorer
 from msaexplorer import config
 
@@ -363,7 +364,7 @@ class MSA:
         the nucleotides that reach a cumulative frequency >= threshold is used. Otherwise 'N' (for nt alignments)
         or 'X' (for as alignments) is used if none of the characters reach a cumulative frequency >= threshold.
 
-        use_ambig_nt: Use ambiguous character nt if none of the possible nt at a alignment position
+        use_ambig_nt:test Use ambiguous character nt if none of the possible nt at a alignment position
         has a frequency above the defined threshold.
 
         :return: consensus sequence
@@ -618,13 +619,27 @@ class MSA:
                     freqs['total'][char][value] = freqs['total'][char][value] / len(aln)
 
         return freqs
-    # TODO write function
-    def calc_pairwise_distance(self):
+
+    def calc_hamming_distance(self) -> ndarray:
         """
-        score for each seq how many identical characters it has compared to each other seq
-        :return:
+        Calculate Hamming distances for an alignment.
+        :return: array with pairwise Hamming distances.
         """
-        pass
+
+        def hamming_distance(string_1, string_2):
+            return sum(c1 != c2 for c1, c2 in zip(string_1, string_2))
+
+        aln = self.alignment
+        aln_length = self.length
+        distance_array = []
+
+        for sequence_1 in aln.values():
+            distances = []
+            for sequence_2 in aln.values():
+                distances.append((aln_length - hamming_distance(sequence_1, sequence_2))/aln_length*100)
+            distance_array.append(distances)
+
+        return np.array(distance_array)
 
     def get_conserved_orfs(self, min_length:int=500) -> dict:
         """
@@ -752,22 +767,56 @@ class MSA:
     def get_snps(self):
         pass
     # TODO write function
-    def get_non_overlapping_orfs(self, min_length:int=500):
+    def get_gap_cleaned_alignment(self):
+        pass
+
+    def get_non_overlapping_conserved_orfs(self, min_length:int=500) -> dict:
         """
-        no overlap algorithm:\n
+
+        First calculates all ORFs and then searches from 5'
+        all non-overlapping orfs in the fw strand and from the
+        3' all non-overlapping orfs in th rw strand.
+
+        No overlap algorithm:\n
         frame 1: -[M------*]--- ----[M--*]---------[M-----\n
         frame 2: -------[M------*]---------[M---*]--------\n
         frame 3: [M---*]-----[M----------*]----------[M---\n
         \n
         results: [M---*][M------*]--[M--*]-[M---*]-[M-----\n
         frame:    3      2           1      2       1
-        :param min_length:
-        :return:
+
+        :return: dictionary with non-overlapping orfs
         """
         orf_dict = self.get_conserved_orfs(min_length)
 
+        fw_orfs, rw_orfs = [], []
 
-        pass
+        for orf in orf_dict:
+            if orf_dict[orf]['strand'] == '+':
+                fw_orfs.append((orf, orf_dict[orf]['positions']))
+            else:
+                rw_orfs.append((orf, orf_dict[orf]['positions']))
+
+        fw_orfs.sort(key = lambda x: x[1][0]) # sort by start pos
+        rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
+
+        non_overlapping_orfs = []
+        for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
+            previous_stop = -1
+            for orf in orf_list:
+                if strand == '+' and orf[1][0] > previous_stop:
+                    non_overlapping_orfs.append(orf[0])
+                    previous_stop = orf[1][0]
+                elif strand == '-' and self.length - orf[1][1] > previous_stop:
+                    non_overlapping_orfs.append(orf[0])
+                    previous_stop = orf[1][1]
+
+        non_overlap_dict = {}
+        for orf in orf_dict:
+            if orf in non_overlapping_orfs:
+                non_overlap_dict[orf] = orf_dict[orf]
+
+        return non_overlap_dict
 
 class Annotation:
     def __init__(self, annotation_path):
