@@ -6,6 +6,7 @@ This contains ...
 import math
 import re
 import collections
+from typing import Callable, Dict
 
 # installed
 import numpy as np
@@ -20,7 +21,7 @@ class MSA:
     An alignment class that allows computation of several stats
     """
 
-    def __init__(self, alignment_path: str, reference_id:str=None, zoom_range:tuple=None):
+    def __init__(self, alignment_path: str, reference_id: str = None, zoom_range: tuple = None):
         """
         Initialise an Alignment object.
         :param alignment_path: path to alignment file
@@ -41,7 +42,7 @@ class MSA:
         :return: dictionary with ids as keys and sequences as values
         """
 
-        def add_seq(aln:dict, sequence_id:str, seq_list:list):
+        def add_seq(aln: dict, sequence_id: str, seq_list: list):
             """
             Add a complete sequence and check for non-allowed chars
             :param aln: alignment dictionary to build
@@ -97,7 +98,7 @@ class MSA:
             raise ValueError(f"Alignment file {file_path} does not contain any sequences in fasta format.")
 
     @staticmethod
-    def _validate_ref(reference: str|None, alignment: dict) -> str|None|ValueError:
+    def _validate_ref(reference: str | None, alignment: dict) -> str | None | ValueError:
         """
         Validate if the ref seq is indeed part of the alignment.
         :param reference: reference seq id
@@ -112,7 +113,7 @@ class MSA:
             raise ValueError('Reference not in alignment.')
 
     @staticmethod
-    def _validate_zoom(zoom: tuple, original_aln:dict) -> ValueError|tuple|None:
+    def _validate_zoom(zoom: tuple, original_aln: dict) -> ValueError | tuple | None:
         """
         Validates if the user defined zoom range is within the start, end of the initial
         alignment.\n
@@ -145,7 +146,7 @@ class MSA:
                 return 'RNA'
             counter += sum(map(alignment[record].count, ['A', 'C', 'G', 'T', 'N', '-']))
         # determine which is the most likely type
-        if counter/len(alignment) >= 0.7 * len(alignment[list(alignment.keys())[0]]):
+        if counter / len(alignment) >= 0.7 * len(alignment[list(alignment.keys())[0]]):
             return 'DNA'
         else:
             return 'AS'
@@ -185,11 +186,7 @@ class MSA:
     # On the fly properties without setters
     @property
     def length(self) -> int:
-        """
-        Determine the length of the (sliced) alignment.
-        """
-        for record in self.alignment:
-            return len(self.alignment[record])
+        return len(next(iter(self.alignment.values())))
 
     @property
     def alignment(self) -> dict:
@@ -220,11 +217,11 @@ class MSA:
         else:
             # 5' --> 3'
             for start in range(self.length):
-                if self.alignment[self.reference_id][start] not in ['-','N']:
+                if self.alignment[self.reference_id][start] not in ['-', 'N']:
                     break
             # 3' --> 5'
-            for end in range(self.length-1, 0, -1):
-                if self.alignment[self.reference_id][end] not in ['-','N']:
+            for end in range(self.length - 1, 0, -1):
+                if self.alignment[self.reference_id][end] not in ['-', 'N']:
                     break
 
             return start, end
@@ -292,7 +289,6 @@ class MSA:
 
             return ent
 
-
         aln = self.alignment
         entropys = []
 
@@ -309,7 +305,7 @@ class MSA:
 
         return entropys
 
-    def calc_gc(self) -> list|TypeError:
+    def calc_gc(self) -> list | TypeError:
         """
         Determine the GC content for every position in an nt alignment.
         :return: GC content for every position.
@@ -332,10 +328,10 @@ class MSA:
             # handle ambig. nuc
             for char in amb_nucs:
                 if char in nucleotides:
-                    to_count[char] = (amb_nucs[char].count('C') + amb_nucs[char].count('G'))/len(amb_nucs[char])
+                    to_count[char] = (amb_nucs[char].count('C') + amb_nucs[char].count('G')) / len(amb_nucs[char])
 
             gc.append(
-                sum([nucleotides.count(x)*to_count[x] for x in to_count])/len(nucleotides)
+                sum([nucleotides.count(x) * to_count[x] for x in to_count]) / len(nucleotides)
             )
 
         return gc
@@ -352,11 +348,11 @@ class MSA:
             pos = str()
             for record in aln.keys():
                 pos = pos + aln[record][nuc_pos]
-            coverage.append(1-pos.count('-')/len(pos))
+            coverage.append(1 - pos.count('-') / len(pos))
 
         return coverage
 
-    def get_consensus(self, threshold:float=None, use_ambig_nt:bool=False) -> str:
+    def get_consensus(self, threshold: float = None, use_ambig_nt: bool = False) -> str:
         """
         Creates a non-gapped consensus sequence.
 
@@ -475,7 +471,7 @@ class MSA:
 
         return consensus
 
-    def calc_reverse_complement_alignment(self) -> dict|TypeError:
+    def calc_reverse_complement_alignment(self) -> dict | TypeError:
         """
         Reverse complement the alignment.
         :return: Alignment
@@ -501,41 +497,48 @@ class MSA:
         """
 
         aln = self.alignment
+        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
 
-        if self.reference_id is not None:
-            ref = aln[self.reference_id]
-        else:
-            ref = self.get_consensus()
+        # Convert alignment to a NumPy array for vectorized processing
+        sequence_ids = list(aln.keys())
+        sequences = np.array([list(aln[seq_id]) for seq_id in sequence_ids])
+        # Convert the reference sequence into a NumPy array
+        reference = np.array(list(ref))
 
-        identity_matrix, aln = [], self.alignment
+        # Create the identity matrix
+        return np.where(
+            sequences == "-", np.nan,  # Gaps represented as NaN
+            np.where(sequences == reference, 0, 1)  # Matches as 0, mismatches as 1
+        )
 
-        for seq_id in aln:
-            temp_list = []
-            for i, char in enumerate(aln[seq_id]):
-                if char == '-':
-                    temp_list.append(np.nan)
-                elif char == ref[i]:
-                    temp_list.append(0)
-                else:
-                    temp_list.append(1)
-            identity_matrix.append(temp_list)
-
-        return np.array(identity_matrix, dtype=object)
     # TODO write the function
-    def calc_similarity_alignment(self):
+    def calc_similarity_alignment(self, matrix_type=str) -> np.ndarray:
         """
-        Calculate the similarity score between the alignment and the reference seq based on
-        Similarity matrixes (Blossum etc)
+        Calculate the similarity score between the alignment and the reference seq.
         :return:
         """
-        pass
+
+        aln = self.alignment
+        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
+
+        # load substitution matrix as dictionary
+        try:
+            subs_matrix = config.SUBS_MATRICES[self.aln_type][matrix_type]
+        except KeyError:
+            print(
+                f'The specified matrix does not exist for alignment type.\nAvailable matrices for {self.aln_type} are:\n{list(config.SUBS_MATRICES[self.aln_type].keys())}'
+            )
 
     def calc_percent_recovery(self) -> dict:
         """
         Recovery per sequence either compared to the majority consensus seq
         or the reference seq.\n
         Defined as:\n
-        100 - (number of non-N and non-gap characters of non-gapped reference regions) / length of ungapped region * 100
+
+        (1 - sum(N/X/- characters in ungapped ref regions))*100
+
+        This is highly similar to how nextclade calculates recovery over reference.
+
         :return: dict
         """
 
@@ -546,31 +549,35 @@ class MSA:
         else:
             ref = self.get_consensus()  # majority consensus
 
-        # define positions in reference that are not gapped
-        non_gaps = [(match.start(), match.end()) for match in re.finditer(r"[^-]+", ref)]
-        cumulative_length = sum(end - start for start, end in non_gaps)
+        if not any(char != '-' for char in ref):
+            raise ValueError("Reference sequence is entirely gapped, cannot calculate recovery.")
 
-        # count 'N' and '-' chars in non-gapped regions
+
+        # count 'N', 'X' and '-' chars in non-gapped regions
         recovery_over_ref = dict()
 
+        # Get positions of non-gap characters in the reference
+        non_gap_positions = [i for i, char in enumerate(ref) if char != '-']
+        cumulative_length = len(non_gap_positions)
+
+        # Calculate recovery
         for seq_id in aln:
             if seq_id == self.reference_id:
-               continue
-            recovery_over_ref[seq_id] = 0
-            for region in non_gaps:
-                recovery_over_ref[seq_id] += aln[seq_id][region[0]:region[1]].count('-')
-                if self.aln_type == "AS":
-                    recovery_over_ref[seq_id] += aln[seq_id][region[0]:region[1]].count('X')
-                else:
-                    recovery_over_ref[seq_id] += aln[seq_id][region[0]:region[1]].count('N')
-            recovery_over_ref[seq_id] = 100 - recovery_over_ref[seq_id] / cumulative_length * 100
+                continue
+            seq = aln[seq_id]
+            count_invalid = sum(
+                seq[pos] == '-' or
+                (seq[pos] == 'X' if self.aln_type == "AS" else seq[pos] == 'N')
+                for pos in non_gap_positions
+            )
+            recovery_over_ref[seq_id] = (1 - count_invalid / cumulative_length) * 100
 
         return recovery_over_ref
 
     def calc_character_frequencies(self) -> dict:
         """
         Calculate the percentage characters in the alignment:
-        The frequencies are counter by seq and in total. The
+        The frequencies are counted by seq and in total. The
         percentage of non-gap characters in the alignment is
         relative to the total number of non-gap characters.
         The gap percentage is relative to the sequence length.
@@ -582,19 +589,19 @@ class MSA:
 
         aln, aln_length = self.alignment, self.length
 
-        freqs = {'total':{'-': {'counts':0, '% of alignment':float()}}}
+        freqs = {'total': {'-': {'counts': 0, '% of alignment': float()}}}
 
         for seq_id in aln:
-            freqs[seq_id], all_chars = {'-': {'counts':0, '% of alignment':float()}}, 0
+            freqs[seq_id], all_chars = {'-': {'counts': 0, '% of alignment': float()}}, 0
             unique_chars = set(aln[seq_id])
             for char in unique_chars:
                 if char == '-':
                     continue
                 # add characters to dictionaries
                 if char not in freqs[seq_id]:
-                    freqs[seq_id][char] = {'counts':0, '% of non-gapped':0}
+                    freqs[seq_id][char] = {'counts': 0, '% of non-gapped': 0}
                 if char not in freqs['total']:
-                    freqs['total'][char] = {'counts':0, '% of non-gapped':0}
+                    freqs['total'][char] = {'counts': 0, '% of non-gapped': 0}
                 # count non-gap chars
                 freqs[seq_id][char]['counts'] += aln[seq_id].count(char)
                 freqs['total'][char]['counts'] += freqs[seq_id][char]['counts']
@@ -620,28 +627,105 @@ class MSA:
 
         return freqs
 
-    def calc_hamming_distance(self) -> ndarray:
+    def calc_pairwise_identity_matrix(self, distance_type:str='ghd') -> ndarray:
         """
-        Calculate Hamming distances for an alignment.
-        :return: array with pairwise Hamming distances.
+        Calculate pairwise identities for an alignment. As there are different definitions of sequence identity, there are different options implemented:
+
+        ghd (global hamming distance): At each alignment position, check if characters match:
+        \ndistance = matches / alignment_length * 100
+
+        lhd (local hamming distance): Restrict the alignment to the region in both sequences that do not start and end with gaps:
+        \ndistance = matches / min(5'3' ungapped seq1, 5'3' ungapped seq2) * 100
+
+        ged (gap excluded distance): All gaps are excluded from the alignment
+        \ndistance = matches / (matches + mismatches) * 100
+
+        gcd (gap compressed distance): All consecutive gaps are compressed to one mismatch.
+        \ndistance = matches / gap_compressed_alignment_length * 100
+
+        :return: array with pairwise distances.
         """
 
-        def hamming_distance(string_1, string_2):
-            return sum(c1 != c2 for c1, c2 in zip(string_1, string_2))
+        def hamming_distance(seq1: str, seq2: str) -> int:
+            return sum(c1 == c2 for c1, c2 in zip(seq1, seq2))
 
+        def ghd(seq1: str, seq2: str) -> float:
+            return hamming_distance(seq1, seq2) / self.length * 100
+
+        def lhd(seq1: str, seq2: str) -> float:
+            # remove 5' trailing gaps
+            i, j = 0, self.length - 1
+            while i < self.length and (seq1[i] == '-' or seq2[i] == '-'):
+                i += 1
+            while j >= 0 and (seq1[j] == '-' or seq2[j] == '-'):
+                j -= 1
+            if i > j:
+                return 0.0
+            # slice seq
+            seq1_, seq2_ = seq1[i:j + 1], seq2[i:j + 1]
+
+            return hamming_distance(seq1_, seq2_) / min([len(seq1_), len(seq2_)]) * 100
+
+        def ged(seq1: str, seq2: str) -> float:
+
+            matches, mismatches = 0, 0
+
+            for c1, c2 in zip(seq1, seq2):
+                if c1 != '-' and c2 != '-':
+                    if c1 == c2:
+                        matches += 1
+                    else:
+                        mismatches += 1
+            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
+
+        def gcd(seq1: str, seq2: str) -> float:
+            matches = 0
+            mismatches = 0
+            in_gap = False
+
+            for char1, char2 in zip(seq1, seq2):
+                if char1 == '-' and char2 == '-':  # Shared gap: do nothing
+                    continue
+                elif char1 == '-' or char2 == '-':  # Gap in only one sequence
+                    if not in_gap:  # Start of a new gap stretch
+                        mismatches += 1
+                        in_gap = True
+                else:  # No gaps
+                    in_gap = False
+                    if char1 == char2:  # Matching characters
+                        matches += 1
+                    else:  # Mismatched characters
+                        mismatches += 1
+
+            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
+
+
+        # Map distance type to corresponding function
+        distance_functions: Dict[str, Callable[[str, str], float]] = {
+            'ghd': ghd,
+            'lhd': lhd,
+            'ged': ged,
+            'gcd': gcd
+        }
+
+        if distance_type not in distance_functions:
+            raise ValueError(f"Invalid distance type '{distance_type}'. Choose from {list(distance_functions.keys())}.")
+
+        # Compute pairwise distances
         aln = self.alignment
-        aln_length = self.length
-        distance_array = []
+        distance_func = distance_functions[distance_type]
+        distance_matrix = np.zeros((len(aln), len(aln)))
 
-        for sequence_1 in aln.values():
-            distances = []
-            for sequence_2 in aln.values():
-                distances.append((aln_length - hamming_distance(sequence_1, sequence_2))/aln_length*100)
-            distance_array.append(distances)
+        sequences = list(aln.values())
+        for i, seq1 in enumerate(sequences):
+            for j, seq2 in enumerate(sequences):
+                if i <= j:  # Compute only once for symmetric matrix
+                    distance_matrix[i, j] = distance_func(seq1, seq2)
+                    distance_matrix[j, i] = distance_matrix[i, j]
 
-        return np.array(distance_array)
+        return distance_matrix
 
-    def get_conserved_orfs(self, min_length:int=500) -> dict:
+    def get_conserved_orfs(self, min_length: int = 500) -> dict:
         """
         conserved ORF definition:
             - conserved starts and stops
@@ -666,7 +750,7 @@ class MSA:
             raise TypeError('ORF search only for RNA/DNA alignments')
 
         # helper functions
-        def determine_conserved_start_stops(alignment:dict, alignment_length:int, identity_dict) -> tuple:
+        def determine_conserved_start_stops(alignment: dict, alignment_length: int, identity_dict) -> tuple:
             """
             Determine all start and stop codons within an alignment.
             :param alignment: alignment
@@ -680,15 +764,16 @@ class MSA:
             list_of_starts, list_of_stops = [], []
             seq = alignment[list(alignment.keys())[0]]
             for nt_position in range(alignment_length):
-                if seq[nt_position:nt_position + 3] in starts and np.nansum(identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
+                if seq[nt_position:nt_position + 3] in starts and np.nansum(
+                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
                     list_of_starts.append(nt_position)
-                if seq[nt_position:nt_position + 3] in stops and np.nansum(identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
+                if seq[nt_position:nt_position + 3] in stops and np.nansum(
+                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
                     list_of_stops.append(nt_position)
 
             return list_of_starts, list_of_stops
 
-
-        def get_ungapped_sliced_seqs(alignment:dict, start_pos:int, stop_pos:int) -> list:
+        def get_ungapped_sliced_seqs(alignment: dict, start_pos: int, stop_pos: int) -> list:
             """
             get ungapped sequences starting and stop codons and eliminate gaps
             :param alignment: alignment
@@ -698,12 +783,11 @@ class MSA:
             """
             ungapped_seqs = []
             for seq_id in alignment:
-                ungapped_seqs.append(alignment[seq_id][start_pos:stop_pos+3].replace('-', ''))
+                ungapped_seqs.append(alignment[seq_id][start_pos:stop_pos + 3].replace('-', ''))
 
             return ungapped_seqs
 
-
-        def additional_stops(ungapped_seqs:list) -> bool:
+        def additional_stops(ungapped_seqs: list) -> bool:
             """
             Checks for the presence of a stop codon
             :param ungapped_seqs: list of ungapped sequences
@@ -712,11 +796,10 @@ class MSA:
             stops = config.STOP_CODONS[self.aln_type]
 
             for sliced_seq in ungapped_seqs:
-                for position in range(0, len(sliced_seq)-3, 3):
+                for position in range(0, len(sliced_seq) - 3, 3):
                     if sliced_seq[position:position + 3] in stops:
                         return True
             return False
-
 
         # ini
         identities = self.calc_identity_alignment()
@@ -736,7 +819,7 @@ class MSA:
                 last_stop = -1
                 for start in potential_starts:
                     # go to the next stop that is sufficiently far away in the alignment
-                    next_stops = [x for x in potential_stops if x+3 >= start + min_length]
+                    next_stops = [x for x in potential_stops if x + 3 >= start + min_length]
                     if not next_stops:
                         continue
                     next_stop = next_stops[0]
@@ -763,14 +846,8 @@ class MSA:
                             orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
 
         return orf_dict
-    # TODO write function
-    def get_snps(self):
-        pass
-    # TODO write function
-    def get_gap_cleaned_alignment(self):
-        pass
 
-    def get_non_overlapping_conserved_orfs(self, min_length:int=500) -> dict:
+    def get_non_overlapping_conserved_orfs(self, min_length: int = 500) -> dict:
         """
 
         First calculates all ORFs and then searches from 5'
@@ -797,7 +874,7 @@ class MSA:
             else:
                 rw_orfs.append((orf, orf_dict[orf]['positions']))
 
-        fw_orfs.sort(key = lambda x: x[1][0]) # sort by start pos
+        fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
         rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
 
         non_overlapping_orfs = []
@@ -818,19 +895,37 @@ class MSA:
 
         return non_overlap_dict
 
+    # TODO write function
+    def find_conserved_regions(self):
+        pass
+
+    # TODO write function
+    def get_snps(self):
+        pass
+
+    # TODO write function
+    def get_gap_cleaned_alignment(self):
+        pass
+
+
 class Annotation:
     def __init__(self, annotation_path):
         _annotation = self.read_annotation(annotation_path)
         pass
+
     @staticmethod
     def read_annotation():
         def parse_bed():
             pass
+
         def parse_gff():
             pass
+
         def parse_genbank():
             pass
+
         pass
+
 
 # functions to save data in standard formats
 def dict_to_bed_file():
