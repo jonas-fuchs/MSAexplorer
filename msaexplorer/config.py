@@ -58,7 +58,7 @@ STOP_CODONS = {
 }
 
 # from: https://github.com/biopython/biopython/tree/master/Bio/Align/substitution_matrices/data
-# extracted to dictionary
+# extracted to nested dictionaries dependent on the alignment type
 SUBS_MATRICES = {
         'AS': {
                 'BLOSUM45': {

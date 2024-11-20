@@ -4,7 +4,6 @@ This contains ...
 
 # built-in
 import math
-import re
 import collections
 from typing import Callable, Dict
 
@@ -500,9 +499,7 @@ class MSA:
         ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
 
         # Convert alignment to a NumPy array for vectorized processing
-        sequence_ids = list(aln.keys())
-        sequences = np.array([list(aln[seq_id]) for seq_id in sequence_ids])
-        # Convert the reference sequence into a NumPy array
+        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
 
         # Create the identity matrix
@@ -511,7 +508,6 @@ class MSA:
             np.where(sequences == reference, 0, 1)  # Matches as 0, mismatches as 1
         )
 
-    # TODO write the function
     def calc_similarity_alignment(self, matrix_type=str) -> np.ndarray:
         """
         Calculate the similarity score between the alignment and the reference seq.
@@ -525,9 +521,22 @@ class MSA:
         try:
             subs_matrix = config.SUBS_MATRICES[self.aln_type][matrix_type]
         except KeyError:
-            print(
+            raise ValueError(
                 f'The specified matrix does not exist for alignment type.\nAvailable matrices for {self.aln_type} are:\n{list(config.SUBS_MATRICES[self.aln_type].keys())}'
             )
+
+        # Convert alignment to a NumPy array for vectorized processing
+        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        reference = np.array(list(ref))
+        valid_chars = list(subs_matrix.keys())
+        identity_array = np.full(sequences.shape, np.nan)
+
+        for i, seq in enumerate(sequences):
+            for j, char in enumerate(seq):
+                if char in valid_chars and reference[j] in valid_chars:
+                    identity_array[i, j] = subs_matrix[char][reference[j]]
+
+        return identity_array
 
     def calc_percent_recovery(self) -> dict:
         """
@@ -725,7 +734,7 @@ class MSA:
 
         return distance_matrix
 
-    def get_conserved_orfs(self, min_length: int = 500) -> dict:
+    def get_conserved_orfs(self, min_length: int = 100, conservation_cutoff:float = None) -> dict:
         """
         conserved ORF definition:
             - conserved starts and stops
@@ -733,6 +742,9 @@ class MSA:
             - stop - start must be at least min_length
             - all ungapped seqs[start:stop] must have at least min_length
             - no ungapped seq can have a Stop in between Start Stop
+
+        Conservation is measured by number of positions with identical characters divided by
+        orf slice of the alignment.
 
         Algorithm overview:
             - check for conserved start and stop codons
@@ -746,8 +758,6 @@ class MSA:
 
         :return: ORF positions and internal ORF positions
         """
-        if self.aln_type == 'AS':
-            raise TypeError('ORF search only for RNA/DNA alignments')
 
         # helper functions
         def determine_conserved_start_stops(alignment: dict, alignment_length: int, identity_dict) -> tuple:
@@ -801,6 +811,21 @@ class MSA:
                         return True
             return False
 
+        def calculate_conservation(identity_matrix: ndarray, aln_slice:list) -> float:
+            sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]]
+            return np.sum(np.all(sliced_array == 0, axis=0))/(aln_slice[1] - aln_slice[0]) * 100
+
+        # checks for arguments
+
+        if self.aln_type == 'AS':
+            raise TypeError('ORF search only for RNA/DNA alignments')
+
+        if conservation_cutoff > 100 or conservation_cutoff < 0:
+            raise ValueError('conservation cutoff must be between 0 and 100')
+
+        if min_length <= 0 or min_length > self.length:
+            raise ValueError(f'min_length must be between 0 and {self.length}')
+
         # ini
         identities = self.calc_identity_alignment()
         alignments = [self.alignment, self.calc_reverse_complement_alignment()]
@@ -835,19 +860,23 @@ class MSA:
                         else:
                             positions = [aln_len - next_stop - 3, aln_len - start]
                         if last_stop != next_stop:
+                            last_stop = next_stop
+                            conservation = calculate_conservation(identities, positions)
+                            if conservation_cutoff is not None and conservation < conservation_cutoff:
+                                continue
                             orf_dict[f'ORF_{orf_counter}'] = {'positions': positions,
                                                               'frame': frame,
                                                               'strand': direction,
+                                                              'conservation': conservation,
                                                               'internal': []
                                                               }
                             orf_counter += 1
-                            last_stop = next_stop
                         else:
                             orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
 
         return orf_dict
 
-    def get_non_overlapping_conserved_orfs(self, min_length: int = 500) -> dict:
+    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, conservation_cutoff:float = None) -> dict:
         """
 
         First calculates all ORFs and then searches from 5'
@@ -864,7 +893,7 @@ class MSA:
 
         :return: dictionary with non-overlapping orfs
         """
-        orf_dict = self.get_conserved_orfs(min_length)
+        orf_dict = self.get_conserved_orfs(min_length, conservation_cutoff)
 
         fw_orfs, rw_orfs = [], []
 
