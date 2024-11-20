@@ -225,6 +225,315 @@ class MSA:
 
             return start, end
 
+    def get_consensus(self, threshold: float = None, use_ambig_nt: bool = False) -> str:
+        """
+        Creates a non-gapped consensus sequence.
+
+        threshold: Threshold for consensus sequence. If use_ambig_nt = True the ambig. char that encodes
+        the nucleotides that reach a cumulative frequency >= threshold is used. Otherwise 'N' (for nt alignments)
+        or 'X' (for as alignments) is used if none of the characters reach a cumulative frequency >= threshold.
+
+        use_ambig_nt:test Use ambiguous character nt if none of the possible nt at a alignment position
+        has a frequency above the defined threshold.
+
+        :return: consensus sequence
+        """
+
+        # helper functions
+        def determine_counts(alignment_dict: dict, position: int) -> dict:
+            """
+            count the number of each char at
+            an idx of the alignment. return sorted dic.
+            handles ambiguous nucleotides in sequences.
+            also handles gaps.
+            """
+            nucleotide_list = []
+
+            # get all nucleotides
+            for sequence in alignment_dict.items():
+                nucleotide_list.append(sequence[1][position])
+            # count occurences of nucleotides
+            counter = dict(collections.Counter(nucleotide_list))
+            # get permutations of an ambiguous nucleotide
+            to_delete = []
+            temp_dict = {}
+            for nucleotide in counter:
+                if nucleotide in config.AMBIG_CHARS[self.aln_type]:
+                    to_delete.append(nucleotide)
+                    permutations = config.AMBIG_CHARS[self.aln_type][nucleotide]
+                    adjusted_freq = 1 / len(permutations)
+                    for permutation in permutations:
+                        if permutation in temp_dict:
+                            temp_dict[permutation] += adjusted_freq
+                        else:
+                            temp_dict[permutation] = adjusted_freq
+
+            # drop ambiguous entries and add adjusted freqs to
+            if to_delete:
+                for i in to_delete:
+                    counter.pop(i)
+                for nucleotide in temp_dict:
+                    if nucleotide in counter:
+                        counter[nucleotide] += temp_dict[nucleotide]
+                    else:
+                        counter[nucleotide] = temp_dict[nucleotide]
+
+            return dict(sorted(counter.items(), key=lambda x: x[1], reverse=True))
+
+        def get_consensus_char(counts: dict, cutoff: float) -> list:
+            """
+            get a list of nucleotides for the consensus seq
+            """
+            n = 0
+
+            consensus_chars = []
+            for char in counts:
+                n += counts[char]
+                consensus_chars.append(char)
+                if n >= cutoff:
+                    break
+
+            return consensus_chars
+
+        def get_ambiguous_char(nucleotides: list) -> str:
+            """
+            get ambiguous char from a list of nucleotides
+            """
+            for ambiguous, permutations in config.AMBIG_CHARS[self.aln_type].items():
+                if set(permutations) == set(nucleotides):
+                    return ambiguous
+
+        # check if params have been set correctly
+        if threshold is not None:
+            if threshold < 0 or threshold > 1:
+                raise ValueError('Threshold must be between 0 and 1.')
+        if self.aln_type == 'AS' and use_ambig_nt:
+            raise ValueError('Ambiguous characters can not be calculated for amino acid alignments.')
+        if threshold is None and use_ambig_nt:
+            raise ValueError('To calculate ambiguous nucleotides, set a threshold > 0.')
+
+        alignment = self.alignment
+        consensus = str()
+
+        if threshold is not None:
+            consensus_cutoff = len(alignment) * threshold
+        else:
+            consensus_cutoff = 0
+
+        # built consensus sequences
+        for idx in range(self.length):
+            char_counts = determine_counts(alignment, idx)
+            consensus_chars = get_consensus_char(
+                char_counts,
+                consensus_cutoff
+            )
+            if threshold != 0:
+                if len(consensus_chars) > 1:
+                    if use_ambig_nt:
+                        char = get_ambiguous_char(consensus_chars)
+                    else:
+                        if self.aln_type == 'AS':
+                            char = 'X'
+                        else:
+                            char = 'N'
+                    consensus = consensus + char
+                else:
+                    consensus = consensus + consensus_chars[0]
+            else:
+                consensus = consensus + consensus_chars[0]
+
+        return consensus
+
+    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> dict:
+        """
+        conserved ORF definition:
+            - conserved starts and stops
+            - start, stop must be on the same frame
+            - stop - start must be at least min_length
+            - all ungapped seqs[start:stop] must have at least min_length
+            - no ungapped seq can have a Stop in between Start Stop
+
+        Conservation is measured by number of positions with identical characters divided by
+        orf slice of the alignment.
+
+        Algorithm overview:
+            - check for conserved start and stop codons
+            - iterate over all three frames
+            - check each start and next sufficiently far away stop codon
+            - check if all ungapped seqs between start and stop codon are >= min_length
+            - check if no ungapped seq in the alignment has a stop codon
+            - write to dictionary
+            - classify as internal if the stop codon has already been written with a prior start
+            - repeat for reverse complement
+
+        :return: ORF positions and internal ORF positions
+        """
+
+        # helper functions
+        def determine_conserved_start_stops(alignment: dict, alignment_length: int, identity_dict) -> tuple:
+            """
+            Determine all start and stop codons within an alignment.
+            :param alignment: alignment
+            :param alignment_length: length of alignment
+            :param identity_dict: identity dictionary
+            :return: start and stop codon positions
+            """
+            starts = config.START_CODONS[self.aln_type]
+            stops = config.STOP_CODONS[self.aln_type]
+
+            list_of_starts, list_of_stops = [], []
+            seq = alignment[list(alignment.keys())[0]]
+            for nt_position in range(alignment_length):
+                if seq[nt_position:nt_position + 3] in starts and np.nansum(
+                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
+                    list_of_starts.append(nt_position)
+                if seq[nt_position:nt_position + 3] in stops and np.nansum(
+                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
+                    list_of_stops.append(nt_position)
+
+            return list_of_starts, list_of_stops
+
+        def get_ungapped_sliced_seqs(alignment: dict, start_pos: int, stop_pos: int) -> list:
+            """
+            get ungapped sequences starting and stop codons and eliminate gaps
+            :param alignment: alignment
+            :param start_pos: start codon
+            :param stop_pos: stop codon
+            :return: sliced sequences
+            """
+            ungapped_seqs = []
+            for seq_id in alignment:
+                ungapped_seqs.append(alignment[seq_id][start_pos:stop_pos + 3].replace('-', ''))
+
+            return ungapped_seqs
+
+        def additional_stops(ungapped_seqs: list) -> bool:
+            """
+            Checks for the presence of a stop codon
+            :param ungapped_seqs: list of ungapped sequences
+            :return: Additional stop codons (True/False)
+            """
+            stops = config.STOP_CODONS[self.aln_type]
+
+            for sliced_seq in ungapped_seqs:
+                for position in range(0, len(sliced_seq) - 3, 3):
+                    if sliced_seq[position:position + 3] in stops:
+                        return True
+            return False
+
+        def calculate_identity(identity_matrix: ndarray, aln_slice:list) -> float:
+            sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]]
+            return np.sum(np.all(sliced_array == 0, axis=0))/(aln_slice[1] - aln_slice[0]) * 100
+
+        # checks for arguments
+
+        if self.aln_type == 'AS':
+            raise TypeError('ORF search only for RNA/DNA alignments')
+
+        if identity_cutoff > 100 or identity_cutoff < 0:
+            raise ValueError('conservation cutoff must be between 0 and 100')
+
+        if min_length <= 0 or min_length > self.length:
+            raise ValueError(f'min_length must be between 0 and {self.length}')
+
+        # ini
+        identities = self.calc_identity_alignment()
+        alignments = [self.alignment, self.calc_reverse_complement_alignment()]
+        aln_len = self.length
+
+        orf_counter = 0
+        orf_dict = {}
+
+        for aln, direction in zip(alignments, ['+', '-']):
+            # check for starts and stops in the first seq and then check if these are present in all seqs
+            conserved_starts, conserved_stops = determine_conserved_start_stops(aln, aln_len, identities)
+            # check each frame
+            for frame in (0, 1, 2):
+                potential_starts = [x for x in conserved_starts if x % 3 == frame]
+                potential_stops = [x for x in conserved_stops if x % 3 == frame]
+                last_stop = -1
+                for start in potential_starts:
+                    # go to the next stop that is sufficiently far away in the alignment
+                    next_stops = [x for x in potential_stops if x + 3 >= start + min_length]
+                    if not next_stops:
+                        continue
+                    next_stop = next_stops[0]
+                    ungapped_sliced_seqs = get_ungapped_sliced_seqs(aln, start, next_stop)
+                    # re-check the lengths of all ungapped seqs
+                    ungapped_seq_lengths = [len(x) >= min_length for x in ungapped_sliced_seqs]
+                    if not all(ungapped_seq_lengths):
+                        continue
+                    # if no stop codon between start and stop --> write to dictionary
+                    if not additional_stops(ungapped_sliced_seqs):
+                        if direction == '+':
+                            positions = [start, next_stop + 3]
+                        else:
+                            positions = [aln_len - next_stop - 3, aln_len - start]
+                        if last_stop != next_stop:
+                            last_stop = next_stop
+                            conservation = calculate_identity(identities, positions)
+                            if identity_cutoff is not None and conservation < identity_cutoff:
+                                continue
+                            orf_dict[f'ORF_{orf_counter}'] = {'positions': positions,
+                                                              'frame': frame,
+                                                              'strand': direction,
+                                                              'conservation': conservation,
+                                                              'internal': []
+                                                              }
+                            orf_counter += 1
+                        else:
+                            orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
+
+        return orf_dict
+
+    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> dict:
+        """
+
+        First calculates all ORFs and then searches from 5'
+        all non-overlapping orfs in the fw strand and from the
+        3' all non-overlapping orfs in th rw strand.
+
+        No overlap algorithm:\n
+        frame 1: -[M------*]--- ----[M--*]---------[M-----\n
+        frame 2: -------[M------*]---------[M---*]--------\n
+        frame 3: [M---*]-----[M----------*]----------[M---\n
+        \n
+        results: [M---*][M------*]--[M--*]-[M---*]-[M-----\n
+        frame:    3      2           1      2       1
+
+        :return: dictionary with non-overlapping orfs
+        """
+        orf_dict = self.get_conserved_orfs(min_length, identity_cutoff)
+
+        fw_orfs, rw_orfs = [], []
+
+        for orf in orf_dict:
+            if orf_dict[orf]['strand'] == '+':
+                fw_orfs.append((orf, orf_dict[orf]['positions']))
+            else:
+                rw_orfs.append((orf, orf_dict[orf]['positions']))
+
+        fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
+        rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
+
+        non_overlapping_orfs = []
+        for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
+            previous_stop = -1
+            for orf in orf_list:
+                if strand == '+' and orf[1][0] > previous_stop:
+                    non_overlapping_orfs.append(orf[0])
+                    previous_stop = orf[1][0]
+                elif strand == '-' and self.length - orf[1][1] > previous_stop:
+                    non_overlapping_orfs.append(orf[0])
+                    previous_stop = orf[1][1]
+
+        non_overlap_dict = {}
+        for orf in orf_dict:
+            if orf in non_overlapping_orfs:
+                non_overlap_dict[orf] = orf_dict[orf]
+
+        return non_overlap_dict
+
     def calc_length_stats(self) -> dict:
         """
         Determine the stats for the length of the ungapped seqs in the alignment.
@@ -350,125 +659,6 @@ class MSA:
             coverage.append(1 - pos.count('-') / len(pos))
 
         return coverage
-
-    def get_consensus(self, threshold: float = None, use_ambig_nt: bool = False) -> str:
-        """
-        Creates a non-gapped consensus sequence.
-
-        threshold: Threshold for consensus sequence. If use_ambig_nt = True the ambig. char that encodes
-        the nucleotides that reach a cumulative frequency >= threshold is used. Otherwise 'N' (for nt alignments)
-        or 'X' (for as alignments) is used if none of the characters reach a cumulative frequency >= threshold.
-
-        use_ambig_nt:test Use ambiguous character nt if none of the possible nt at a alignment position
-        has a frequency above the defined threshold.
-
-        :return: consensus sequence
-        """
-
-        # helper functions
-        def determine_counts(alignment_dict: dict, position: int) -> dict:
-            """
-            count the number of each char at
-            an idx of the alignment. return sorted dic.
-            handles ambiguous nucleotides in sequences.
-            also handles gaps.
-            """
-            nucleotide_list = []
-
-            # get all nucleotides
-            for sequence in alignment_dict.items():
-                nucleotide_list.append(sequence[1][position])
-            # count occurences of nucleotides
-            counter = dict(collections.Counter(nucleotide_list))
-            # get permutations of an ambiguous nucleotide
-            to_delete = []
-            temp_dict = {}
-            for nucleotide in counter:
-                if nucleotide in config.AMBIG_CHARS[self.aln_type]:
-                    to_delete.append(nucleotide)
-                    permutations = config.AMBIG_CHARS[self.aln_type][nucleotide]
-                    adjusted_freq = 1 / len(permutations)
-                    for permutation in permutations:
-                        if permutation in temp_dict:
-                            temp_dict[permutation] += adjusted_freq
-                        else:
-                            temp_dict[permutation] = adjusted_freq
-
-            # drop ambiguous entries and add adjusted freqs to
-            if to_delete:
-                for i in to_delete:
-                    counter.pop(i)
-                for nucleotide in temp_dict:
-                    if nucleotide in counter:
-                        counter[nucleotide] += temp_dict[nucleotide]
-                    else:
-                        counter[nucleotide] = temp_dict[nucleotide]
-
-            return dict(sorted(counter.items(), key=lambda x: x[1], reverse=True))
-
-        def get_consensus_char(counts: dict, cutoff: float) -> list:
-            """
-            get a list of nucleotides for the consensus seq
-            """
-            n = 0
-
-            consensus_chars = []
-            for char in counts:
-                n += counts[char]
-                consensus_chars.append(char)
-                if n >= cutoff:
-                    break
-
-            return consensus_chars
-
-        def get_ambiguous_char(nucleotides: list) -> str:
-            """
-            get ambiguous char from a list of nucleotides
-            """
-            for ambiguous, permutations in config.AMBIG_CHARS[self.aln_type].items():
-                if set(permutations) == set(nucleotides):
-                    return ambiguous
-
-        # check if params have been set correctly
-        if threshold is not None:
-            if threshold < 0 or threshold > 1:
-                raise ValueError('Threshold must be between 0 and 1.')
-        if self.aln_type == 'AS' and use_ambig_nt:
-            raise ValueError('Ambiguous characters can not be calculated for amino acid alignments.')
-        if threshold is None and use_ambig_nt:
-            raise ValueError('To calculate ambiguous nucleotides, set a threshold > 0.')
-
-        alignment = self.alignment
-        consensus = str()
-
-        if threshold is not None:
-            consensus_cutoff = len(alignment) * threshold
-        else:
-            consensus_cutoff = 0
-
-        # built consensus sequences
-        for idx in range(self.length):
-            char_counts = determine_counts(alignment, idx)
-            consensus_chars = get_consensus_char(
-                char_counts,
-                consensus_cutoff
-            )
-            if threshold != 0:
-                if len(consensus_chars) > 1:
-                    if use_ambig_nt:
-                        char = get_ambiguous_char(consensus_chars)
-                    else:
-                        if self.aln_type == 'AS':
-                            char = 'X'
-                        else:
-                            char = 'N'
-                    consensus = consensus + char
-                else:
-                    consensus = consensus + consensus_chars[0]
-            else:
-                consensus = consensus + consensus_chars[0]
-
-        return consensus
 
     def calc_reverse_complement_alignment(self) -> dict | TypeError:
         """
@@ -734,208 +924,35 @@ class MSA:
 
         return distance_matrix
 
-    def get_conserved_orfs(self, min_length: int = 100, conservation_cutoff:float = None) -> dict:
-        """
-        conserved ORF definition:
-            - conserved starts and stops
-            - start, stop must be on the same frame
-            - stop - start must be at least min_length
-            - all ungapped seqs[start:stop] must have at least min_length
-            - no ungapped seq can have a Stop in between Start Stop
-
-        Conservation is measured by number of positions with identical characters divided by
-        orf slice of the alignment.
-
-        Algorithm overview:
-            - check for conserved start and stop codons
-            - iterate over all three frames
-            - check each start and next sufficiently far away stop codon
-            - check if all ungapped seqs between start and stop codon are >= min_length
-            - check if no ungapped seq in the alignment has a stop codon
-            - write to dictionary
-            - classify as internal if the stop codon has already been written with a prior start
-            - repeat for reverse complement
-
-        :return: ORF positions and internal ORF positions
-        """
-
-        # helper functions
-        def determine_conserved_start_stops(alignment: dict, alignment_length: int, identity_dict) -> tuple:
-            """
-            Determine all start and stop codons within an alignment.
-            :param alignment: alignment
-            :param alignment_length: length of alignment
-            :param identity_dict: identity dictionary
-            :return: start and stop codon positions
-            """
-            starts = config.START_CODONS[self.aln_type]
-            stops = config.STOP_CODONS[self.aln_type]
-
-            list_of_starts, list_of_stops = [], []
-            seq = alignment[list(alignment.keys())[0]]
-            for nt_position in range(alignment_length):
-                if seq[nt_position:nt_position + 3] in starts and np.nansum(
-                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
-                    list_of_starts.append(nt_position)
-                if seq[nt_position:nt_position + 3] in stops and np.nansum(
-                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
-                    list_of_stops.append(nt_position)
-
-            return list_of_starts, list_of_stops
-
-        def get_ungapped_sliced_seqs(alignment: dict, start_pos: int, stop_pos: int) -> list:
-            """
-            get ungapped sequences starting and stop codons and eliminate gaps
-            :param alignment: alignment
-            :param start_pos: start codon
-            :param stop_pos: stop codon
-            :return: sliced sequences
-            """
-            ungapped_seqs = []
-            for seq_id in alignment:
-                ungapped_seqs.append(alignment[seq_id][start_pos:stop_pos + 3].replace('-', ''))
-
-            return ungapped_seqs
-
-        def additional_stops(ungapped_seqs: list) -> bool:
-            """
-            Checks for the presence of a stop codon
-            :param ungapped_seqs: list of ungapped sequences
-            :return: Additional stop codons (True/False)
-            """
-            stops = config.STOP_CODONS[self.aln_type]
-
-            for sliced_seq in ungapped_seqs:
-                for position in range(0, len(sliced_seq) - 3, 3):
-                    if sliced_seq[position:position + 3] in stops:
-                        return True
-            return False
-
-        def calculate_conservation(identity_matrix: ndarray, aln_slice:list) -> float:
-            sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]]
-            return np.sum(np.all(sliced_array == 0, axis=0))/(aln_slice[1] - aln_slice[0]) * 100
-
-        # checks for arguments
-
-        if self.aln_type == 'AS':
-            raise TypeError('ORF search only for RNA/DNA alignments')
-
-        if conservation_cutoff > 100 or conservation_cutoff < 0:
-            raise ValueError('conservation cutoff must be between 0 and 100')
-
-        if min_length <= 0 or min_length > self.length:
-            raise ValueError(f'min_length must be between 0 and {self.length}')
-
-        # ini
-        identities = self.calc_identity_alignment()
-        alignments = [self.alignment, self.calc_reverse_complement_alignment()]
-        aln_len = self.length
-
-        orf_counter = 0
-        orf_dict = {}
-
-        for aln, direction in zip(alignments, ['+', '-']):
-            # check for starts and stops in the first seq and then check if these are present in all seqs
-            conserved_starts, conserved_stops = determine_conserved_start_stops(aln, aln_len, identities)
-            # check each frame
-            for frame in (0, 1, 2):
-                potential_starts = [x for x in conserved_starts if x % 3 == frame]
-                potential_stops = [x for x in conserved_stops if x % 3 == frame]
-                last_stop = -1
-                for start in potential_starts:
-                    # go to the next stop that is sufficiently far away in the alignment
-                    next_stops = [x for x in potential_stops if x + 3 >= start + min_length]
-                    if not next_stops:
-                        continue
-                    next_stop = next_stops[0]
-                    ungapped_sliced_seqs = get_ungapped_sliced_seqs(aln, start, next_stop)
-                    # re-check the lengths of all ungapped seqs
-                    ungapped_seq_lengths = [len(x) >= min_length for x in ungapped_sliced_seqs]
-                    if not all(ungapped_seq_lengths):
-                        continue
-                    # if no stop codon between start and stop --> write to dictionary
-                    if not additional_stops(ungapped_sliced_seqs):
-                        if direction == '+':
-                            positions = [start, next_stop + 3]
-                        else:
-                            positions = [aln_len - next_stop - 3, aln_len - start]
-                        if last_stop != next_stop:
-                            last_stop = next_stop
-                            conservation = calculate_conservation(identities, positions)
-                            if conservation_cutoff is not None and conservation < conservation_cutoff:
-                                continue
-                            orf_dict[f'ORF_{orf_counter}'] = {'positions': positions,
-                                                              'frame': frame,
-                                                              'strand': direction,
-                                                              'conservation': conservation,
-                                                              'internal': []
-                                                              }
-                            orf_counter += 1
-                        else:
-                            orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
-
-        return orf_dict
-
-    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, conservation_cutoff:float = None) -> dict:
-        """
-
-        First calculates all ORFs and then searches from 5'
-        all non-overlapping orfs in the fw strand and from the
-        3' all non-overlapping orfs in th rw strand.
-
-        No overlap algorithm:\n
-        frame 1: -[M------*]--- ----[M--*]---------[M-----\n
-        frame 2: -------[M------*]---------[M---*]--------\n
-        frame 3: [M---*]-----[M----------*]----------[M---\n
-        \n
-        results: [M---*][M------*]--[M--*]-[M---*]-[M-----\n
-        frame:    3      2           1      2       1
-
-        :return: dictionary with non-overlapping orfs
-        """
-        orf_dict = self.get_conserved_orfs(min_length, conservation_cutoff)
-
-        fw_orfs, rw_orfs = [], []
-
-        for orf in orf_dict:
-            if orf_dict[orf]['strand'] == '+':
-                fw_orfs.append((orf, orf_dict[orf]['positions']))
-            else:
-                rw_orfs.append((orf, orf_dict[orf]['positions']))
-
-        fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
-        rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
-
-        non_overlapping_orfs = []
-        for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
-            previous_stop = -1
-            for orf in orf_list:
-                if strand == '+' and orf[1][0] > previous_stop:
-                    non_overlapping_orfs.append(orf[0])
-                    previous_stop = orf[1][0]
-                elif strand == '-' and self.length - orf[1][1] > previous_stop:
-                    non_overlapping_orfs.append(orf[0])
-                    previous_stop = orf[1][1]
-
-        non_overlap_dict = {}
-        for orf in orf_dict:
-            if orf in non_overlapping_orfs:
-                non_overlap_dict[orf] = orf_dict[orf]
-
-        return non_overlap_dict
-
-    # TODO write function
-    def find_conserved_regions(self):
-        pass
-
     # TODO write function
     def get_snps(self):
-        pass
 
-    # TODO write function
-    def get_gap_cleaned_alignment(self):
-        pass
 
+        aln = self.alignment
+        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
+
+        snp_dict = {}
+
+        for pos in range(self.length):
+            for seq_id in aln:
+                if seq_id == self.reference_id:
+                    continue
+                reference_char, snp_char = ref[pos], aln[seq_id][pos]
+                if reference_char != snp_char:
+                    if reference_char in config.AMBIG_CHARS[self.aln_type] or snp_char in config.AMBIG_CHARS[self.aln_type]:
+                        continue
+                    if pos not in snp_dict:
+                        snp_dict[pos] = {'ref': reference_char, 'alt': {}}
+                    if snp_char not in snp_dict[pos]['alt']:
+                        snp_dict[pos]['alt'][snp_char] = 1
+                    else:
+                        snp_dict[pos]['alt'][snp_char] += 1
+            # calculate AF
+            if pos in snp_dict:
+                for alt in snp_dict[pos]['alt']:
+                    snp_dict[pos]['alt'][alt] /= len(aln)
+
+        return snp_dict
 
 class Annotation:
     def __init__(self, annotation_path):
