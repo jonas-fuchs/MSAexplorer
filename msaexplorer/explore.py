@@ -924,29 +924,48 @@ class MSA:
 
         return distance_matrix
 
-    # TODO write function
-    def get_snps(self):
+    # TODO optimize?
+    def get_snps(self, include_ambig:bool=False) -> dict:
+        """
+        Calculate snps similar to snp-sites (output is comparable).
+        Importantly, SNPs are only considered if at least one of the snps is not an ambiguous character.
+        The SNPs are calculated to a majority consensus sequence or to a reference if it has been set.
 
-
+        :param include_ambig: Include ambiguous snps (default: False)
+        :return: dictionary containing snp positions and their variants including their frequency.
+        """
         aln = self.alignment
         ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
+        aln = {x: aln[x] for x in aln.keys() if x != self.reference_id}
 
         snp_dict = {}
 
         for pos in range(self.length):
-            for seq_id in aln:
-                if seq_id == self.reference_id:
+            reference_char = ref[pos]
+            if not include_ambig:  ## ? is this smart? TODO: insertions are not called this way
+                if reference_char in config.AMBIG_CHARS[self.aln_type]:
                     continue
-                reference_char, snp_char = ref[pos], aln[seq_id][pos]
-                if reference_char != snp_char:
-                    if reference_char in config.AMBIG_CHARS[self.aln_type] or snp_char in config.AMBIG_CHARS[self.aln_type]:
-                        continue
-                    if pos not in snp_dict:
-                        snp_dict[pos] = {'ref': reference_char, 'alt': {}}
-                    if snp_char not in snp_dict[pos]['alt']:
-                        snp_dict[pos]['alt'][snp_char] = 1
-                    else:
-                        snp_dict[pos]['alt'][snp_char] += 1
+            alt_chars, snps = [], []
+            for i, seq_id in enumerate(aln.keys()):
+                alt_chars.append(aln[seq_id][pos])
+                if reference_char != aln[seq_id][pos]:
+                    snps.append(i)
+            if not snps:
+                continue
+            if include_ambig:
+                if all(alt_chars[x] in config.AMBIG_CHARS[self.aln_type] for x in snps):
+                    continue
+            else:
+                snps = [x for x in snps if alt_chars[x] not in config.AMBIG_CHARS[self.aln_type]]
+                if not snps:
+                    continue
+            if pos not in snp_dict:
+                snp_dict[pos] = {'ref': reference_char, 'alt': {}}
+            for snp in snps:
+                if alt_chars[snp] not in snp_dict[pos]['alt']:
+                    snp_dict[pos]['alt'][alt_chars[snp]] = 1
+                else:
+                    snp_dict[pos]['alt'][alt_chars[snp]] += 1
             # calculate AF
             if pos in snp_dict:
                 for alt in snp_dict[pos]['alt']:
