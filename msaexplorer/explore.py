@@ -924,12 +924,12 @@ class MSA:
 
         return distance_matrix
 
-    # TODO optimize?
     def get_snps(self, include_ambig:bool=False) -> dict:
         """
-        Calculate snps similar to snp-sites (output is comparable).
+        Calculate snps similar to snp-sites (output is comparable):
+        https://github.com/sanger-pathogens/snp-sites
         Importantly, SNPs are only considered if at least one of the snps is not an ambiguous character.
-        The SNPs are calculated to a majority consensus sequence or to a reference if it has been set.
+        The SNPs are compared to a majority consensus sequence or to a reference if it has been set.
 
         :param include_ambig: Include ambiguous snps (default: False)
         :return: dictionary containing snp positions and their variants including their frequency.
@@ -937,13 +937,13 @@ class MSA:
         aln = self.alignment
         ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
         aln = {x: aln[x] for x in aln.keys() if x != self.reference_id}
-
-        snp_dict = {}
+        seq_ids = list(aln.keys())
+        snp_dict = {'#CHROM': self.reference_id if self.reference_id is not None else 'consensus', 'POS': {}}
 
         for pos in range(self.length):
             reference_char = ref[pos]
-            if not include_ambig:  ## ? is this smart? TODO: insertions are not called this way
-                if reference_char in config.AMBIG_CHARS[self.aln_type]:
+            if not include_ambig:
+                if reference_char in config.AMBIG_CHARS[self.aln_type] and reference_char != '-':
                     continue
             alt_chars, snps = [], []
             for i, seq_id in enumerate(aln.keys()):
@@ -960,16 +960,20 @@ class MSA:
                 if not snps:
                     continue
             if pos not in snp_dict:
-                snp_dict[pos] = {'ref': reference_char, 'alt': {}}
+                snp_dict['POS'][pos] = {'ref': reference_char, 'ALT': {}}
             for snp in snps:
-                if alt_chars[snp] not in snp_dict[pos]['alt']:
-                    snp_dict[pos]['alt'][alt_chars[snp]] = 1
+                if alt_chars[snp] not in snp_dict['POS'][pos]['ALT']:
+                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]] = {
+                        'AF': 1,
+                        'SEQ_ID': [seq_ids[snp]]
+                    }
                 else:
-                    snp_dict[pos]['alt'][alt_chars[snp]] += 1
+                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]]['AF'] += 1
+                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]]['SEQ_ID'].append(seq_ids[snp])
             # calculate AF
-            if pos in snp_dict:
-                for alt in snp_dict[pos]['alt']:
-                    snp_dict[pos]['alt'][alt] /= len(aln)
+            if pos in snp_dict['POS']:
+                for alt in snp_dict['POS'][pos]['ALT']:
+                    snp_dict['POS'][pos]['ALT'][alt]['AF'] /= len(aln)
 
         return snp_dict
 
