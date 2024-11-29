@@ -1,17 +1,32 @@
+# WORK IN PROGRESS...
+
 ## MSAexplorer
 _"Explore multiple sequence alignments with a simple python package."_ 
 
 ![MSAexplorer](msa_explorer.png)
 
-**DISCLAIMER:** This is a hobby project of mine. I re-implemented some of my old stuff and some new ideas, just to get it all under one roof. Hope it is useful for you. Contributions are highly welcome.
+**DISCLAIMER:** This is a hobby project of mine to keep my coding skills progressing. I re-implemented some of my old stuff and some new ideas, just to get it all under one roof. Hope it is useful for you. Contributions are highly welcome.
 
 ## Planned features
 
-- class for annotations (*.gff, *.bed, *.gb)
-- annotate MSA with annotation class (adjust positions)
-- output to standard file formats
-- easy to use plotting features
-- unit tests
+**General:**
+
+  - class for annotations (*.gff, *.bed, *.gb)
+  - annotate MSA with annotation class (adjust positions)
+  - dN/dS ratio (?)
+  - output to standard file formats
+  - easy to use plotting features
+  - unit tests
+  - command line feature (mostly plotting)
+  - read in different alignment types?
+
+**Manipulation functions:**
+  - compress (either remove all identical or non identical sites)
+  - deduplicate (remove identical sequences, retain first)
+  - mask
+  - exclude sequences (and clean gaps that came from these sequences)
+  - extract sequences (and clean gaps)
+  - clean gaps
 
 ## Requirements
 
@@ -22,7 +37,9 @@ _Tried to make the requirements as minimal as possible._
 
 ## Installation
 
-Coming soon.
+```bash
+pip install .
+```
 
 ## Documentation
 
