@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "msaexplorer"
 version = "0.1.0"
-dependencies = ["numpy~=2.1.3"]
+dependencies = ["numpy~=2.1.3", "matplotlib"]
 requires-python = ">= 3.10"
 authors = [{name = "Jonas Fuchs", email = "jonas.fuchs@uniklinik-freiburg.de"}]
 maintainers = [{name = "Jonas Fuchs", email = "jonas.fuchs@uniklinik-freiburg.de"}]

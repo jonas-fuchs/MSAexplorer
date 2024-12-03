@@ -740,3 +740,9 @@ SUBS_MATRICES = {
         }
 }
 
+ALN_COLORS = {
+    0: 'lightgrey',  # identical
+    1: 'crimson',  # difference
+    'mask': 'dimgrey',  # N or X
+    'del': 'white'  # deletion
+}

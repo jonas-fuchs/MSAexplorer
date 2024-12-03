@@ -1,6 +1,4 @@
-import importlib.metadata
-import pathlib
-import tomllib
+import importlib.metadata, pathlib, tomllib
 
 # get __version__ from pyproject.toml
 source_location = pathlib.Path("__file__").parent

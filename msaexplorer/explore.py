@@ -1,5 +1,5 @@
 """
-This contains ...
+This contains the MSA class
 """
 
 # built-in

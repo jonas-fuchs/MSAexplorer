@@ -2,3 +2,4 @@ venv/
 .idea/
 ./example_alignments
 command.py
+test
