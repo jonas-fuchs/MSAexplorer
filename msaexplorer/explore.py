@@ -676,27 +676,46 @@ class MSA:
 
         return reverse_complement_dict
 
-    def calc_identity_alignment(self) -> np.ndarray:
+    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=True, encode_gaps:bool=True) -> np.ndarray:
         """
-        Converts alignment to identity array compared to consensus or reference:\n
-        nan: deletion \n
-        0: identical \n
-        1: mismatch
+        Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
+        :param encode_mismatches: encode gaps with value=1
+        :param encode_mask: encode mask with value=2
+        :param encode_gaps: encode gaps with value=3
         :return: identity alignment
         """
 
         aln = self.alignment
         ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
 
-        # Convert alignment to a NumPy array for vectorized processing
+        # convert alignment to array
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
+        # ini matrix
+        identity_matrix = np.full(sequences.shape, 0)
 
-        # Create the identity matrix
-        return np.where(
-            sequences == "-", np.nan,  # Gaps represented as NaN
-            np.where(sequences == reference, 0, 1)  # Matches as 0, mismatches as 1
-        )
+        is_identical = sequences == reference
+
+        if encode_gaps:
+            is_gap = sequences == "-"
+        else:
+            is_gap = np.full(sequences.shape, False)
+
+        if encode_mask:
+            is_n_or_x = np.isin(sequences, ['N', 'X'])
+        else:
+            is_n_or_x = np.full(sequences.shape, False)
+
+        if encode_mismatches:
+            is_mismatch = ~is_gap & ~is_identical & ~is_n_or_x
+        else:
+            is_mismatch = np.full(sequences.shape, False)
+        # assign values based on conditions
+        identity_matrix[is_mismatch] = 1  # mismatch
+        identity_matrix[is_n_or_x] = 2  # 'N' or 'X'
+        identity_matrix[is_gap] = 3 # gaps
+
+        return identity_matrix
 
     def calc_similarity_alignment(self, matrix_type=str) -> np.ndarray:
         """
