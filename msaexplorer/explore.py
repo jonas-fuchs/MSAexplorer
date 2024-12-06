@@ -112,21 +112,30 @@ class MSA:
             raise ValueError('Reference not in alignment.')
 
     @staticmethod
-    def _validate_zoom(zoom: tuple, original_aln: dict) -> ValueError | tuple | None:
+    def _validate_zoom(zoom: tuple | int, original_aln: dict) -> ValueError | tuple | None:
         """
         Validates if the user defined zoom range is within the start, end of the initial
         alignment.\n
-        :param zoom: zoom range
+        :param zoom: zoom range or zoom start
         :param original_aln: non-zoomed alignment dict
         :return: validated zoom range
         """
         if zoom is not None:
+            aln_length = len(original_aln[list(original_aln.keys())[0]])
+            # check if only over value is provided -> stop is alignment length
+            if isinstance(zoom, int):
+                if 0 <= zoom < aln_length:
+                    return zoom, aln_length - 1
+                else:
+                    raise ValueError('Zoom start must be within the alignment length range.')
+            # check if more than 2 values are provided
             if len(zoom) != 2:
                 raise ValueError('Zoom position have to be (zoom_start, zoom_end)')
+            # validate zoom start/stop
             for position in zoom:
                 if type(position) != int:
                     raise ValueError('Zoom positions have to be integers.')
-                if position not in range(0, len(original_aln[list(original_aln.keys())[0]])):
+                if position not in range(0, aln_length):
                     raise ValueError('Zoom position out of range')
 
         return zoom
@@ -167,7 +176,7 @@ class MSA:
         return self._zoom
 
     @zoom.setter
-    def zoom(self, zoom_pos: tuple):
+    def zoom(self, zoom_pos: tuple | int):
         """
         Validate if the user defined zoom range.
         """
@@ -680,8 +689,8 @@ class MSA:
         """
         Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
         :param encode_mismatches: encode gaps with value=1
-        :param encode_mask: encode mask with value=2
-        :param encode_gaps: encode gaps with value=3
+        :param encode_mask: encode mask with value=2 --> also in the reference
+        :param encode_gaps: encode gaps with value=3 --> also in the reference
         :return: identity alignment
         """
 
