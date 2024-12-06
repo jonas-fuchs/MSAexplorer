@@ -1,45 +1,32 @@
+"""
+contains the functions for drawing graphs
+"""
 
+# built-in
 
+from typing import Callable, Dict
+
+# MSAexplorer
 from msaexplorer import explore
 from msaexplorer import config
 
+# libs
+import numpy as np
 from setuptools.errors import ClassError
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.collections import PatchCollection
 from matplotlib.colors import is_color_like
-import numpy as np
 
 
-def find_stretches(arr, target_value):
-    """
-    finds consecutive stretches of a number in an array
-    :param arr: values in array
-    :param target_value: target value to search for stretches
-    :return: list of stretches (start value + length)
-    """
-    # Create a boolean array
-    if np.isnan(target_value):
-        is_target = np.isnan(arr)
-    else:
-        is_target = arr == target_value
-
-    # Identify where changes occur in the boolean array
-    change_points = np.where(np.diff(is_target) != 0)[0] + 1
-    start_indices = np.insert(change_points, 0, 0)
-    end_indices = np.append(change_points, len(arr))
-
-    # Collect stretches where the boolean array is True
-    stretches = [
-        (int(start), int(end - start))
-        for start, end in zip(start_indices, end_indices)
-        if np.all(is_target[start:end])
-    ]
-
-    return stretches
+def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes):
+    if not isinstance(aln, explore.MSA):
+        raise ClassError('alignment has to be an MSA class. use explore.MSA to read in alignment')
+    if not isinstance(ax, plt.Axes):
+        raise ClassError('ax has to be an matplotlib axis')
 
 
-def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names:bool=False, custom_seq_names:tuple=(), reference_color='lightsteelblue', aln_colors:dict=config.ALN_COLORS, show_mask:bool=True, show_gaps:bool=True, fancy_gaps:bool=False, show_mismatches:bool=True):
+def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, custom_seq_names: tuple = (), reference_color = 'lightsteelblue', aln_colors:dict = config.ALN_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguties: bool = False, show_x_label: bool =True):
     """
     generates an alignment overview plot
     :param aln: alignment MSA class
@@ -52,13 +39,39 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names:bool=False, cus
     :param show_gaps: whether to show gaps otherwise it will be shown as match or mismatch
     :param fancy_gaps: show gaps with a small black bar
     :param show_mismatches: whether to show mismatches otherwise it will be shown as match
+    :param show_ambiguties: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
+    :param show_x_label: whether to show x label
     """
 
+    def find_stretches(arr, target_value):
+        """
+        finds consecutive stretches of a number in an array
+        :param arr: values in array
+        :param target_value: target value to search for stretches
+        :return: list of stretches (start value + length)
+        """
+        # Create a boolean array
+        if np.isnan(target_value):
+            is_target = np.isnan(arr)
+        else:
+            is_target = arr == target_value
+
+        # Identify where changes occur in the boolean array
+        change_points = np.where(np.diff(is_target) != 0)[0] + 1
+        start_indices = np.insert(change_points, 0, 0)
+        end_indices = np.append(change_points, len(arr))
+
+        # Collect stretches where the boolean array is True
+        stretches = [
+            (int(start), int(end - start))
+            for start, end in zip(start_indices, end_indices)
+            if np.all(is_target[start:end])
+        ]
+
+        return stretches
+
     # input check
-    if not isinstance(aln, explore.MSA):
-        raise ClassError('alignment has to be an MSA class. use explore.MSA to read in alignment')
-    if not isinstance(ax, plt.Axes):
-        raise ClassError('ax has to be an matplotlib axis')
+    _validate_input_parameters(aln, ax)
 
     # validate colors
     if not is_color_like(reference_color):
@@ -80,7 +93,7 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names:bool=False, cus
         show_gaps = True
 
     # get alignment and identity array
-    identity_aln = aln.calc_identity_alignment(encode_mask=show_mask, encode_gaps=show_gaps, encode_mismatches=show_mismatches)
+    identity_aln = aln.calc_identity_alignment(encode_mask=show_mask, encode_gaps=show_gaps, encode_mismatches=show_mismatches, encode_ambiguities=show_ambiguties)
     # define zoom to plot
     if aln.zoom is None:
         zoom = (0, aln.length)
@@ -96,7 +109,7 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names:bool=False, cus
                                                facecolor=reference_color if seq_name == aln.reference_id else aln_colors[0]
                                                )
                              )
-        for identity_value in [3, 2, 1]: # first plot gaps, then mask, then mismatches
+        for identity_value in [3, 2, 4, 1]: # first plot gaps, then mask, then ambiguities, then mismatches
             stretches = find_stretches(sequence, identity_value)
             for stretch in stretches:
                 col.append(
@@ -135,4 +148,77 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names:bool=False, cus
             ax.set_yticklabels(list(aln.alignment.keys())[::-1])
     else:
         ax.set_yticks([])
-    ax.set_xlabel('alignment position')
+    if show_x_label:
+        ax.set_xlabel('alignment position')
+
+
+def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', rolling_average: int = 20, show_x_label: bool = False):
+    """
+    generate a plot for the various alignment stats
+    :param aln: alignment MSA class
+    :param ax: matplotlib axes
+    :param stat_type: 'entropy', 'gc' or 'coverage'
+    :param line_color: color of the line
+    :param rolling_average: average rolling window size in nucleotides or amino acids
+    :param show_x_label: whether to show the x-axis label
+    """
+
+    def moving_average(arr, window_size):
+        if window_size > 1:
+            i = 0
+            moving_averages, plotting_idx = [], []
+            while i < len(arr) - window_size + 1:
+                window = arr[i: i + window_size]
+                moving_averages.append(sum(window) / window_size)
+                plotting_idx.append(i + window_size / 2)
+                i += 1
+
+            return np.array(moving_averages), np.array(plotting_idx) if aln.zoom is None else np.array(plotting_idx) + aln.zoom[0]
+        else:
+            return arr, np.arange(aln.zoom[0], aln.length) if aln.zoom is not None else np.arange(aln.length)
+
+    # define possible functions to calc here
+    stat_functions: Dict[str, Callable[[], list]] = {
+        'gc': aln.calc_gc,
+        'entropy': aln.calc_entropy,
+        'coverage': aln.calc_coverage
+    }
+
+    if stat_type not in stat_functions:
+        raise ValueError('stat_type must be one of {}'.format(list(stat_functions.keys())))
+
+    # input check
+    _validate_input_parameters(aln, ax)
+    if not is_color_like(line_color):
+        raise ValueError('line color is not a color')
+
+    # validate rolling average
+    if rolling_average < 0 or rolling_average > aln.length:
+        raise ValueError('rolling_average must be between 0 and length of sequence')
+
+    # generate input data
+    data, plot_idx = moving_average(stat_functions[stat_type](), rolling_average)
+    # plot
+    ax.plot(plot_idx, data, color=line_color)
+
+    # specific visual cues for individual plots
+    if stat_type == 'entropy' or stat_type == 'coverage':
+        ax.fill_between(plot_idx, data, color=(line_color, 0.5))
+    if stat_type == 'gc':
+        ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='gray', linestyles='--')
+
+    # format axis
+    ax.set_ylim(0, 1)
+    ax.set_xlim(
+        (aln.zoom[0] - aln.length / 50, aln.zoom[0] + aln.length + aln.length / 50)
+        if aln.zoom is not None else
+        (0- aln.length / 50, aln.length + aln.length / 50)
+    )
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    if show_x_label:
+        ax.set_xlabel('alignment position')
+    if rolling_average > 1:
+        ax.set_ylabel(f'{stat_type}\n rolling average')
+    else:
+        ax.set_ylabel(f'{stat_type}')

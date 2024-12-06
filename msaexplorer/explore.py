@@ -353,7 +353,7 @@ class MSA:
 
         return consensus
 
-    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> dict:
+    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float|None = None) -> dict:
         """
         conserved ORF definition:
             - conserved starts and stops
@@ -439,8 +439,9 @@ class MSA:
         if self.aln_type == 'AS':
             raise TypeError('ORF search only for RNA/DNA alignments')
 
-        if identity_cutoff > 100 or identity_cutoff < 0:
-            raise ValueError('conservation cutoff must be between 0 and 100')
+        if identity_cutoff is not None:
+            if identity_cutoff > 100 or identity_cutoff < 0:
+                raise ValueError('conservation cutoff must be between 0 and 100')
 
         if min_length <= 0 or min_length > self.length:
             raise ValueError(f'min_length must be between 0 and {self.length}')
@@ -685,12 +686,13 @@ class MSA:
 
         return reverse_complement_dict
 
-    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=True, encode_gaps:bool=True) -> np.ndarray:
+    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=True, encode_gaps:bool=True, encode_ambiguities:bool=False) -> np.ndarray:
         """
         Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
         :param encode_mismatches: encode gaps with value=1
         :param encode_mask: encode mask with value=2 --> also in the reference
         :param encode_gaps: encode gaps with value=3 --> also in the reference
+        :param encode_ambiguities: encode ambiguities with value=4
         :return: identity alignment
         """
 
@@ -706,7 +708,7 @@ class MSA:
         is_identical = sequences == reference
 
         if encode_gaps:
-            is_gap = sequences == "-"
+            is_gap = sequences == '-'
         else:
             is_gap = np.full(sequences.shape, False)
 
@@ -715,14 +717,20 @@ class MSA:
         else:
             is_n_or_x = np.full(sequences.shape, False)
 
+        if encode_ambiguities:
+            is_ambig = np.isin(sequences, [key for key in config.AMBIG_CHARS[self.aln_type] if key not in ['N', 'X', '-']])
+        else:
+            is_ambig = np.full(sequences.shape, False)
+
         if encode_mismatches:
-            is_mismatch = ~is_gap & ~is_identical & ~is_n_or_x
+            is_mismatch = ~is_gap & ~is_identical & ~is_n_or_x & ~is_ambig
         else:
             is_mismatch = np.full(sequences.shape, False)
         # assign values based on conditions
         identity_matrix[is_mismatch] = 1  # mismatch
         identity_matrix[is_n_or_x] = 2  # 'N' or 'X'
         identity_matrix[is_gap] = 3 # gaps
+        identity_matrix[is_ambig] = 4  # ambiguities
 
         return identity_matrix
 

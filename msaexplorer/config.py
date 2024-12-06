@@ -742,7 +742,8 @@ SUBS_MATRICES = {
 
 ALN_COLORS = {
     0: 'lightgrey',  # identical
-    1: 'crimson',  # difference
+    1: 'peru',  # difference
     2: 'dimgrey',  # N or X
-    3: 'white'  # deletion
+    3: 'white',  # deletion
+    4: 'black'  # ambiguity
 }
