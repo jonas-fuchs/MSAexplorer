@@ -205,7 +205,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     if stat_type == 'entropy' or stat_type == 'coverage':
         ax.fill_between(plot_idx, data, color=(line_color, 0.5))
     if stat_type == 'gc':
-        ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='gray', linestyles='--')
+        ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='-', linewidth=1)
 
     # format axis
     ax.set_ylim(0, 1)
@@ -222,3 +222,93 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         ax.set_ylabel(f'{stat_type}\n rolling average')
     else:
         ax.set_ylabel(f'{stat_type}')
+
+
+def variant_plot(aln: explore.MSA, ax: plt.Axes, style:str='line', show_x_label:bool=False, colors:dict|None=None):
+
+    # validate input
+    _validate_input_parameters(aln, ax)
+    if style not in ['circle', 'bar']:
+        raise TypeError('choose bar or circle style')
+    # define colors
+    if colors is None:
+        # define colors to use
+        if aln.aln_type == 'AA':
+            colors = config.AA_COLORS
+        else:
+            colors = config.NT_COLORS
+    else:
+        if colors is not dict:
+            raise TypeError('Format colors like in config.AA_COLORS or config.NT_COLORS')
+        if aln.aln_type == 'AA':
+            if colors.keys() != config.AA_COLORS.keys():
+                raise TypeError('Format colors like in config.AA_COLORS')
+        if aln.aln_type == 'NT':
+            if colors.keys() != config.NT_COLORS.keys():
+                raise TypeError('Format colors like in config.NT_COLORS')
+        for color in colors:
+            if not is_color_like(color):
+                raise TypeError(f'{color} is not a color')
+
+    # get snps
+    snps = aln.get_snps()
+    # define where to plot (each ref type gets a separate line)
+    ref_y_positions, y_pos = {}, 0
+
+    # iterate over snp dict
+    for pos in snps['POS']:
+        for identifier in snps['POS'][pos]:
+            # fill in y pos dict
+            if identifier == 'ref':
+                if snps['POS'][pos]['ref'] not in ref_y_positions:
+                    ref_y_positions[snps['POS'][pos]['ref']] = y_pos
+                    y_pos += 1
+                    continue
+            # plot
+            if identifier == 'ALT':
+                for alt in snps['POS'][pos]['ALT']:
+                    if style == 'bar':
+                        ax.vlines(x=pos + aln.zoom[0] if aln.zoom is not None else pos,
+                                  ymin=ref_y_positions[snps['POS'][pos]['ref']],
+                                  ymax=ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
+                                  color=colors[alt],
+                                  )
+                    if style == 'circle':
+                        ax.plot(pos+aln.zoom[0] if aln.zoom is not None else pos,
+                                ref_y_positions[snps['POS'][pos]['ref']],
+                                marker='o',
+                                color=colors[alt],
+                                alpha=0.75,
+                                markersize=2**(snps['POS'][pos]['ALT'][alt]['AF']*10),
+                                markeredgewidth=0,
+                                zorder=100
+                                )
+    # plot hlines
+    for y_char in ref_y_positions:
+        ax.hlines(
+            ref_y_positions[y_char],
+            xmin=aln.zoom[0] - aln.length / 50 if aln.zoom is not None else 0 - aln.length / 50,
+            xmax=aln.zoom[0] + aln.length + aln.length / 50 if aln.zoom is not None else aln.length + aln.length / 50,
+            color='black',
+            linestyle='-',
+            zorder=0,
+            linewidth=0.75
+        )
+    # format axis
+    ax.set_xlim(
+        (aln.zoom[0] - aln.length / 50, aln.zoom[0] + aln.length + aln.length / 50)
+        if aln.zoom is not None else
+        (0 - aln.length / 50, aln.length + aln.length / 50)
+    )
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.set_yticks([ref_y_positions[x] for x in ref_y_positions])
+    ax.set_yticklabels(ref_y_positions.keys())
+    if style == 'bar':
+        ax.set_ylim(0, y_pos)
+    else:
+        ax.set_ylim(-1, y_pos)
+    if show_x_label:
+        ax.set_xlabel('alignment position')
+    ax.set_ylabel('reference')

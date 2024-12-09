@@ -316,7 +316,7 @@ class MSA:
         if threshold is not None:
             if threshold < 0 or threshold > 1:
                 raise ValueError('Threshold must be between 0 and 1.')
-        if self.aln_type == 'AS' and use_ambig_nt:
+        if self.aln_type == 'AA' and use_ambig_nt:
             raise ValueError('Ambiguous characters can not be calculated for amino acid alignments.')
         if threshold is None and use_ambig_nt:
             raise ValueError('To calculate ambiguous nucleotides, set a threshold > 0.')
@@ -341,7 +341,7 @@ class MSA:
                     if use_ambig_nt:
                         char = get_ambiguous_char(consensus_chars)
                     else:
-                        if self.aln_type == 'AS':
+                        if self.aln_type == 'AA':
                             char = 'X'
                         else:
                             char = 'N'
@@ -352,7 +352,7 @@ class MSA:
                 consensus = consensus + consensus_chars[0]
 
         return consensus
-
+    # TODO maybe do this also for single sequences?
     def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float|None = None) -> dict:
         """
         conserved ORF definition:
@@ -436,7 +436,7 @@ class MSA:
 
         # checks for arguments
 
-        if self.aln_type == 'AS':
+        if self.aln_type == 'AA':
             raise TypeError('ORF search only for RNA/DNA alignments')
 
         if identity_cutoff is not None:
@@ -610,7 +610,7 @@ class MSA:
         aln = self.alignment
         entropys = []
 
-        if self.aln_type == 'AS':
+        if self.aln_type == 'AA':
             states = 20
         else:
             states = 4
@@ -628,7 +628,7 @@ class MSA:
         Determine the GC content for every position in an nt alignment.
         :return: GC content for every position.
         """
-        if self.aln_type == 'AS':
+        if self.aln_type == 'AA':
             raise TypeError("GC computation is not possible for aminoacid alignment")
 
         gc, aln, amb_nucs = [], self.alignment, config.AMBIG_CHARS[self.aln_type]
@@ -675,7 +675,7 @@ class MSA:
         Reverse complement the alignment.
         :return: Alignment
         """
-        if self.aln_type == 'AS':
+        if self.aln_type == 'AA':
             raise TypeError('Reverse complement only for RNA or DNA.')
 
         aln = self.alignment
@@ -734,15 +734,20 @@ class MSA:
 
         return identity_matrix
 
-    def calc_similarity_alignment(self, matrix_type=str) -> np.ndarray:
+    def calc_similarity_alignment(self, matrix_type:str|None=None) -> np.ndarray:
         """
         Calculate the similarity score between the alignment and the reference seq.
-        :return:
+        :param: matrix_type: type of similarity score (if not set - AS: BLOSSUM65, RNA/DNA: BLASTN)
+        :return: identity array
         """
 
         aln = self.alignment
         ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
-
+        if matrix_type is None:
+            if self.aln_type == 'AA':
+                matrix_type = 'BLOSUM65'
+            else:
+                matrix_type = 'BLASTN'
         # load substitution matrix as dictionary
         try:
             subs_matrix = config.SUBS_MATRICES[self.aln_type][matrix_type]
@@ -802,7 +807,7 @@ class MSA:
             seq = aln[seq_id]
             count_invalid = sum(
                 seq[pos] == '-' or
-                (seq[pos] == 'X' if self.aln_type == "AS" else seq[pos] == 'N')
+                (seq[pos] == 'X' if self.aln_type == "AA" else seq[pos] == 'N')
                 for pos in non_gap_positions
             )
             recovery_over_ref[seq_id] = (1 - count_invalid / cumulative_length) * 100

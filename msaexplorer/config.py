@@ -33,7 +33,7 @@ AMBIG_CHARS = {
         'N': ['A', 'C', 'G', 'U'],
         '-': ['A', 'C', 'G', 'T'],
         },
-        'AS': {
+        'AA': {
         'X': ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*'],
         '-': ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
         }
@@ -741,9 +741,42 @@ SUBS_MATRICES = {
 }
 
 ALN_COLORS = {
-    0: 'lightgrey',  # identical
-    1: 'peru',  # difference
-    2: 'dimgrey',  # N or X
-    3: 'white',  # deletion
-    4: 'black'  # ambiguity
+        0: 'lightgrey',  # identical
+        1: 'peru',  # difference
+        2: 'dimgrey',  # N or X
+        3: 'white',  # deletion
+        4: 'black'  # ambiguity
+}
+
+NT_COLORS = {
+        'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
+        'T': '#F26D6D',  # Thymine (T) - muted pinkish red
+        'U': '#F26D6D',  # Uracil (U) - same as Thymine
+        'G': '#64A87B',  # Guanine (G) - strong teal-green
+        'C': '#7095D1',  # Cytosine (C) - soft steel blue
+        '-': 'black'
+}
+
+AA_COLORS = {
+        'A': '#D99058',  # Alanine (A) - warm orange-brown
+        'R': '#5DA5A4',  # Arginine (R) - soft teal
+        'N': '#AB6D9F',  # Asparagine (N) - medium mauve
+        'D': '#D96666',  # Aspartic Acid (D) - muted red
+        'C': '#D1B758',  # Cysteine (C) - golden yellow
+        'Q': '#986DB2',  # Glutamine (Q) - medium purple
+        'E': '#D96F5F',  # Glutamic Acid (E) - soft coral
+        'G': '#6FAF99',  # Glycine (G) - teal green
+        'H': '#916FA7',  # Histidine (H) - muted violet
+        'I': '#E0A45F',  # Isoleucine (I) - warm sandy orange
+        'L': '#DA8A54',  # Leucine (L) - light orange
+        'K': '#5D93C4',  # Lysine (K) - medium blue
+        'M': '#D99058',  # Methionine (M) - warm orange-brown (same as A)
+        'F': '#B05B61',  # Phenylalanine (F) - muted brick red
+        'P': '#77A86F',  # Proline (P) - muted green
+        'S': '#D98B81',  # Serine (S) - warm peach
+        'T': '#D9A86B',  # Threonine (T) - soft caramel
+        'W': '#805F9C',  # Tryptophan (W) - deep lavender
+        'Y': '#C76F61',  # Tyrosine (Y) - muted terracotta
+        'V': '#E2A876',  # Valine (V) - soft peach-orange
+        '-': 'black'
 }
