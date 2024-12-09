@@ -1,6 +1,7 @@
-# WORK IN PROGRESS...
+# HOBBY -> WORK IN PROGRESS...
 
 ## MSAexplorer
+
 _"Explore multiple sequence alignments with a simple python package."_ 
 
 ![MSAexplorer](msa_explorer.png)
@@ -10,12 +11,10 @@ _"Explore multiple sequence alignments with a simple python package."_
 ## Planned features
 
 **General:**
-
   - class for annotations (*.gff, *.bed, *.gb)
   - annotate MSA with annotation class (adjust positions)
   - dN/dS ratio (?)
   - output to standard file formats
-  - easy to use plotting features
   - unit tests
   - command line feature (mostly plotting)
   - read in different alignment types?
@@ -33,6 +32,7 @@ _"Explore multiple sequence alignments with a simple python package."_
 _Tried to make the requirements as minimal as possible._
 
 - python >= 3.12
+- matplotlib >= 3.9
 - numpy ~ 2.1.3
 
 ## Installation
@@ -78,3 +78,28 @@ msa.calc_character_frequencies()  # calculate observed character frequencies
 msa.calc_pairwise_identity_matrix()  # calculate identity matrix
 msa.calc_reverse_complement_alignment()  # convert alignment sequences to reverese complement
 ```
+
+## Drawing an alignment with minimal python syntax
+
+```python
+import matplotlib.pyplot as plt
+from msaexplorer import explore
+from msaexplorer import draw
+
+# load alignment
+aln = explore.MSA("example_alignments/BoDV.aln", reference_id=None, zoom_range=None)
+# define subplots
+fig, ax = plt.subplots(nrows=5, height_ratios=[0.5,0.5,0.5,2,1], sharex=False)
+# draw different alignment vis
+draw.stat_plot(aln, ax[0], "gc", rolling_average=50, line_color="black")
+draw.stat_plot(aln, ax[1], stat_type="entropy", rolling_average=50, line_color="indigo")
+draw.stat_plot(aln, ax[2], "coverage", rolling_average=1)
+draw.identity_plot(aln, ax[3], show_gaps=True, show_mask=True, show_mismatches=True, reference_color='lightsteelblue', show_seq_names=False, show_ambiguties=True, fancy_gaps=True, show_x_label=False, show_legend=True)
+draw.variant_plot(aln, ax[4], show_x_label=True, show_legend=True)
+# format figure
+fig.set_size_inches(14, 15)
+fig.tight_layout()
+plt.show()
+```
+
+![example](example_alignments/BoDV.png)

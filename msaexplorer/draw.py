@@ -118,9 +118,8 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
             stretches = find_stretches(sequence, identity_value)
             if not stretches:
                 continue
-            # skip white colors in legend
-            if aln_colors[identity_value]['color'] != 'white':
-                detected_identity_values.add(identity_value)
+            # add values for legend
+            detected_identity_values.add(identity_value)
             for stretch in stretches:
                 col.append(
                     patches.Rectangle(
