@@ -26,7 +26,7 @@ def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes):
         raise ClassError('ax has to be an matplotlib axis')
 
 
-def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, custom_seq_names: tuple = (), reference_color = 'lightsteelblue', aln_colors:dict = config.ALN_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguties: bool = False, show_x_label: bool =True):
+def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, custom_seq_names: tuple = (), reference_color = 'lightsteelblue', aln_colors:dict = config.ALN_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguties: bool = False, show_x_label: bool = True, show_legend: bool = False):
     """
     generates an alignment overview plot
     :param aln: alignment MSA class
@@ -78,7 +78,11 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
         raise ValueError('reference color is not a color')
     if aln_colors.keys() != config.ALN_COLORS.keys():
         raise ValueError('configure your dictionary with 0 to 3 key and associated colors. See config.ALN_COLORS')
-    if not all([is_color_like(x) for x in aln_colors.values()]):
+    for key in aln_colors.keys():
+        for key2 in aln_colors[key]:
+            if key2 not in ['type', 'color']:
+                raise ValueError('configure your dictionary - see config.ALN_COLORS')
+    if not all([is_color_like(aln_colors[x]['color']) for x in aln_colors.keys()]):
         raise ValueError('configure your dictionary with 0 to 3 key and associated colors. See config.ALN_COLORS')
 
     # validate custom names and set show names to True
@@ -101,23 +105,29 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
         zoom = aln.zoom
     # define the y position of the first sequence
     y_position = len(aln.alignment) - 0.8
+    detected_identity_values = {0}
     # ini collection for patches
     col = []
     for sequence, seq_name in zip(identity_aln, aln.alignment.keys()):
         # ini identity patches
         col.append(patches.Rectangle((zoom[0], y_position), zoom[1] - zoom[0],0.8,
-                                               facecolor=reference_color if seq_name == aln.reference_id else aln_colors[0]
+                                               facecolor=reference_color if seq_name == aln.reference_id else aln_colors[0]['color']
                                                )
                              )
         for identity_value in [3, 2, 4, 1]: # first plot gaps, then mask, then ambiguities, then mismatches
             stretches = find_stretches(sequence, identity_value)
+            if not stretches:
+                continue
+            # skip white colors in legend
+            if aln_colors[identity_value]['color'] != 'white':
+                detected_identity_values.add(identity_value)
             for stretch in stretches:
                 col.append(
                     patches.Rectangle(
                         (stretch[0] + zoom[0], y_position),
                         stretch[1],
                         0.8,
-                        color=aln_colors[identity_value],
+                        color=aln_colors[identity_value]['color'],
                         linewidth=None
                     )
                 )
@@ -133,6 +143,20 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
                     )
                 )
         y_position -= 1
+
+    # custom legend
+    if show_legend:
+        custom_legend = [ax.add_line(plt.Line2D([], [], color=aln_colors[val]['color'], marker='s' ,markeredgecolor='grey', linestyle='', markersize=10)) for val in
+                         detected_identity_values]
+        ax.legend(
+            custom_legend,
+            [aln_colors[x]['type'] for x in detected_identity_values],
+            loc='upper right',
+            bbox_to_anchor=(1, 1.1),
+            ncols=len(detected_identity_values),
+            frameon=False
+        )
+
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
     ax.set_ylim(0, len(aln.alignment)+0.8/4)
@@ -208,7 +232,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='-', linewidth=1)
 
     # format axis
-    ax.set_ylim(0, 1)
+    ax.set_ylim(0, 1.1)
     ax.set_xlim(
         (aln.zoom[0] - aln.length / 50, aln.zoom[0] + aln.length + aln.length / 50)
         if aln.zoom is not None else
@@ -224,12 +248,18 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         ax.set_ylabel(f'{stat_type}')
 
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes, style:str='line', show_x_label:bool=False, colors:dict|None=None):
+def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, colors: dict|None = None, show_legend: bool = True):
+    """
+    Plots variants
+    :param aln: alignment MSA class
+    :param ax: matplotlib axes
+    :param show_x_label:  whether to show the x-axis label
+    :param colors: colors for variants - standard are config.AA_colors or config.NT_colors
+    :param legend: whether to show the legend or not
+    """
 
     # validate input
     _validate_input_parameters(aln, ax)
-    if style not in ['circle', 'bar']:
-        raise TypeError('choose bar or circle style')
     # define colors
     if colors is None:
         # define colors to use
@@ -253,7 +283,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, style:str='line', show_x_label:
     # get snps
     snps = aln.get_snps()
     # define where to plot (each ref type gets a separate line)
-    ref_y_positions, y_pos = {}, 0
+    ref_y_positions, y_pos, detected_var = {}, 0, set()
 
     # iterate over snp dict
     for pos in snps['POS']:
@@ -267,22 +297,13 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, style:str='line', show_x_label:
             # plot
             if identifier == 'ALT':
                 for alt in snps['POS'][pos]['ALT']:
-                    if style == 'bar':
-                        ax.vlines(x=pos + aln.zoom[0] if aln.zoom is not None else pos,
-                                  ymin=ref_y_positions[snps['POS'][pos]['ref']],
-                                  ymax=ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
-                                  color=colors[alt],
-                                  )
-                    if style == 'circle':
-                        ax.plot(pos+aln.zoom[0] if aln.zoom is not None else pos,
-                                ref_y_positions[snps['POS'][pos]['ref']],
-                                marker='o',
-                                color=colors[alt],
-                                alpha=0.75,
-                                markersize=2**(snps['POS'][pos]['ALT'][alt]['AF']*10),
-                                markeredgewidth=0,
-                                zorder=100
-                                )
+                    ax.vlines(x=pos + aln.zoom[0] if aln.zoom is not None else pos,
+                              ymin=ref_y_positions[snps['POS'][pos]['ref']],
+                              ymax=ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
+                              color=colors[alt],
+                              zorder=100
+                              )
+                    detected_var.add(alt)
     # plot hlines
     for y_char in ref_y_positions:
         ax.hlines(
@@ -294,6 +315,19 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, style:str='line', show_x_label:
             zorder=0,
             linewidth=0.75
         )
+    # create a custom legend
+    if show_legend:
+        custom_legend = [ax.add_line(plt.Line2D([], [], color=colors[char], linestyle='-', markersize=10)) for char in
+                         detected_var]
+        ax.legend(
+            custom_legend,
+            detected_var,
+            loc='upper right',
+            bbox_to_anchor=(1, 1.1),
+            ncols=len(detected_var),
+            frameon=False
+        )
+
     # format axis
     ax.set_xlim(
         (aln.zoom[0] - aln.length / 50, aln.zoom[0] + aln.length + aln.length / 50)
@@ -305,10 +339,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, style:str='line', show_x_label:
     ax.spines['left'].set_visible(False)
     ax.set_yticks([ref_y_positions[x] for x in ref_y_positions])
     ax.set_yticklabels(ref_y_positions.keys())
-    if style == 'bar':
-        ax.set_ylim(0, y_pos)
-    else:
-        ax.set_ylim(-1, y_pos)
+    ax.set_ylim(0, y_pos)
     if show_x_label:
         ax.set_xlabel('alignment position')
     ax.set_ylabel('reference')

@@ -741,11 +741,16 @@ SUBS_MATRICES = {
 }
 
 ALN_COLORS = {
-        0: 'lightgrey',  # identical
-        1: 'peru',  # difference
-        2: 'dimgrey',  # N or X
-        3: 'white',  # deletion
-        4: 'black'  # ambiguity
+        0: {'type': 'identical',
+            'color': 'lightgrey'},
+        1: {'type': 'different',
+            'color': 'peru'},
+        2: {'type': 'mask',
+            'color': 'dimgrey'},
+        3: {'type': 'deletion',
+            'color': 'white'},
+        4: {'type': 'ambiguity',
+            'color': 'black'}
 }
 
 NT_COLORS = {
@@ -754,7 +759,7 @@ NT_COLORS = {
         'U': '#F26D6D',  # Uracil (U) - same as Thymine
         'G': '#64A87B',  # Guanine (G) - strong teal-green
         'C': '#7095D1',  # Cytosine (C) - soft steel blue
-        '-': 'black'
+        '-': 'grey'
 }
 
 AA_COLORS = {
@@ -778,5 +783,5 @@ AA_COLORS = {
         'W': '#805F9C',  # Tryptophan (W) - deep lavender
         'Y': '#C76F61',  # Tyrosine (Y) - muted terracotta
         'V': '#E2A876',  # Valine (V) - soft peach-orange
-        '-': 'black'
+        '-': 'grey'
 }
