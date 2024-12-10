@@ -3,7 +3,6 @@ contains the functions for drawing graphs
 """
 
 # built-in
-
 from typing import Callable, Dict
 
 # MSAexplorer
@@ -12,7 +11,6 @@ from msaexplorer import config
 
 # libs
 import numpy as np
-from setuptools.errors import ClassError
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.collections import PatchCollection
@@ -21,9 +19,9 @@ from matplotlib.colors import is_color_like
 
 def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes):
     if not isinstance(aln, explore.MSA):
-        raise ClassError('alignment has to be an MSA class. use explore.MSA to read in alignment')
+        raise ValueError('alignment has to be an MSA class. use explore.MSA() to read in alignment')
     if not isinstance(ax, plt.Axes):
-        raise ClassError('ax has to be an matplotlib axis')
+        raise ValueError('ax has to be an matplotlib axis')
 
 
 def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, custom_seq_names: tuple = (), reference_color = 'lightsteelblue', aln_colors:dict = config.ALN_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguties: bool = False, show_x_label: bool = True, show_legend: bool = False):
@@ -302,6 +300,11 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
                               color=colors[alt],
                               zorder=100
                               )
+                    ax.plot(pos + aln.zoom[0] if aln.zoom is not None else pos,
+                            ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
+                            color=colors[alt],
+                            marker='o',
+                            markersize=3)
                     detected_var.add(alt)
     # plot hlines
     for y_char in ref_y_positions:
@@ -316,12 +319,13 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
         )
     # create a custom legend
     if show_legend:
-        custom_legend = [ax.add_line(plt.Line2D([], [], color=colors[char], linestyle='-', markersize=10)) for char in
+        custom_legend = [ax.add_line(plt.Line2D([], [], color=colors[char], marker='o', linestyle='', markersize=5)) for char in
                          detected_var]
         ax.legend(
             custom_legend,
             detected_var,
             loc='upper right',
+            title='variant',
             bbox_to_anchor=(1, 1.1),
             ncols=len(detected_var),
             frameon=False
