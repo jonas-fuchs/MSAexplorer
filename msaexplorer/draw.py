@@ -4,6 +4,7 @@ contains the functions for drawing graphs
 
 # built-in
 from typing import Callable, Dict
+from copy import deepcopy
 
 # MSAexplorer
 from msaexplorer import explore
@@ -13,8 +14,9 @@ from msaexplorer import config
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import is_color_like, Normalize
 from matplotlib.collections import PatchCollection
-from matplotlib.colors import is_color_like
 
 
 def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes):
@@ -157,7 +159,7 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
     ax.set_ylim(0, len(aln.alignment)+0.8/4)
-    ax.set_xlim(zoom[0] - aln.length / 50, zoom[0] + aln.length + aln.length / 50)
+    ax.set_xlim(zoom[0], zoom[0] + aln.length)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
@@ -180,7 +182,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     :param ax: matplotlib axes
     :param stat_type: 'entropy', 'gc' or 'coverage'
     :param line_color: color of the line
-    :param rolling_average: average rolling window size in nucleotides or amino acids
+    :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
     :param show_x_label: whether to show the x-axis label
     """
 
@@ -188,15 +190,16 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         if window_size > 1:
             i = 0
             moving_averages, plotting_idx = [], []
-            while i < len(arr) - window_size + 1:
-                window = arr[i: i + window_size]
-                moving_averages.append(sum(window) / window_size)
-                plotting_idx.append(i + window_size / 2)
+            while i < len(arr) + 1:
+                window_left = arr[i- window_size: i] if i > window_size else arr[0:i]
+                window_right = arr[i: i + window_size] if i < len(arr) - window_size else arr[i:len(arr)]
+                moving_averages.append((sum(window_left)+ sum(window_right)) / (len(window_left) + len(window_right)))
+                plotting_idx.append(i)
                 i += 1
 
             return np.array(moving_averages), np.array(plotting_idx) if aln.zoom is None else np.array(plotting_idx) + aln.zoom[0]
         else:
-            return arr, np.arange(aln.zoom[0], aln.length) if aln.zoom is not None else np.arange(aln.length)
+            return arr, np.arange(aln.zoom[0], aln.zoom[1]) if aln.zoom is not None else np.arange(aln.length)
 
     # define possible functions to calc here
     stat_functions: Dict[str, Callable[[], list]] = {
@@ -226,14 +229,14 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     if stat_type == 'entropy' or stat_type == 'coverage':
         ax.fill_between(plot_idx, data, color=(line_color, 0.5))
     if stat_type == 'gc':
-        ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='-', linewidth=1)
+        ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
 
     # format axis
     ax.set_ylim(0, 1.1)
     ax.set_xlim(
-        (aln.zoom[0] - aln.length / 50, aln.zoom[0] + aln.length + aln.length / 50)
+        (aln.zoom[0], aln.zoom[0] + aln.length)
         if aln.zoom is not None else
-        (0- aln.length / 50, aln.length + aln.length / 50)
+        (0, aln.length)
     )
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -252,7 +255,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
     :param ax: matplotlib axes
     :param show_x_label:  whether to show the x-axis label
     :param colors: colors for variants - standard are config.AA_colors or config.NT_colors
-    :param legend: whether to show the legend or not
+    :param show_legend: whether to show the legend
     """
 
     # validate input
@@ -310,8 +313,8 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
     for y_char in ref_y_positions:
         ax.hlines(
             ref_y_positions[y_char],
-            xmin=aln.zoom[0] - aln.length / 50 if aln.zoom is not None else 0 - aln.length / 50,
-            xmax=aln.zoom[0] + aln.length + aln.length / 50 if aln.zoom is not None else aln.length + aln.length / 50,
+            xmin=aln.zoom[0] if aln.zoom is not None else 0,
+            xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length,
             color='black',
             linestyle='-',
             zorder=0,
@@ -326,16 +329,16 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
             detected_var,
             loc='upper right',
             title='variant',
-            bbox_to_anchor=(1, 1.1),
+            bbox_to_anchor=(1, 1.15),
             ncols=len(detected_var),
             frameon=False
         )
 
     # format axis
     ax.set_xlim(
-        (aln.zoom[0] - aln.length / 50, aln.zoom[0] + aln.length + aln.length / 50)
+        (aln.zoom[0], aln.zoom[0] + aln.length)
         if aln.zoom is not None else
-        (0 - aln.length / 50, aln.length + aln.length / 50)
+        (0, aln.length)
     )
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -346,3 +349,99 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
     if show_x_label:
         ax.set_xlabel('alignment position')
     ax.set_ylabel('reference')
+
+
+def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', show_direction:bool = True, show_x_label: bool = False, show_legend: bool = True):
+    """
+    Plot conserved ORFs
+    :param aln: alignment MSA class
+    :param ax: matplotlib axes
+    :param min_length: minimum length of orf
+    :param non_overlapping_orfs: whether to consider overlapping orfs
+    :param cmap: color mapping for % identity - see https://matplotlib.org/stable/users/explain/colors/colormaps.html
+    :param show_direction: show strand information
+    :param show_x_label: whether to show the x-axis label
+    :param show_legend: whether to show the legend
+    """
+    # helper function
+    def add_track_positions(annotation_dic):
+        # create a dict and sort
+        annotation_dic = dict(sorted(annotation_dic.items(), key=lambda x: x[1]['positions'][0]))
+
+        # remember for each track the largest stop
+        track_stops = [0]
+
+        for ann in annotation_dic:
+            track = 0
+            # check if a start of a gene is smaller than the stop of the current track
+            # -> move to new track
+            while annotation_dic[ann]['positions'][0] < track_stops[track]:
+                track += 1
+                # if all prior tracks are potentially causing an overlap
+                # create a new track and break
+                if len(track_stops) <= track:
+                    track_stops.append(0)
+                    break
+            # in the current track remember the stop of the current gene
+            track_stops[track] = annotation_dic[ann]['positions'][1]
+            # and indicate the track in the dict
+            annotation_dic[ann]['track'] = track
+
+        return annotation_dic
+
+    cmap = ScalarMappable(norm=Normalize(0, 100), cmap=plt.get_cmap('Blues'))
+
+    # validate input
+    _validate_input_parameters(aln, ax)
+
+    # get orfs --> first deepcopy and reset zoom that the orfs are also zoomed in (by default, the orfs are only
+    # searched within the zoomed region)
+    aln_temp = deepcopy(aln)
+    aln_temp.zoom = None
+    if non_overlapping_orfs:
+        annotation_dict = add_track_positions(aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length))
+    else:
+        annotation_dict = add_track_positions(aln_temp.get_conserved_orfs(min_length=min_length))
+    # plot
+    for annotation in annotation_dict:
+        x_value = annotation_dict[annotation]['positions'][0] + aln.zoom[0] if aln.zoom is not None else annotation_dict[annotation]['positions'][0]
+        length = annotation_dict[annotation]['positions'][1] - annotation_dict[annotation]['positions'][0]
+        ax.add_patch(
+            patches.FancyBboxPatch(
+                (x_value, annotation_dict[annotation]['track'] + 0.2),
+                length,
+                0.8,
+                boxstyle="round,pad=-0.0040,rounding_size=0.1",
+                ec="black",
+                fc=cmap.to_rgba(annotation_dict[annotation]['conservation'])
+            )
+        )
+        if show_direction:
+            if annotation_dict[annotation]['strand'] == '-':
+                marker = '<'
+            else:
+                marker = '>'
+            ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 0.6, marker=marker, markersize=5, color='white', markeredgecolor='black')
+
+    # legend
+    if show_legend:
+        cbar = plt.colorbar(cmap, ax=ax, location= 'top', orientation='horizontal', fraction=0.2, pad=0.1, anchor=(1,0))
+        cbar.set_label('% identity')
+        cbar.set_ticks([0, 100])
+
+    # format axis
+    ax.set_xlim(
+        (aln.zoom[0], aln.zoom[0] + aln.length)
+        if aln.zoom is not None else
+        (0, aln.length)
+    )
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    if show_x_label:
+        ax.set_xlabel('alignment position')
+    ax.set_ylim(bottom=0)
+    ax.set_yticks([])
+    ax.set_yticklabels([])
+    ax.set_title('conserved orfs', loc='left')
+

@@ -468,7 +468,6 @@ class MSA:
         for aln, direction in zip(alignments, ['+', '-']):
             # check for starts and stops in the first seq and then check if these are present in all seqs
             conserved_starts, conserved_stops = determine_conserved_start_stops(aln, aln_len, identities)
-            print(conserved_starts, conserved_stops)
             # check each frame
             for frame in (0, 1, 2):
                 potential_starts = [x for x in conserved_starts if x % 3 == frame]
