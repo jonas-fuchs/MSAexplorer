@@ -150,7 +150,7 @@ class MSA:
         """
         counter = int()
         for record in alignment:
-            if 'U' in record:
+            if 'U' in alignment[record]:
                 return 'RNA'
             counter += sum(map(alignment[record].count, ['A', 'C', 'G', 'T', 'N', '-']))
         # determine which is the most likely type
@@ -352,7 +352,7 @@ class MSA:
                 consensus = consensus + consensus_chars[0]
 
         return consensus
-    # TODO maybe do this also for single sequences?
+
     def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float|None = None) -> dict:
         """
         conserved ORF definition:
@@ -391,14 +391,25 @@ class MSA:
             stops = config.STOP_CODONS[self.aln_type]
 
             list_of_starts, list_of_stops = [], []
-            seq = alignment[list(alignment.keys())[0]]
+            ref = self.get_consensus()
             for nt_position in range(alignment_length):
-                if seq[nt_position:nt_position + 3] in starts and np.nansum(
-                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
-                    list_of_starts.append(nt_position)
-                if seq[nt_position:nt_position + 3] in stops and np.nansum(
-                        identity_dict[:, [x for x in range(nt_position, nt_position + 3)]]) == 0:
-                    list_of_stops.append(nt_position)
+                if ref[nt_position:nt_position + 3] in starts:
+                    conserved_start = True
+                    for sequence in alignment:
+                        if not alignment[sequence][nt_position:].replace('-', '')[0:3] in starts:
+                            conserved_start = False
+                            break
+                    if conserved_start:
+                        list_of_starts.append(nt_position)
+
+                if ref[nt_position:nt_position + 3] in stops:
+                    conserved_stop = True
+                    for sequence in alignment:
+                        if not alignment[sequence][nt_position:].replace('-', '')[0:3] in stops:
+                            conserved_stop = False
+                            break
+                    if conserved_stop:
+                        list_of_stops.append(nt_position)
 
             return list_of_starts, list_of_stops
 
@@ -457,6 +468,7 @@ class MSA:
         for aln, direction in zip(alignments, ['+', '-']):
             # check for starts and stops in the first seq and then check if these are present in all seqs
             conserved_starts, conserved_stops = determine_conserved_start_stops(aln, aln_len, identities)
+            print(conserved_starts, conserved_stops)
             # check each frame
             for frame in (0, 1, 2):
                 potential_starts = [x for x in conserved_starts if x % 3 == frame]
