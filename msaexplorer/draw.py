@@ -26,7 +26,19 @@ def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes):
         raise ValueError('ax has to be an matplotlib axis')
 
 
-def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, custom_seq_names: tuple = (), reference_color = 'lightsteelblue', aln_colors:dict = config.ALN_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguties: bool = False, show_x_label: bool = True, show_legend: bool = False):
+def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left: bool):
+    ax.set_xlim(
+            (aln.zoom[0], aln.zoom[0] + aln.length) if aln.zoom is not None else (0, aln.length)
+        )
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    if show_x_label:
+        ax.set_xlabel('alignment position')
+    if not show_left:
+        ax.spines['left'].set_visible(False)
+
+
+def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, custom_seq_names: tuple = (), reference_color = 'lightsteelblue', aln_colors:dict = config.ALN_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguties: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple = (1, 1.15)):
     """
     generates an alignment overview plot
     :param aln: alignment MSA class
@@ -41,6 +53,8 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
     :param show_mismatches: whether to show mismatches otherwise it will be shown as match
     :param show_ambiguties: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
     :param show_x_label: whether to show x label
+    :param show_legend: whether to show the legend
+    :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
     """
 
     def find_stretches(arr, target_value):
@@ -151,7 +165,7 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
             custom_legend,
             [aln_colors[x]['type'] for x in detected_identity_values],
             loc='upper right',
-            bbox_to_anchor=(1, 1.1),
+            bbox_to_anchor=bbox_to_anchor,
             ncols=len(detected_identity_values),
             frameon=False
         )
@@ -159,10 +173,7 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
     ax.set_ylim(0, len(aln.alignment)+0.8/4)
-    ax.set_xlim(zoom[0], zoom[0] + aln.length)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
+    _format_x_axis(aln, ax, show_x_label, show_left=False)
     if show_seq_names:
         ax.set_yticks(np.arange(len(aln.alignment)) + 0.6)
         if custom_seq_names:
@@ -171,8 +182,6 @@ def identity_plot(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, 
             ax.set_yticklabels(list(aln.alignment.keys())[::-1])
     else:
         ax.set_yticks([])
-    if show_x_label:
-        ax.set_xlabel('alignment position')
 
 
 def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', rolling_average: int = 20, show_x_label: bool = False):
@@ -233,33 +242,33 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     # format axis
     ax.set_ylim(0, 1.1)
-    ax.set_xlim(
-        (aln.zoom[0], aln.zoom[0] + aln.length)
-        if aln.zoom is not None else
-        (0, aln.length)
-    )
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    if show_x_label:
-        ax.set_xlabel('alignment position')
+    _format_x_axis(aln, ax, show_x_label, show_left=True)
     if rolling_average > 1:
-        ax.set_ylabel(f'{stat_type}\n rolling average')
+        ax.set_ylabel(f'{stat_type}\n {2*rolling_average} char roll. average')
     else:
         ax.set_ylabel(f'{stat_type}')
 
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, colors: dict|None = None, show_legend: bool = True):
+def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple = (1, 3), show_x_label: bool = False, colors: dict|None = None, show_legend: bool = True, bbox_to_anchor: tuple = (1, 1.15)):
     """
     Plots variants
     :param aln: alignment MSA class
     :param ax: matplotlib axes
+    :param lollisize: (stem_size, head_size)
     :param show_x_label:  whether to show the x-axis label
     :param colors: colors for variants - standard are config.AA_colors or config.NT_colors
     :param show_legend: whether to show the legend
+    :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
     """
 
     # validate input
     _validate_input_parameters(aln, ax)
+    if not isinstance(lollisize, tuple) or len(lollisize) != 2:
+        raise ValueError('lollisize must be tuple of length 2 (stem, head)')
+    for _size in lollisize:
+        if not isinstance(_size, float | int) or _size <= 0:
+            raise ValueError('lollisize must be floats greater than zero')
+
     # define colors
     if colors is None:
         # define colors to use
@@ -276,9 +285,9 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
         if aln.aln_type == 'NT':
             if colors.keys() != config.NT_COLORS.keys():
                 raise TypeError('Format colors like in config.NT_COLORS')
-        for color in colors:
-            if not is_color_like(color):
-                raise TypeError(f'{color} is not a color')
+        for char in colors:
+            if not is_color_like(colors[char]):
+                raise TypeError(f'{colors[char]} is not a color')
 
     # get snps
     snps = aln.get_snps()
@@ -292,7 +301,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
             if identifier == 'ref':
                 if snps['POS'][pos]['ref'] not in ref_y_positions:
                     ref_y_positions[snps['POS'][pos]['ref']] = y_pos
-                    y_pos += 1
+                    y_pos += 1.1
                     continue
             # plot
             if identifier == 'ALT':
@@ -301,13 +310,15 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
                               ymin=ref_y_positions[snps['POS'][pos]['ref']],
                               ymax=ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
                               color=colors[alt],
-                              zorder=100
+                              zorder=100,
+                              linewidth=lollisize[0]
                               )
                     ax.plot(pos + aln.zoom[0] if aln.zoom is not None else pos,
                             ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
                             color=colors[alt],
                             marker='o',
-                            markersize=3)
+                            markersize=lollisize[1]
+                            )
                     detected_var.add(alt)
     # plot hlines
     for y_char in ref_y_positions:
@@ -329,25 +340,17 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, show_x_label: bool = False, col
             detected_var,
             loc='upper right',
             title='variant',
-            bbox_to_anchor=(1, 1.15),
+            bbox_to_anchor=bbox_to_anchor,
             ncols=len(detected_var),
             frameon=False
         )
 
     # format axis
-    ax.set_xlim(
-        (aln.zoom[0], aln.zoom[0] + aln.length)
-        if aln.zoom is not None else
-        (0, aln.length)
-    )
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    _format_x_axis(aln, ax, show_x_label, show_left=False)
     ax.spines['left'].set_visible(False)
     ax.set_yticks([ref_y_positions[x] for x in ref_y_positions])
     ax.set_yticklabels(ref_y_positions.keys())
     ax.set_ylim(0, y_pos)
-    if show_x_label:
-        ax.set_xlabel('alignment position')
     ax.set_ylabel('reference')
 
 
@@ -402,7 +405,9 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
         annotation_dict = add_track_positions(aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length))
     else:
         annotation_dict = add_track_positions(aln_temp.get_conserved_orfs(min_length=min_length))
+
     # plot
+    max_track = 0  # gives a scaling value for the colorbar
     for annotation in annotation_dict:
         x_value = annotation_dict[annotation]['positions'][0] + aln.zoom[0] if aln.zoom is not None else annotation_dict[annotation]['positions'][0]
         length = annotation_dict[annotation]['positions'][1] - annotation_dict[annotation]['positions'][0]
@@ -411,11 +416,14 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
                 (x_value, annotation_dict[annotation]['track'] + 0.2),
                 length,
                 0.8,
-                boxstyle="round,pad=-0.0040,rounding_size=0.1",
+                boxstyle="round",
                 ec="black",
                 fc=cmap.to_rgba(annotation_dict[annotation]['conservation'])
             )
         )
+        if annotation_dict[annotation]['track'] > max_track:
+            max_track = annotation_dict[annotation]['track']
+
         if show_direction:
             if annotation_dict[annotation]['strand'] == '-':
                 marker = '<'
@@ -425,21 +433,12 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
 
     # legend
     if show_legend:
-        cbar = plt.colorbar(cmap, ax=ax, location= 'top', orientation='horizontal', fraction=0.2, pad=0.1, anchor=(1,0))
+        cbar = plt.colorbar(cmap, ax=ax, location= 'top', orientation='horizontal', fraction=0.3/(max_track+1), pad=0.1, anchor=(1,0), aspect=10)
         cbar.set_label('% identity')
         cbar.set_ticks([0, 100])
 
     # format axis
-    ax.set_xlim(
-        (aln.zoom[0], aln.zoom[0] + aln.length)
-        if aln.zoom is not None else
-        (0, aln.length)
-    )
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    if show_x_label:
-        ax.set_xlabel('alignment position')
+    _format_x_axis(aln, ax, show_x_label, show_left=False)
     ax.set_ylim(bottom=0)
     ax.set_yticks([])
     ax.set_yticklabels([])
