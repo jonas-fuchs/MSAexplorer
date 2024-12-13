@@ -18,6 +18,7 @@ import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import is_color_like, Normalize, LinearSegmentedColormap
 from matplotlib.collections import PatchCollection
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 # general helper functions
@@ -219,11 +220,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = Fa
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
-    ax.set_ylim(0, len(aln.alignment)+0.8/4)
+    ax.set_ylim(0, len(aln.alignment))
+    ax.set_title('identity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_legend: bool = False, legend_pad: float | int = 0.05):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_legend: bool = False):
     """
     Generates a similarity alignment overview plot.
     :param aln: alignment MSA class
@@ -237,8 +239,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     :param show_gaps: whether to show gaps otherwise it will be ignored
     :param fancy_gaps: show gaps with a small black bar
     :param show_x_label: whether to show x label
-    :param show_legend: whether to show the legend
-    :param legend_pad: moves colorbar vertically
+    :param show_legend: whether to show the legend - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
     """
     # input check
     _validate_input_parameters(aln, ax)
@@ -267,7 +268,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     cmap = ScalarMappable(norm=Normalize(
         vmin=min_value,
         vmax=max_value
-    ), cmap=LinearSegmentedColormap.from_list("", colors=similarity_colors))
+    ), cmap=LinearSegmentedColormap.from_list('', colors=similarity_colors))
     # create plot
     col = []
     y_position = len(aln.alignment) - 0.8
@@ -284,9 +285,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
 
     # legend
     if show_legend:
-        cbar = plt.colorbar(cmap, ax=ax, location='top', orientation='horizontal', fraction=1 / len(aln.alignment.keys()),
-                            pad=legend_pad, anchor=(1, 0), aspect=10)
-        cbar.set_label('similarity')
+        cbar = plt.colorbar(cmap, ax=ax, location= 'top', anchor=(1,0), shrink=0.2, pad=2/ax.bbox.height)
         cbar.set_ticks([min_value, max_value])
         cbar.set_ticklabels(['low', 'high'])
 
@@ -295,7 +294,8 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
-    ax.set_ylim(0, len(aln.alignment)+0.8/4)
+    ax.set_ylim(0, len(aln.alignment))
+    ax.set_title('similarity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
@@ -489,7 +489,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     ax.set_ylabel('reference')
 
 
-def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False, show_legend: bool = True, legend_pad: float | int = 0.1):
+def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False, show_legend: bool = True):
     """
     Plot conserved ORFs.
     :param aln: alignment MSA class
@@ -500,8 +500,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     :param show_direction: show strand information
     :param direction_marker_size: marker size for direction marker, only relevant if show_direction is True
     :param show_x_label: whether to show the x-axis label
-    :param show_legend: whether to show the legend
-    :param legend_pad: moves colorbar vertically
+    :param show_legend: whether to show the legend - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
     """
     # helper function
     def add_track_positions(annotation_dic):
@@ -539,18 +538,23 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     aln_temp = deepcopy(aln)
     aln_temp.zoom = None
     if non_overlapping_orfs:
-        annotation_dict = add_track_positions(aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length))
+        annotation_dict = aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length)
     else:
-        annotation_dict = add_track_positions(aln_temp.get_conserved_orfs(min_length=min_length))
+        annotation_dict = aln_temp.get_conserved_orfs(min_length=min_length)
+    # filter dict for zoom
+    if aln.zoom is not None:
+        annotation_dict = {key:val for key, val in annotation_dict.items() if aln.zoom[0] < val['positions'][0] <= aln.zoom[1]}
+
+    add_track_positions(annotation_dict)
 
     # plot
-    max_track = 0  # gives a scaling value for the colorbar
+    max_track = 0
     for annotation in annotation_dict:
-        x_value = annotation_dict[annotation]['positions'][0] + aln.zoom[0] if aln.zoom is not None else annotation_dict[annotation]['positions'][0]
+        x_value = annotation_dict[annotation]['positions'][0]
         length = annotation_dict[annotation]['positions'][1] - annotation_dict[annotation]['positions'][0]
         ax.add_patch(
             patches.FancyBboxPatch(
-                (x_value, annotation_dict[annotation]['track'] + 0.2),
+                (x_value, annotation_dict[annotation]['track'] + 1),
                 length,
                 0.8,
                 boxstyle="round",
@@ -566,11 +570,11 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
                 marker = '<'
             else:
                 marker = '>'
-            ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 0.6, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
+            ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
 
     # legend
     if show_legend:
-        cbar = plt.colorbar(cmap, ax=ax, location= 'top', orientation='horizontal', fraction=0.3/(max_track+1), pad=legend_pad, anchor=(1,0), aspect=10)
+        cbar = plt.colorbar(cmap,ax=ax, location= 'top', orientation='horizontal', anchor=(1,0), shrink=0.2, pad=2/ax.bbox.height)
         cbar.set_label('% identity')
         cbar.set_ticks([0, 100])
 
