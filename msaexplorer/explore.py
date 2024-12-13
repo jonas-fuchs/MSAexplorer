@@ -210,7 +210,7 @@ class MSA:
             return self._alignment
 
     # functions for different alignment stats
-    def get_reference_coords(self) -> tuple:
+    def get_reference_coords(self) -> tuple[int, int]:
         """
         Determine the start and end coordinates of the reference sequence
         defined as the first/last nucleotide in the reference sequence
@@ -353,7 +353,7 @@ class MSA:
 
         return consensus
 
-    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float|None = None) -> dict:
+    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> dict:
         """
         conserved ORF definition:
             - conserved starts and stops
@@ -443,7 +443,7 @@ class MSA:
 
         def calculate_identity(identity_matrix: ndarray, aln_slice:list) -> float:
             sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]]
-            return np.sum(np.all(sliced_array == 0, axis=0))/(aln_slice[1] - aln_slice[0]) * 100
+            return np.sum(np.all(sliced_array == 1, axis=0))/(aln_slice[1] - aln_slice[0]) * 100
 
         # checks for arguments
 
@@ -581,8 +581,9 @@ class MSA:
             """
             Calculate the shannon's entropy of a sequence and
             normalized between 0 and 1.
-            :param chars: characters at an alignment position
+            :param character_list: characters at an alignment position
             :param states: number of potential characters that can be present
+            :param aln_type: type of the alignment
             :returns: entropy
             """
             ent, n_chars = 0, len(character_list)
@@ -697,13 +698,14 @@ class MSA:
 
         return reverse_complement_dict
 
-    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=True, encode_gaps:bool=True, encode_ambiguities:bool=False) -> np.ndarray:
+    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False) -> np.ndarray:
         """
-        Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
-        :param encode_mismatches: encode gaps with value=1
+        Converts alignment to identity array (identical=1) compared to majority consensus or reference:\n
+
+        :param encode_mismatches: encode mismatch as 0
         :param encode_mask: encode mask with value=2 --> also in the reference
-        :param encode_gaps: encode gaps with value=3 --> also in the reference
-        :param encode_ambiguities: encode ambiguities with value=4
+        :param encode_gaps: encode gaps with np.nan --> also in the reference
+        :param encode_ambiguities: encode ambiguities with value=3
         :return: identity alignment
         """
 
@@ -714,7 +716,7 @@ class MSA:
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
         # ini matrix
-        identity_matrix = np.full(sequences.shape, 0)
+        identity_matrix = np.full(sequences.shape, 1, dtype=float)
 
         is_identical = sequences == reference
 
@@ -738,16 +740,16 @@ class MSA:
         else:
             is_mismatch = np.full(sequences.shape, False)
         # assign values based on conditions
-        identity_matrix[is_mismatch] = 1  # mismatch
+        identity_matrix[is_mismatch] = 0  # mismatch
+        identity_matrix[is_gap] = np.nan  # gap
         identity_matrix[is_n_or_x] = 2  # 'N' or 'X'
-        identity_matrix[is_gap] = 3 # gaps
-        identity_matrix[is_ambig] = 4  # ambiguities
+        identity_matrix[is_ambig] = 3  # ambiguities
 
         return identity_matrix
 
     def calc_similarity_alignment(self, matrix_type:str|None=None) -> np.ndarray:
         """
-        Calculate the similarity score between the alignment and the reference seq.
+        Calculate the similarity score between the alignment and the reference seq. Gaps are encoded as np.nan
         :param: matrix_type: type of similarity score (if not set - AS: BLOSSUM65, RNA/DNA: BLASTN)
         :return: identity array
         """
@@ -758,7 +760,7 @@ class MSA:
             if self.aln_type == 'AA':
                 matrix_type = 'BLOSUM65'
             else:
-                matrix_type = 'BLASTN'
+                matrix_type = 'TRANS'
         # load substitution matrix as dictionary
         try:
             subs_matrix = config.SUBS_MATRICES[self.aln_type][matrix_type]
@@ -767,16 +769,18 @@ class MSA:
                 f'The specified matrix does not exist for alignment type.\nAvailable matrices for {self.aln_type} are:\n{list(config.SUBS_MATRICES[self.aln_type].keys())}'
             )
 
-        # Convert alignment to a NumPy array for vectorized processing
+        # set dtype and convert alignment to a NumPy array for vectorized processing
+        dtype = np.dtype(float, metadata={'matrix': matrix_type})
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
         valid_chars = list(subs_matrix.keys())
-        identity_array = np.full(sequences.shape, np.nan)
+        identity_array = np.full(sequences.shape, np.nan, dtype=dtype)
 
         for i, seq in enumerate(sequences):
             for j, char in enumerate(seq):
                 if char in valid_chars and reference[j] in valid_chars:
                     identity_array[i, j] = subs_matrix[char][reference[j]]
+
 
         return identity_array
 

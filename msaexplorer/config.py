@@ -1,3 +1,5 @@
+import numpy as np
+
 POSSIBLE_CHARS = [
         'A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*', 'X',  #AS
         'A', 'T','U', 'C', 'G', 'R', 'Y', 'S', 'W', 'K', 'M', 'B', 'D', 'H', 'V','N',  #RNA/DNA
@@ -60,7 +62,7 @@ STOP_CODONS = {
 # from: https://github.com/biopython/biopython/tree/master/Bio/Align/substitution_matrices/data
 # extracted to nested dictionaries dependent on the alignment type
 SUBS_MATRICES = {
-        'AS': {
+        'AA': {
                 'BLOSUM45': {
                         '*': {'*': 1.0, 'A': -5.0, 'B': -5.0, 'C': -5.0, 'D': -5.0, 'E': -5.0, 'F': -5.0, 'G': -5.0, 'H': -5.0, 'I': -5.0, 'K': -5.0, 'L': -5.0, 'M': -5.0, 'N': -5.0, 'P': -5.0, 'Q': -5.0, 'R': -5.0, 'S': -5.0, 'T': -5.0, 'V': -5.0, 'W': -5.0, 'X': -5.0, 'Y': -5.0, 'Z': -5.0},
                         'A': {'*': -5.0, 'A': 5.0, 'B': -1.0, 'C': -1.0, 'D': -2.0, 'E': -1.0, 'F': -2.0, 'G': 0.0, 'H': -2.0, 'I': -1.0, 'K': -1.0, 'L': -1.0, 'M': -1.0, 'N': -1.0, 'P': -1.0, 'Q': -1.0, 'R': -2.0, 'S': 1.0, 'T': 0.0, 'V': 0.0, 'W': -2.0, 'X': 0.0, 'Y': -2.0, 'Z': -1.0},
@@ -740,17 +742,17 @@ SUBS_MATRICES = {
         }
 }
 
-ALN_COLORS = {
-        0: {'type': 'identical',
-            'color': 'lightgrey'},
-        1: {'type': 'different',
+IDENTITY_COLORS = {
+        0: {'type': 'different',
             'color': 'peru'},
+        1: {'type': 'identical',
+            'color': 'lightgrey'},
         2: {'type': 'mask',
             'color': 'dimgrey'},
-        3: {'type': 'deletion',
-            'color': 'white'},
-        4: {'type': 'ambiguity',
-            'color': 'black'}
+        3: {'type': 'ambiguity',
+            'color': 'black'},
+        np.nan: {'type': 'deletion',
+                 'color': 'white'},
 }
 
 NT_COLORS = {
