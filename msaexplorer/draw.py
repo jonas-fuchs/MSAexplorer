@@ -225,7 +225,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = Fa
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_legend: bool = False):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot.
     :param aln: alignment MSA class
@@ -239,7 +239,8 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     :param show_gaps: whether to show gaps otherwise it will be ignored
     :param fancy_gaps: show gaps with a small black bar
     :param show_x_label: whether to show x label
-    :param show_legend: whether to show the legend - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
+    :param show_cbar: whether to show the legend - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
+    :param cbar_fraction: fraction of the original ax reserved for the legend
     """
     # input check
     _validate_input_parameters(aln, ax)
@@ -284,8 +285,8 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         y_position -= 1
 
     # legend
-    if show_legend:
-        cbar = plt.colorbar(cmap, ax=ax, location= 'top', anchor=(1,0), shrink=0.2, pad=2/ax.bbox.height)
+    if show_cbar:
+        cbar = plt.colorbar(cmap, ax=ax, location= 'top', anchor=(1,0), shrink=0.2, pad=2/ax.bbox.height, fraction=cbar_fraction)
         cbar.set_ticks([min_value, max_value])
         cbar.set_ticklabels(['low', 'high'])
 
@@ -379,7 +380,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
     if rolling_average > 1:
-        ax.set_ylabel(f'{stat_type}\n {2*rolling_average} char mean')
+        ax.set_ylabel(f'{stat_type}\n {2*rolling_average}c mean')
     else:
         ax.set_ylabel(f'{stat_type}')
 
@@ -489,7 +490,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     ax.set_ylabel('reference')
 
 
-def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False, show_legend: bool = True):
+def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Plot conserved ORFs.
     :param aln: alignment MSA class
@@ -500,7 +501,9 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     :param show_direction: show strand information
     :param direction_marker_size: marker size for direction marker, only relevant if show_direction is True
     :param show_x_label: whether to show the x-axis label
-    :param show_legend: whether to show the legend - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
+    :param show_cbar: whether to show the colorbar - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
+    :param cbar_fraction: fraction of the original ax reserved for the colorbar
+
     """
     # helper function
     def add_track_positions(annotation_dic):
@@ -573,8 +576,8 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
             ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
 
     # legend
-    if show_legend:
-        cbar = plt.colorbar(cmap,ax=ax, location= 'top', orientation='horizontal', anchor=(1,0), shrink=0.2, pad=2/ax.bbox.height)
+    if show_cbar:
+        cbar = plt.colorbar(cmap,ax=ax, location= 'top', orientation='horizontal', anchor=(1,0), shrink=0.2, pad=2/ax.bbox.height, fraction=cbar_fraction)
         cbar.set_label('% identity')
         cbar.set_ticks([0, 100])
 
