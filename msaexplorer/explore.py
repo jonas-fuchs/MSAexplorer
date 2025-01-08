@@ -379,19 +379,18 @@ class MSA:
         """
 
         # helper functions
-        def determine_conserved_start_stops(alignment: dict, alignment_length: int, identity_dict) -> tuple:
+        def determine_conserved_start_stops(alignment: dict, alignment_length: int) -> tuple:
             """
             Determine all start and stop codons within an alignment.
             :param alignment: alignment
             :param alignment_length: length of alignment
-            :param identity_dict: identity dictionary
             :return: start and stop codon positions
             """
             starts = config.START_CODONS[self.aln_type]
             stops = config.STOP_CODONS[self.aln_type]
 
             list_of_starts, list_of_stops = [], []
-            ref = self.get_consensus()
+            ref = alignment[list(alignment.keys())[0]]
             for nt_position in range(alignment_length):
                 if ref[nt_position:nt_position + 3] in starts:
                     conserved_start = True
@@ -467,7 +466,7 @@ class MSA:
 
         for aln, direction in zip(alignments, ['+', '-']):
             # check for starts and stops in the first seq and then check if these are present in all seqs
-            conserved_starts, conserved_stops = determine_conserved_start_stops(aln, aln_len, identities)
+            conserved_starts, conserved_stops = determine_conserved_start_stops(aln, aln_len)
             # check each frame
             for frame in (0, 1, 2):
                 potential_starts = [x for x in conserved_starts if x % 3 == frame]
@@ -536,7 +535,7 @@ class MSA:
 
         fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
         rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
-
+        print(rw_orfs)
         non_overlapping_orfs = []
         for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
             previous_stop = -1
@@ -546,7 +545,7 @@ class MSA:
                     previous_stop = orf[1][0]
                 elif strand == '-' and self.length - orf[1][1] > previous_stop:
                     non_overlapping_orfs.append(orf[0])
-                    previous_stop = orf[1][1]
+                    previous_stop = self.length - orf[1][1]
 
         non_overlap_dict = {}
         for orf in orf_dict:

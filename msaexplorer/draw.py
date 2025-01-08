@@ -95,6 +95,7 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
         if len(custom_seq_names) != len(aln.alignment.keys()):
             raise ValueError('length of sequences not equal to number of custom names')
     if show_seq_names:
+        ax.yaxis.set_ticks_position('none')
         ax.set_yticks(np.arange(len(aln.alignment)) + 0.6)
         if custom_seq_names:
             ax.set_yticklabels(custom_seq_names[::-1])
@@ -144,11 +145,12 @@ def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_p
         )
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1.15)):
+def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1.15)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
+    :param show_title: whether to show title
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
@@ -195,7 +197,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = Fa
     for sequence, seq_name in zip(identity_aln, aln.alignment.keys()):
         # ini identity patches
         _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, aln_colors[1]['color'])
-        for identity_value in [0, 2, 3, np.nan]:
+        for identity_value in [np.nan, 0, 2, 3]:
             stretches = _find_stretches(sequence, identity_value)
             if not stretches:
                 continue
@@ -219,18 +221,20 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_seq_names: bool = Fa
     # format seq names
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
     # configure axis
-    ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
-    ax.set_ylim(0, len(aln.alignment))
-    ax.set_title('identity', loc='left')
+    ax.add_collection(PatchCollection(col, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
+    ax.set_ylim(0, len(aln.alignment)+0.2)
+    if show_title:
+        ax.set_title('identity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param matrix_type: substitution matrix - see config.SUBS_MATRICES, standard: NT - TRANS, AA - BLOSUM65
+    :param show_title: whether to show title
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
@@ -295,18 +299,20 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
-    ax.set_ylim(0, len(aln.alignment))
-    ax.set_title('similarity', loc='left')
+    ax.set_ylim(0, len(aln.alignment)+0.2)
+    if show_title:
+        ax.set_title('similarity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', rolling_average: int = 20, show_x_label: bool = False):
+def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False):
     """
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param stat_type: 'entropy', 'gc', 'coverage', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
     :param line_color: color of the line
+    :param line_width: width of the line
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
     :param show_x_label: whether to show the x-axis label
     """
@@ -362,7 +368,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     data, plot_idx = moving_average(array, rolling_average)
     # plot
-    ax.plot(plot_idx, data, color=line_color)
+    ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
 
     # specific visual cues for individual plots
     if stat_type != 'gc':
