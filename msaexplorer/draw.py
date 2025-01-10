@@ -566,7 +566,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
                 (x_value, annotation_dict[annotation]['track'] + 1),
                 length,
                 0.8,
-                boxstyle="round",
+                boxstyle="Round, pad=0",
                 ec="black",
                 fc=cmap.to_rgba(annotation_dict[annotation]['conservation'])
             )
@@ -589,7 +589,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
 
     # format axis
     _format_x_axis(aln, ax, show_x_label, show_left=False)
-    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0.8)
     ax.set_yticks([])
     ax.set_yticklabels([])
     ax.set_title('conserved orfs', loc='left')

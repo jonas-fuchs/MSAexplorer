@@ -535,17 +535,16 @@ class MSA:
 
         fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
         rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
-        print(rw_orfs)
         non_overlapping_orfs = []
         for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
-            previous_stop = -1
+            previous_stop = -1 if strand == '+' else self.length + 1
             for orf in orf_list:
                 if strand == '+' and orf[1][0] > previous_stop:
                     non_overlapping_orfs.append(orf[0])
-                    previous_stop = orf[1][0]
-                elif strand == '-' and self.length - orf[1][1] > previous_stop:
+                    previous_stop = orf[1][1]
+                elif strand == '-' and orf[1][1] < previous_stop:
                     non_overlapping_orfs.append(orf[0])
-                    previous_stop = self.length - orf[1][1]
+                    previous_stop = orf[1][0]
 
         non_overlap_dict = {}
         for orf in orf_dict:
