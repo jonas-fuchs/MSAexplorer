@@ -1035,6 +1035,16 @@ class MSA:
 
 class Annotation:
     def __init__(self, aln: MSA, annotation_path: str):
+        """
+        The annotation class. Lets you parse multiple standard formats
+        which might be used for annotating an alignment. The main purpose
+        is to parse the annotation file and adapt the locations of diverse
+        features to the locations within the alignment, considering the
+        respective alignment positions. Importantly, IDs of the alignment
+        and the MSA have to partly match.
+        :param aln: MSA class
+        :param annotation_path: path to annotation file (gb, bed, gff).
+        """
         self._ann, self.ann_type  = self._parse_annotation(annotation_path, aln)
         self._msa = self._validate_MSA(aln)
 
@@ -1161,6 +1171,7 @@ class Annotation:
         annotation_found = False
         for annotation in annotations.keys():
             for aln_id in aln.alignment.keys():
+                aln_id = aln_id.split(' ')[0]
                 # check in both directions
                 if aln_id in annotation:
                     annotation_found = True
