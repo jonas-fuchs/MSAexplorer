@@ -18,7 +18,6 @@ import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import is_color_like, Normalize, LinearSegmentedColormap
 from matplotlib.collections import PatchCollection
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 # general helper functions

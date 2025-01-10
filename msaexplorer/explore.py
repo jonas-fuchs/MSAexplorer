@@ -4,6 +4,7 @@ This contains the MSA class
 
 # built-in
 import math
+import os
 import collections
 from typing import Callable, Dict
 
@@ -1031,3 +1032,150 @@ class MSA:
 
         return snp_dict
 
+
+class Annotation:
+    def __init__(self, aln: MSA, annotation_path: str):
+        self._ann, self.ann_type  = self._parse_annotation(annotation_path, aln)
+        self._msa = self._validate_MSA(aln)
+
+    @staticmethod
+    def _validate_MSA(aln):
+        if not isinstance(aln, MSA):
+            raise ValueError('alignment has to be an MSA class. use explore.MSA() to read in alignment')
+        else:
+            return aln
+
+    @staticmethod
+    def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[Dict, str]:
+
+        def sanitize_gb_location(string: str) -> tuple[list, str]:
+            """
+            see: https://www.insdc.org/submitting-standards/feature-table/
+            """
+            strand = '+'
+            locations = []
+            # check the direction of the annotation
+            if 'complement' in string:
+                strand = '-'
+            # sanitize operators
+            for operator in ['complement(', 'join(', 'order(']:
+                string = string.strip(operator)
+            # sanitize possible chars for splitting start stop -
+            # however in the future might not simply do this
+            # as some useful information is retained
+            for char in ['>', '<', ')']:
+                string = string.replace(char, '')
+            # check if we have multiple location e.g. due to splicing
+            if ',' in string:
+                raw_locations = string.split(',')
+            else:
+                raw_locations = [string]
+            # try to split start and stop
+            for location in raw_locations:
+                for sep in ['..', '.', '^']:
+                    if sep in location:
+                        locations.append([int(x) for x in location.split(sep)])
+                        break
+
+            return locations, strand
+
+        def parse_gb(file_path) -> dict:
+            """
+            parse a genebank file to dictionary - primarily retained are the informations
+            for qualifiers as these will be used for plotting.
+            :param file_path: path to genebank file
+            :return: nested dictionarty
+            """
+            records = {}
+            with open(file_path, "r") as file:
+                record = None
+                in_features = False
+                counter_dict = {}
+                for line in file:
+                    line = line.rstrip()
+                    parts = line.split()
+                    # extract the locus id
+                    if line.startswith('LOCUS'):
+                        if record:
+                            records[record['locus']] = record
+                        record = {
+                            'locus': parts[1],
+                            'features': {}
+                        }
+
+                    elif line.startswith('FEATURES'):
+                        in_features = True
+
+                    # ignore the sequence info
+                    elif line.startswith('ORIGIN'):
+                        in_features = False
+
+                    # now write useful feature information to dictionary
+                    elif in_features:
+                        if not line.strip():
+                            continue
+                        if line[5] != ' ':
+                            feature_type, qualifier = parts[0], parts[1]
+                            if feature_type not in record['features']:
+                                record['features'][feature_type] = {}
+                                counter_dict[feature_type] = 0
+                            locations, strand = sanitize_gb_location(qualifier)
+                            record['features'][feature_type][counter_dict[feature_type]] = {
+                                'location': locations,
+                                'strand': strand
+                            }
+                            counter_dict[feature_type] += 1
+                        else:
+                            try:
+                                qualifier_type, qualifier = parts[0].split('=')
+                            except ValueError:  # we are in the coding sequence
+                                qualifier = qualifier + parts[0]
+
+                            qualifier_type, qualifier = qualifier_type.lstrip('/'), qualifier.strip('"')
+                            last_index = counter_dict[feature_type] - 1
+                            record['features'][feature_type][last_index][qualifier_type] = qualifier
+
+            records[record['locus']] = record
+
+            return records
+
+
+        def parse_bed() -> dict:
+            pass
+        def parse_gff() -> dict:
+            pass
+
+        parse_functions: Dict[str, Callable[[str], dict]] = {
+            'gb': parse_gb,
+            'bed': parse_bed,
+            'gff': parse_gff,
+        }
+
+        annotation_type = os.path.splitext(annotation_path)[1][1:]
+        if annotation_type not in parse_functions.keys():
+            raise ValueError(f'{annotation_type} is not supported. Supported file types are {parse_functions.keys()}')
+
+        annotations = parse_functions[annotation_type](annotation_path)
+
+        # sanity check whether one of the annotation ids and alignment ids match
+        annotation_found = False
+        for annotation in annotations.keys():
+            for aln_id in aln.alignment.keys():
+                # check in both directions
+                if aln_id in annotation:
+                    annotation_found = True
+                    break
+                if annotation in aln_id:
+                    annotation_found = True
+                    break
+            else:
+                break
+
+        if not annotation_found:
+            raise ValueError(f'the annotations of {annotation_path} do not match any ids in the MSA')
+
+        return annotations, annotation_type
+
+
+    def transfer_to_msa(self):
+        pass
