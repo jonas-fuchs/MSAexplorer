@@ -1,4 +1,5 @@
-# HOBBY -> WORK IN PROGRESS...
+# HOBBY -> WORK IN PROGRESS... 
+Oh well, some stuff is not implemented, some might not work as intended or might break, but overall a fun project. Enjoy :)
 
 ## MSAexplorer
 
@@ -8,24 +9,6 @@ _"Explore multiple sequence alignments with a simple python package."_
 
 **DISCLAIMER:** This is a hobby project of mine to keep my coding skills progressing. I re-implemented some of my old stuff and some new ideas, just to get it all under one roof. Hope it is useful for you. Contributions are highly welcome.
 
-## Planned features
-
-**General:**
-  - class for annotations (*.gff, *.bed, *.gb)
-  - annotate MSA with annotation class (adjust positions)
-  - dN/dS ratio (?)
-  - output to standard file formats
-  - unit tests
-  - command line feature (mostly plotting)
-  - read in different alignment types?
-
-**Manipulation functions:**
-  - compress (either remove all identical or non identical sites)
-  - deduplicate (remove identical sequences, retain first)
-  - mask
-  - exclude sequences (and clean gaps that came from these sequences)
-  - extract sequences (and clean gaps)
-  - clean gaps
 
 ## Requirements
 
@@ -38,6 +21,8 @@ _Tried to make the requirements as minimal as possible._
 ## Installation
 
 ```bash
+git clone https://github.com/jonas-fuchs/MSAexplorer
+cd MSAexplorer
 pip install .
 ```
 
@@ -94,8 +79,8 @@ fig, ax = plt.subplots(nrows=5, height_ratios=[0.5,0.5,0.5,2,1], sharex=False)
 draw.stat_plot(aln, ax[0], "gc", rolling_average=50, line_color="black")
 draw.stat_plot(aln, ax[1], stat_type="entropy", rolling_average=50, line_color="indigo")
 draw.stat_plot(aln, ax[2], "coverage", rolling_average=1)
-draw.identity_plot(aln, ax[3], show_gaps=True, show_mask=True, show_mismatches=True, reference_color='lightsteelblue', show_seq_names=False, show_ambiguties=True, fancy_gaps=True, show_x_label=False, show_legend=True)
-draw.variant_plot(aln, ax[4], show_x_label=True, show_legend=True)
+draw.identity_alignment(aln, ax[3], show_gaps=True, show_mask=True, show_mismatches=True, reference_color='lightsteelblue', show_seq_names=False, show_ambiguities=True, fancy_gaps=True, show_x_label=False, show_legend=True)
+draw.similarity_alignment(aln, ax[4], show_x_label=True)
 # format figure
 fig.set_size_inches(14, 15)
 fig.tight_layout()
