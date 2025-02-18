@@ -6,6 +6,7 @@ This contains the MSA class
 import math
 import os
 import collections
+import re
 from typing import Callable, Dict
 
 # installed
@@ -1034,6 +1035,10 @@ class MSA:
 
 
 class Annotation:
+    """
+    An annotation class that allows to read in gff, gb or bed files and adjust its locations to that of the MSA.
+    """
+
     def __init__(self, aln: MSA, annotation_path: str):
         """
         The annotation class. Lets you parse multiple standard formats
@@ -1042,60 +1047,109 @@ class Annotation:
         features to the locations within the alignment, considering the
         respective alignment positions. Importantly, IDs of the alignment
         and the MSA have to partly match.
+
         :param aln: MSA class
         :param annotation_path: path to annotation file (gb, bed, gff).
+
         """
-        self._ann, self.ann_type  = self._parse_annotation(annotation_path, aln)
-        self._msa = self._validate_MSA(aln)
+
+        self.ann_type, self._seq_id, self.locus, self.features  = self._parse_annotation(annotation_path, aln)  # read annotation
+        self._gapped_seq = self._MSA_validation_and_seq_extraction(aln, self._seq_id)  # extract gapped sequence
+        self._position_map = self._build_position_map()  # build a position map
+        self._map_to_alignment()  # adapt feature locations
 
     @staticmethod
-    def _validate_MSA(aln):
+    def _MSA_validation_and_seq_extraction(aln: MSA, seq_id: str) -> str:
+        """
+        extract gapped sequence from MSA that corresponds to annotation
+        :param aln: MSA class
+        :param seq_id: sequence id to extract
+        :return: gapped sequence
+        """
         if not isinstance(aln, MSA):
             raise ValueError('alignment has to be an MSA class. use explore.MSA() to read in alignment')
         else:
-            return aln
+            return aln.alignment[seq_id]
 
     @staticmethod
-    def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[Dict, str]:
+    def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[str, str, str, Dict]:
 
-        def sanitize_gb_location(string: str) -> tuple[list, str]:
+        def detect_annotation_type(file_path: str) -> str:
             """
-            see: https://www.insdc.org/submitting-standards/feature-table/
-            """
-            strand = '+'
-            locations = []
-            # check the direction of the annotation
-            if 'complement' in string:
-                strand = '-'
-            # sanitize operators
-            for operator in ['complement(', 'join(', 'order(']:
-                string = string.strip(operator)
-            # sanitize possible chars for splitting start stop -
-            # however in the future might not simply do this
-            # as some useful information is retained
-            for char in ['>', '<', ')']:
-                string = string.replace(char, '')
-            # check if we have multiple location e.g. due to splicing
-            if ',' in string:
-                raw_locations = string.split(',')
-            else:
-                raw_locations = [string]
-            # try to split start and stop
-            for location in raw_locations:
-                for sep in ['..', '.', '^']:
-                    if sep in location:
-                        locations.append([int(x) for x in location.split(sep)])
-                        break
+            Detect the type of annotation file (GenBank, GFF, or BED).
 
-            return locations, strand
+            :param file_path: Path to the annotation file.
+            :return: The detected file type ('gb', 'gff', or 'bed').
+
+            :raises ValueError: If the file type cannot be determined.
+            """
+
+            with open(file_path, 'r') as file:
+                for line in file:
+                    # skip empty lines and comments
+                    if not line.strip() or line.startswith('#'):
+                        continue
+                   # genbank
+                    if line.startswith('LOCUS'):
+                        return 'gb'
+                    # gff
+                    if len(line.split('\t')) == 9:
+                        # Check for expected values
+                        columns = line.split('\t')
+                        if columns[6] in ['+', '-', '.'] and re.match(r'^\d+$', columns[3]) and re.match(r'^\d+$',columns[4]):
+                            return 'gff'
+                    # BED files are tab-delimited with at least 3 fields: chrom, start, end
+                    fields = line.split('\t')
+                    if len(fields) >= 3 and re.match(r'^\d+$', fields[1]) and re.match(r'^\d+$', fields[2]):
+                        return 'bed'
+
+            raise ValueError(
+                "File type could not be determined. Ensure the file follows a recognized format (GenBank, GFF, or BED).")
 
         def parse_gb(file_path) -> dict:
             """
             parse a genebank file to dictionary - primarily retained are the informations
             for qualifiers as these will be used for plotting.
+
             :param file_path: path to genebank file
-            :return: nested dictionarty
+            :return: nested dictionary
+
             """
+
+            def sanitize_gb_location(string: str) -> tuple[list, str]:
+                """
+                see: https://www.insdc.org/submitting-standards/feature-table/
+                """
+                strand = '+'
+                locations = []
+                # check the direction of the annotation
+                if 'complement' in string:
+                    strand = '-'
+                # sanitize operators
+                for operator in ['complement(', 'join(', 'order(']:
+                    string = string.strip(operator)
+                # sanitize possible chars for splitting start stop -
+                # however in the future might not simply do this
+                # as some useful information is retained
+                for char in ['>', '<', ')']:
+                    string = string.replace(char, '')
+                # check if we have multiple location e.g. due to splicing
+                if ',' in string:
+                    raw_locations = string.split(',')
+                else:
+                    raw_locations = [string]
+                # try to split start and stop
+                for location in raw_locations:
+                    for sep in ['..', '.', '^']:
+                        if sep in location:
+                            sanitized_locations = [int(x) for x in location.split(sep)]
+                            sanitized_locations[0] = sanitized_locations[0] - 1  # enforce 0-based starts
+                            locations.append(sanitized_locations)
+                            break
+
+                return locations, strand
+
+
             records = {}
             with open(file_path, "r") as file:
                 record = None
@@ -1149,44 +1203,164 @@ class Annotation:
 
             return records
 
+        def parse_gff(file_path) -> dict:
+            """
+            Parse a GFF (General Feature Format) file into a dictionary structure.
 
-        def parse_bed() -> dict:
-            pass
-        def parse_gff() -> dict:
-            pass
+            :param file_path: path to genebank file
+            :return: nested dictionary
+
+            """
+            records = {}
+            with open(file_path, 'r') as file:
+                for line in file:
+                    if line.startswith('#') or not line.strip():
+                        continue
+                    parts = line.strip().split('\t')
+                    seqid, source, feature_type, start, end, score, strand, phase, attributes = parts
+                    # ensure that region and source features are not named differently for gff and gb
+                    if feature_type == 'region':
+                        feature_type = 'source'
+                    if seqid not in records:
+                        records[seqid] = {'locus': seqid, 'features': {}}
+                    if feature_type not in records[seqid]['features']:
+                        records[seqid]['features'][feature_type] = {}
+
+                    feature_id = len(records[seqid]['features'][feature_type])
+                    feature = {
+                        'location': [[int(start) - 1, int(end)]],
+                        'strand': strand,
+                    }
+
+                    # Parse attributes into key-value pairs
+                    for attr in attributes.split(';'):
+                        if '=' in attr:
+                            key, value = attr.split('=', 1)
+                            feature[key.strip()] = value.strip()
+
+                    records[seqid]['features'][feature_type][feature_id] = feature
+
+            return records
+
+        def parse_bed(file_path) -> dict:
+            """
+            Parse a BED file into a dictionary structure.
+
+            :param file_path: path to genebank file
+            :return: nested dictionary
+
+            """
+            records = {}
+            with open(file_path, 'r') as file:
+                for line in file:
+                    if line.startswith('#') or not line.strip():
+                        continue
+                    parts = line.strip().split('\t')
+                    chrom, start, end, *optional = parts
+
+                    if chrom not in records:
+                        records[chrom] = {'locus': chrom, 'features': {}}
+                    feature_type = 'region'
+                    if feature_type not in records[chrom]['features']:
+                        records[chrom]['features'][feature_type] = {}
+
+                    feature_id = len(records[chrom]['features'][feature_type])
+                    feature = {
+                        'location': [[int(start), int(end)]],  # BED uses 0-based start, convert to 1-based
+                        'strand': '+',  # assume '+' if not present
+                    }
+
+                    # Handle optional columns (name, score, strand) --> ignore 7-12
+                    if len(optional) >= 1:
+                        feature['name'] = optional[0]
+                    if len(optional) >= 2:
+                        feature['score'] = optional[1]
+                    if len(optional) >= 3:
+                        feature['strand'] = optional[2]
+
+                    records[chrom]['features'][feature_type][feature_id] = feature
+
+            return records
 
         parse_functions: Dict[str, Callable[[str], dict]] = {
             'gb': parse_gb,
             'bed': parse_bed,
             'gff': parse_gff,
         }
+        # determine the annotation content -> should be standard formatted
+        try:
+            annotation_type = detect_annotation_type(annotation_path)
+        except ValueError as e:
+            print(e)
 
-        annotation_type = os.path.splitext(annotation_path)[1][1:]
-        if annotation_type not in parse_functions.keys():
-            raise ValueError(f'{annotation_type} is not supported. Supported file types are {parse_functions.keys()}')
-
+        # read in the annotation
         annotations = parse_functions[annotation_type](annotation_path)
 
         # sanity check whether one of the annotation ids and alignment ids match
         annotation_found = False
         for annotation in annotations.keys():
             for aln_id in aln.alignment.keys():
-                aln_id = aln_id.split(' ')[0]
+                aln_id_sanitized = aln_id.split(' ')[0]
                 # check in both directions
-                if aln_id in annotation:
+                if aln_id_sanitized in annotation:
                     annotation_found = True
                     break
-                if annotation in aln_id:
+                if annotation in aln_id_sanitized:
                     annotation_found = True
                     break
-            else:
-                break
 
         if not annotation_found:
             raise ValueError(f'the annotations of {annotation_path} do not match any ids in the MSA')
 
-        return annotations, annotation_type
+        # return only the annotation that has been found, the respective type and the seq_id to map to
+        return annotation_type, aln_id, annotations[annotation]['locus'], annotations[annotation]['features']
 
 
-    def transfer_to_msa(self):
-        pass
+    def _build_position_map(self) -> Dict[int, int]:
+        """
+        build a position map from a sequence.
+
+        :return genomic position: gapped position
+        """
+
+        position_map = {}
+        genomic_pos = 0
+        for aln_index, char in enumerate(self._gapped_seq):
+            if char != '-':
+                position_map[genomic_pos] = aln_index
+                genomic_pos += 1
+        # ensure the last genomic position is included
+        position_map[genomic_pos] = len(self._gapped_seq)
+
+        return position_map
+
+
+    def _map_to_alignment(self):
+        """
+        Adjust all feature locations to alignment positions
+        """
+
+        def map_location(position_map, locations: list) -> list:
+            """
+            Map genomic locations to alignment positions using a precomputed position map.
+
+            :param locations: List of genomic start and end positions.
+            :return: List of adjusted alignment positions.
+            """
+
+            aligned_locs = []
+            for start, end in locations:
+                try:
+                    aligned_start = position_map[start]
+                    aligned_end = position_map[end]
+                    aligned_locs.append([aligned_start, aligned_end])
+                except KeyError:
+                    raise ValueError(f"Positions {start}-{end} lie outside of the position map.")
+
+            return aligned_locs
+
+        for feature_type, features in self.features.items():
+            for feature_id, feature_data in features.items():
+                original_locations = feature_data['location']
+                aligned_locations = map_location(self._position_map, original_locations)
+                feature_data['location'] = aligned_locations

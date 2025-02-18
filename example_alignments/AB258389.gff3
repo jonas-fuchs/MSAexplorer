@@ -1,0 +1,24 @@
+##gff-version 3
+#!gff-spec-version 1.21
+#!processor NCBI annotwriter
+##sequence-region AB258389.1 1 8909
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=1714621
+AB258389.1	DDBJ	region	1	8909	.	+	.	ID=AB258389.1:1..8909;Dbxref=taxon:1714621;gb-acronym=BoDV-1;gbkey=Src;mol_type=genomic RNA;strain=huP2br
+AB258389.1	DDBJ	gene	55	1167	.	+	.	ID=gene-n;Name=n;gbkey=Gene;gene=n;gene_biotype=protein_coding
+AB258389.1	DDBJ	CDS	55	1167	.	+	0	ID=cds-BAF46119.1;Parent=gene-n;Dbxref=NCBI_GP:BAF46119.1;Name=BAF46119.1;gbkey=CDS;gene=n;product=nucleoprotein;protein_id=BAF46119.1
+AB258389.1	DDBJ	gene	1224	1487	.	+	.	ID=gene-x;Name=x;gbkey=Gene;gene=x;gene_biotype=protein_coding
+AB258389.1	DDBJ	CDS	1224	1487	.	+	0	ID=cds-BAF46120.1;Parent=gene-x;Dbxref=NCBI_GP:BAF46120.1;Name=BAF46120.1;gbkey=CDS;gene=x;product=X-protein;protein_id=BAF46120.1
+AB258389.1	DDBJ	gene	1273	1878	.	+	.	ID=gene-p;Name=p;gbkey=Gene;gene=p;gene_biotype=protein_coding
+AB258389.1	DDBJ	CDS	1273	1878	.	+	0	ID=cds-BAF46121.1;Parent=gene-p;Dbxref=NCBI_GP:BAF46121.1;Name=BAF46121.1;gbkey=CDS;gene=p;product=phosphoprotein;protein_id=BAF46121.1
+AB258389.1	DDBJ	gene	1894	2322	.	+	.	ID=gene-m;Name=m;gbkey=Gene;gene=m;gene_biotype=protein_coding
+AB258389.1	DDBJ	CDS	1894	2322	.	+	0	ID=cds-BAF46122.1;Parent=gene-m;Dbxref=NCBI_GP:BAF46122.1;Name=BAF46122.1;gbkey=CDS;gene=m;product=matrix protein;protein_id=BAF46122.1
+AB258389.1	DDBJ	gene	2237	3748	.	+	.	ID=gene-g;Name=g;gbkey=Gene;gene=g;gene_biotype=protein_coding
+AB258389.1	DDBJ	CDS	2237	3748	.	+	0	ID=cds-BAF46123.1;Parent=gene-g;Dbxref=NCBI_GP:BAF46123.1;Name=BAF46123.1;gbkey=CDS;gene=g;product=glycoprotein;protein_id=BAF46123.1
+AB258389.1	DDBJ	exon	2394	2410	.	+	.	ID=id-g;Parent=gene-g;gbkey=exon;gene=g
+AB258389.1	DDBJ	intron	2411	3704	.	+	.	ID=id-g-2;Parent=gene-g;gbkey=intron;gene=g
+AB258389.1	DDBJ	gene	2394	2410	.	+	.	ID=gene-l;Name=l;gbkey=Gene;gene=l;gene_biotype=protein_coding;is_ordered=true
+AB258389.1	DDBJ	gene	3705	8823	.	+	.	ID=gene-l;Name=l;gbkey=Gene;gene=l;gene_biotype=protein_coding;is_ordered=true
+AB258389.1	DDBJ	CDS	2394	2410	.	+	0	ID=cds-BAF46124.1;Parent=gene-l;Dbxref=NCBI_GP:BAF46124.1;Name=BAF46124.1;gbkey=CDS;gene=l;product=polymerase;protein_id=BAF46124.1
+AB258389.1	DDBJ	CDS	3705	8823	.	+	1	ID=cds-BAF46124.1;Parent=gene-l;Dbxref=NCBI_GP:BAF46124.1;Name=BAF46124.1;gbkey=CDS;gene=l;product=polymerase;protein_id=BAF46124.1
+AB258389.1	DDBJ	exon	3705	8823	.	+	.	ID=id-l;Parent=gene-l;gbkey=exon;gene=l
+

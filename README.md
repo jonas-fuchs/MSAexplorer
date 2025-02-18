@@ -1,14 +1,10 @@
-# HOBBY -> WORK IN PROGRESS... 
-Oh well, some stuff is not implemented, some might not work as intended or might break, but overall a fun project. Enjoy :)
+WORK IN PROGRESS... 
 
 ## MSAexplorer
 
 _"Explore multiple sequence alignments with a simple python package."_ 
 
 ![MSAexplorer](msa_explorer.png)
-
-**DISCLAIMER:** This is a hobby project of mine to keep my coding skills progressing. I re-implemented some of my old stuff and some new ideas, just to get it all under one roof. Hope it is useful for you. Contributions are highly welcome.
-
 
 ## Requirements
 
@@ -29,6 +25,8 @@ pip install .
 ## Documentation
 
 ### The MSA class
+
+Allows to read in multiple sequence alignment and compute several statistics.
 
 ```python
 from msaexplorer import explore
@@ -62,6 +60,23 @@ msa.calc_similarity_alignment()  # convert the alignment into a similartity alig
 msa.calc_character_frequencies()  # calculate observed character frequencies
 msa.calc_pairwise_identity_matrix()  # calculate identity matrix
 msa.calc_reverse_complement_alignment()  # convert alignment sequences to reverese complement
+```
+
+### The annoation class
+Read in *.gb, *.gff and bed files. All genomic locations are automatically adapted.
+
+```python
+from msaexplorer import explore
+
+# read in annotations
+aln = explore.MSA('path-to-msa')
+annotation = explore.Annotation(aln, 'path-to-annotation')
+
+# access attributes
+annotation.ann_type  # type of annotation
+annotation.locus  # the locus
+annotation.features  # all parsed features matching the corresponsing aln positions
+
 ```
 
 ## Drawing an alignment with minimal python syntax
