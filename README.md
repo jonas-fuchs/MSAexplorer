@@ -1,18 +1,10 @@
-# HOBBY -> WORK IN PROGRESS... 
-Oh well, some stuff is not implemented, some might not work as intended or might break, but overall a fun project. Enjoy :)
+**WORK IN PROGRESS...** 
 
 ## MSAexplorer
 
 _"Explore multiple sequence alignments with a simple python package."_ 
 
-![MSAexplorer](msa_explorer.png)
-
-**DISCLAIMER:** This is a hobby project of mine to keep my coding skills progressing. I re-implemented some of my old stuff and some new ideas, just to get it all under one roof. Hope it is useful for you. Contributions are highly welcome.
-
-
 ## Requirements
-
-_Tried to make the requirements as minimal as possible._
 
 - python >= 3.12
 - matplotlib >= 3.9
@@ -28,7 +20,11 @@ pip install .
 
 ## Documentation
 
-### The MSA class
+### Alignment exploration
+
+#### The MSA class
+
+Allows to read in multiple sequence alignment and compute several statistics.
 
 ```python
 from msaexplorer import explore
@@ -64,27 +60,62 @@ msa.calc_pairwise_identity_matrix()  # calculate identity matrix
 msa.calc_reverse_complement_alignment()  # convert alignment sequences to reverese complement
 ```
 
-## Drawing an alignment with minimal python syntax
+#### The annoation class
+Read in *.gb, *.gff and bed files. All genomic locations are automatically adapted.
+
+```python
+from msaexplorer import explore
+
+# read in annotations
+aln = explore.MSA('path-to-msa')
+annotation = explore.Annotation(aln, 'path-to-annotation')
+
+# access attributes
+annotation.ann_type  # type of annotation
+annotation.locus  # the locus
+annotation.features  # all parsed features matching the corresponsing aln positions
+
+```
+
+### Alignment drawing
+
+Simple matplotlib extension to plot alignments. 
+
+
+**Example:**
 
 ```python
 import matplotlib.pyplot as plt
 from msaexplorer import explore
 from msaexplorer import draw
 
-# load alignment
 aln = explore.MSA("example_alignments/BoDV.aln", reference_id=None, zoom_range=None)
-# define subplots
-fig, ax = plt.subplots(nrows=5, height_ratios=[0.5,0.5,0.5,2,1], sharex=False)
-# draw different alignment vis
-draw.stat_plot(aln, ax[0], "gc", rolling_average=50, line_color="black")
-draw.stat_plot(aln, ax[1], stat_type="entropy", rolling_average=50, line_color="indigo")
+aln.reference_id = list(aln.alignment.keys())[0]
+fig, ax = plt.subplots(nrows=9, height_ratios=[0.2,0.2,0.2,0.2,2,0.2,2,0.2,0.5], sharex=False)
+
+draw.stat_plot(aln, ax[0], "gc", rolling_average=20, line_color="black")
+draw.stat_plot(aln, ax[1], stat_type="entropy", rolling_average=1, line_color="indigo")
 draw.stat_plot(aln, ax[2], "coverage", rolling_average=1)
-draw.identity_alignment(aln, ax[3], show_gaps=True, show_mask=True, show_mismatches=True, reference_color='lightsteelblue', show_seq_names=False, show_ambiguities=True, fancy_gaps=True, show_x_label=False, show_legend=True)
-draw.similarity_alignment(aln, ax[4], show_x_label=True)
-# format figure
-fig.set_size_inches(14, 15)
+draw.stat_plot(aln, ax[3], stat_type="identity", rolling_average=1, line_color="grey")
+draw.identity_alignment(aln, ax[4], show_gaps=False, show_mask=True, show_mismatches=True, reference_color='lightsteelblue', show_seq_names=False, show_ambiguities=True, fancy_gaps=True, show_x_label=False, show_legend=True, bbox_to_anchor=(1,1.05))
+draw.stat_plot(aln, ax[5], stat_type="similarity", rolling_average=1, line_color="darkblue")
+draw.similarity_alignment(aln, ax[6], fancy_gaps=True, show_gaps=True, matrix_type='TRANS', show_cbar=True, cbar_fraction=0.02,  show_x_label=False)
+draw.orf_plot(aln, ax[7], cmap='hsv', non_overlapping_orfs=False, show_cbar=True, cbar_fraction=0.2)
+draw.variant_plot(aln, ax[8], show_x_label=True, show_legend=True, bbox_to_anchor=(1,1.35))
+
+fig.set_size_inches(14, 29)
 fig.tight_layout()
 plt.show()
 ```
 
+**Will result in:**
+
 ![example](example_alignments/BoDV.png)
+
+
+## Planned features
+
+- alignment manipulation functions
+- annotation transfer
+- annotation plotting
+- command line tool
