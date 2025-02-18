@@ -593,3 +593,4 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     ax.set_yticklabels([])
     ax.set_title('conserved orfs', loc='left')
 
+# TODO: plot annotations

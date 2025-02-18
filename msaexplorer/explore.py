@@ -4,7 +4,6 @@ This contains the MSA class
 
 # built-in
 import math
-import os
 import collections
 import re
 from typing import Callable, Dict
@@ -16,7 +15,7 @@ from numpy import ndarray
 # msaexplorer
 from msaexplorer import config
 
-
+# TODO: test with as alignment
 class MSA:
     """
     An alignment class that allows computation of several stats
@@ -1033,6 +1032,7 @@ class MSA:
 
         return snp_dict
 
+    # TODO: add functions to manipulate alignments
 
 class Annotation:
     """
@@ -1242,6 +1242,7 @@ class Annotation:
 
             return records
 
+        # TODO: test parsing
         def parse_bed(file_path) -> dict:
             """
             Parse a BED file into a dictionary structure.
@@ -1364,3 +1365,5 @@ class Annotation:
                 original_locations = feature_data['location']
                 aligned_locations = map_location(self._position_map, original_locations)
                 feature_data['location'] = aligned_locations
+
+    # TODO: transfer of annotations to other sequences (return respective ungapped seq and adapted annotation)
