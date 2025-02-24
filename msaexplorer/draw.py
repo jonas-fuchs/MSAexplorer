@@ -2,6 +2,7 @@
 contains the functions for drawing graphs
 """
 # built-in
+from itertools import chain
 from typing import Callable, Dict
 from copy import deepcopy
 
@@ -21,7 +22,7 @@ from matplotlib.collections import PatchCollection
 
 
 # general helper functions
-def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes):
+def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes, annotation: explore.Annotation | None = None):
     """
     Validate MSA class and axis.
     """
@@ -29,6 +30,9 @@ def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes):
         raise ValueError('alignment has to be an MSA class. use explore.MSA() to read in alignment')
     if not isinstance(ax, plt.Axes):
         raise ValueError('ax has to be an matplotlib axis')
+    if annotation is not None:
+        if not isinstance(annotation, explore.Annotation):
+            raise ValueError('annotation has to be an annotation class. use explore.Annotation() to read in annotation')
 
 
 def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left: bool):
@@ -143,6 +147,35 @@ def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_p
             )
         )
 
+
+def _add_track_positions(annotation_dic):
+    # create a dict and sort
+    annotation_dic = dict(sorted(annotation_dic.items(), key=lambda x: x[1]['location'][0][0]))
+
+    # remember for each track the largest stop
+    track_stops = [0]
+
+    for ann in annotation_dic:
+        flattened_locations = list(chain.from_iterable(annotation_dic[ann]['location']))  # flatten list
+        track = 0
+        # check if a start of a gene is smaller than the stop of the current track
+        # -> move to new track
+        while flattened_locations[0] < track_stops[track]:
+            track += 1
+            # if all prior tracks are potentially causing an overlap
+            # create a new track and break
+            if len(track_stops) <= track:
+                track_stops.append(0)
+                break
+        # in the current track remember the stop of the current gene
+        track_stops[track] = flattened_locations[-1]
+        # and indicate the track in the dict
+        annotation_dic[ann]['track'] = track
+
+    return annotation_dic
+
+
+# TODO: allow reading in paths or opjects!
 
 def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1.15)):
     """
@@ -495,6 +528,48 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     ax.set_ylabel('reference')
 
 
+def _plot_annotation(annotation_dict: dict, ax: plt.Axes, show_direction: bool, direction_marker_size: int, color: str | ScalarMappable):
+    """
+    Plot annotations
+    :param annotation_dict: dict of annotations
+    :param ax: matplotlib Axes
+    :param show_direction: bool
+    :param direction_marker_size: size of marker
+    :param color: color of annotation (color or scalar)
+    """
+    for annotation in annotation_dict:
+        for locations in annotation_dict[annotation]['location']:
+            x_value = locations[0]
+            length = locations[1] - locations[0]
+            ax.add_patch(
+                patches.FancyBboxPatch(
+                    (x_value, annotation_dict[annotation]['track'] + 1),
+                    length,
+                    0.8,
+                    boxstyle="Round, pad=0",
+                    ec="black",
+                    fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
+                )
+            )
+            if show_direction:
+                if annotation_dict[annotation]['strand'] == '-':
+                    marker = '<'
+                else:
+                    marker = '>'
+                ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
+
+        # plot linked annotations (such as splicing)
+        if len(annotation_dict[annotation]['location']) > 1:
+            y_value = annotation_dict[annotation]['track'] + 1.4
+            start = None
+            for locations in annotation_dict[annotation]['location']:
+                if start is None:
+                    start = locations[1]
+                    continue
+                ax.plot([start, locations[0]], [y_value, y_value], '--', linewidth=2, color='black')
+                start = locations[1]
+
+
 def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Plot conserved ORFs.
@@ -508,33 +583,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     :param show_x_label: whether to show the x-axis label
     :param show_cbar: whether to show the colorbar - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
     :param cbar_fraction: fraction of the original ax reserved for the colorbar
-
     """
-    # helper function
-    def add_track_positions(annotation_dic):
-        # create a dict and sort
-        annotation_dic = dict(sorted(annotation_dic.items(), key=lambda x: x[1]['positions'][0]))
-
-        # remember for each track the largest stop
-        track_stops = [0]
-
-        for ann in annotation_dic:
-            track = 0
-            # check if a start of a gene is smaller than the stop of the current track
-            # -> move to new track
-            while annotation_dic[ann]['positions'][0] < track_stops[track]:
-                track += 1
-                # if all prior tracks are potentially causing an overlap
-                # create a new track and break
-                if len(track_stops) <= track:
-                    track_stops.append(0)
-                    break
-            # in the current track remember the stop of the current gene
-            track_stops[track] = annotation_dic[ann]['positions'][1]
-            # and indicate the track in the dict
-            annotation_dic[ann]['track'] = track
-
-        return annotation_dic
 
     cmap = ScalarMappable(norm=Normalize(0, 100), cmap=plt.get_cmap(cmap))
 
@@ -553,32 +602,10 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     if aln.zoom is not None:
         annotation_dict = {key:val for key, val in annotation_dict.items() if aln.zoom[0] < val['positions'][0] <= aln.zoom[1]}
 
-    add_track_positions(annotation_dict)
-
+    # add track for plotting
+    _add_track_positions(annotation_dict)
     # plot
-    max_track = 0
-    for annotation in annotation_dict:
-        x_value = annotation_dict[annotation]['positions'][0]
-        length = annotation_dict[annotation]['positions'][1] - annotation_dict[annotation]['positions'][0]
-        ax.add_patch(
-            patches.FancyBboxPatch(
-                (x_value, annotation_dict[annotation]['track'] + 1),
-                length,
-                0.8,
-                boxstyle="Round, pad=0",
-                ec="black",
-                fc=cmap.to_rgba(annotation_dict[annotation]['conservation'])
-            )
-        )
-        if annotation_dict[annotation]['track'] > max_track:
-            max_track = annotation_dict[annotation]['track']
-
-        if show_direction:
-            if annotation_dict[annotation]['strand'] == '-':
-                marker = '<'
-            else:
-                marker = '>'
-            ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
+    _plot_annotation(annotation_dict, ax, show_direction, direction_marker_size, cmap)
 
     # legend
     if show_cbar:
@@ -593,4 +620,26 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     ax.set_yticklabels([])
     ax.set_title('conserved orfs', loc='left')
 
-# TODO: plot annotations
+
+def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', direction_marker_size: int = 5, show_x_label: bool = False):
+
+    # try to parse annotation --> str could be path
+    if type(annotation) is str:
+        annotation = explore.Annotation(aln, annotation)
+    # validate input
+    _validate_input_parameters(aln, ax, annotation)
+    if not is_color_like(color):
+        raise ValueError(f'{color} for reference is not a color')
+    # try to subset the annotation dict
+    try:
+        annotation_dict = annotation.features[feature_to_plot]
+    except KeyError:
+        raise KeyError(f'Feature {feature_to_plot} not found. Use annotation.features.keys() to see available features.')
+
+    _add_track_positions(annotation_dict)
+    _plot_annotation(annotation_dict, ax, show_direction=True, direction_marker_size=direction_marker_size, color=color)
+    _format_x_axis(aln, ax, show_x_label, show_left=False)
+    ax.set_ylim(bottom=0.8)
+    ax.set_yticks([])
+    ax.set_yticklabels([])
+    ax.set_title(f'{annotation.locus} ({feature_to_plot})', loc='left')

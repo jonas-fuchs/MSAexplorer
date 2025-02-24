@@ -495,7 +495,7 @@ class MSA:
                             conservation = calculate_identity(identities, positions)
                             if identity_cutoff is not None and conservation < identity_cutoff:
                                 continue
-                            orf_dict[f'ORF_{orf_counter}'] = {'positions': positions,
+                            orf_dict[f'ORF_{orf_counter}'] = {'location': [positions],
                                                               'frame': frame,
                                                               'strand': direction,
                                                               'conservation': conservation,
@@ -530,9 +530,9 @@ class MSA:
 
         for orf in orf_dict:
             if orf_dict[orf]['strand'] == '+':
-                fw_orfs.append((orf, orf_dict[orf]['positions']))
+                fw_orfs.append((orf, orf_dict[orf]['location'][0]))
             else:
-                rw_orfs.append((orf, orf_dict[orf]['positions']))
+                rw_orfs.append((orf, orf_dict[orf]['location'][0]))
 
         fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
         rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
@@ -1034,6 +1034,9 @@ class MSA:
 
     # TODO: add functions to manipulate alignments
 
+
+# TODO: fix parsing for splicing inf gff3
+
 class Annotation:
     """
     An annotation class that allows to read in gff, gb or bed files and adjust its locations to that of the MSA.
@@ -1341,10 +1344,11 @@ class Annotation:
         Adjust all feature locations to alignment positions
         """
 
-        def map_location(position_map, locations: list) -> list:
+        def map_location(position_map: Dict[int, int], locations: list) -> list:
             """
             Map genomic locations to alignment positions using a precomputed position map.
 
+            :param position_map: Positions mapped from gapped to ungapped
             :param locations: List of genomic start and end positions.
             :return: List of adjusted alignment positions.
             """
