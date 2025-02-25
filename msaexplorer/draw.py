@@ -527,12 +527,11 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     ax.set_ylabel('reference')
 
 
-def _plot_annotation(annotation_dict: dict, ax: plt.Axes, show_direction: bool, direction_marker_size: int, color: str | ScalarMappable):
+def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
     """
     Plot annotations
     :param annotation_dict: dict of annotations
     :param ax: matplotlib Axes
-    :param show_direction: bool
     :param direction_marker_size: size of marker
     :param color: color of annotation (color or scalar)
     """
@@ -550,7 +549,7 @@ def _plot_annotation(annotation_dict: dict, ax: plt.Axes, show_direction: bool, 
                     fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
                 )
             )
-            if show_direction:
+            if direction_marker_size is not None:
                 if annotation_dict[annotation]['strand'] == '-':
                     marker = '<'
                 else:
@@ -569,7 +568,7 @@ def _plot_annotation(annotation_dict: dict, ax: plt.Axes, show_direction: bool, 
                 start = locations[1]
 
 
-def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Plot conserved ORFs.
     :param aln: alignment MSA class
@@ -577,8 +576,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     :param min_length: minimum length of orf
     :param non_overlapping_orfs: whether to consider overlapping orfs
     :param cmap: color mapping for % identity - see https://matplotlib.org/stable/users/explain/colors/colormaps.html
-    :param show_direction: show strand information
-    :param direction_marker_size: marker size for direction marker, only relevant if show_direction is True
+    :param direction_marker_size: marker size for direction marker, not shown if marker_size == None
     :param show_x_label: whether to show the x-axis label
     :param show_cbar: whether to show the colorbar - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
     :param cbar_fraction: fraction of the original ax reserved for the colorbar
@@ -604,7 +602,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     # add track for plotting
     _add_track_positions(annotation_dict)
     # plot
-    _plot_annotation(annotation_dict, ax, show_direction, direction_marker_size, cmap)
+    _plot_annotation(annotation_dict, ax, direction_marker_size=direction_marker_size, color=cmap)
 
     # legend
     if show_cbar:
@@ -621,7 +619,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
 
 
 # TODO: Plot gene names?
-def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False):
+def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
     """
     Plot annotations from bed, gff or gb files. Are automatically mapped to alignment.
     :param aln: alignment MSA class
@@ -668,7 +666,7 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
             raise KeyError(f'Feature {feature_to_plot} not found. Use annotation.features.keys() to see available features.')
 
     _add_track_positions(annotation_dict)
-    _plot_annotation(annotation_dict, ax, show_direction=show_direction, direction_marker_size=direction_marker_size, color=color)
+    _plot_annotation(annotation_dict, ax, direction_marker_size=direction_marker_size, color=color)
     _format_x_axis(aln, ax, show_x_label, show_left=False)
     ax.set_ylim(bottom=0.8)
     ax.set_yticks([])
