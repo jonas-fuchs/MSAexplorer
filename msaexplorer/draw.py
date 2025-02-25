@@ -5,6 +5,7 @@ contains the functions for drawing graphs
 from itertools import chain
 from typing import Callable, Dict
 from copy import deepcopy
+import os
 
 from numpy import ndarray
 
@@ -174,8 +175,6 @@ def _add_track_positions(annotation_dic):
 
     return annotation_dic
 
-
-# TODO: allow reading in paths or opjects!
 
 def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1.15)):
     """
@@ -620,16 +619,44 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     ax.set_yticklabels([])
     ax.set_title('conserved orfs', loc='left')
 
-# TODO: Plot gene names?
-def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', direction_marker_size: int = 5, show_x_label: bool = False):
 
-    # try to parse annotation --> str could be path
+# TODO: Plot gene names?
+def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', show_direction:bool = True, direction_marker_size: int = 5, show_x_label: bool = False):
+    """
+    Plot annotations from bed, gff or gb files. Are automatically mapped to alignment.
+    :param aln: alignment MSA class
+    :param annotation: annotation class | path to annotation file
+    :param ax: matplotlib axes
+    :param feature_to_plot: potential feature to plot (not for bed files as it is parsed as one feature)
+    :param color: color for the annotation
+    :param show_direction: show strand information
+    :param direction_marker_size: marker size for direction marker, only relevant if show_direction is True
+    :param show_x_label: whether to show the x-axis label
+    """
+    # helper function
+    def parse_annotation_from_string(path: str, msa: explore.MSA) -> explore.Annotation:
+        """
+        Parse annotation.
+        :param path: path to annotation
+        :param msa: msa object
+        :return: parsed annotation
+        """
+        if os.path.exists(path):
+            # reset zoom so the annotation is correctly parsed
+            msa_temp = deepcopy(msa)
+            msa_temp.zoom = None
+            return explore.Annotation(msa_temp, path)
+        else:
+            raise FileNotFoundError()
+
+    # parse from path
     if type(annotation) is str:
-        annotation = explore.Annotation(aln, annotation)
+        annotation = parse_annotation_from_string(annotation, aln)
     # validate input
     _validate_input_parameters(aln, ax, annotation)
     if not is_color_like(color):
         raise ValueError(f'{color} for reference is not a color')
+    # ignore features to plot for bed files (here it is written into one feature)
     if annotation.ann_type == 'bed':
         annotation_dict = annotation.features['region']
         feature_to_plot = 'bed regions'
@@ -641,7 +668,7 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
             raise KeyError(f'Feature {feature_to_plot} not found. Use annotation.features.keys() to see available features.')
 
     _add_track_positions(annotation_dict)
-    _plot_annotation(annotation_dict, ax, show_direction=True, direction_marker_size=direction_marker_size, color=color)
+    _plot_annotation(annotation_dict, ax, show_direction=show_direction, direction_marker_size=direction_marker_size, color=color)
     _format_x_axis(aln, ax, show_x_label, show_left=False)
     ax.set_ylim(bottom=0.8)
     ax.set_yticks([])
