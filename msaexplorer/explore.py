@@ -6,6 +6,7 @@ This contains the MSA class
 import math
 import collections
 import re
+from copy import deepcopy
 from typing import Callable, Dict
 
 # installed
@@ -1031,11 +1032,8 @@ class MSA:
                     snp_dict['POS'][pos]['ALT'][alt]['AF'] /= len(aln)
 
         return snp_dict
-
     # TODO: add functions to manipulate alignments
 
-
-# TODO: fix parsing for splicing inf gff3
 
 class Annotation:
     """
@@ -1079,7 +1077,8 @@ class Annotation:
 
         def detect_annotation_type(file_path: str) -> str:
             """
-            Detect the type of annotation file (GenBank, GFF, or BED).
+            Detect the type of annotation file (GenBank, GFF, or BED) based
+            on the first relevant line (excluding empty and #)
 
             :param file_path: Path to the annotation file.
             :return: The detected file type ('gb', 'gff', or 'bed').
@@ -1105,6 +1104,8 @@ class Annotation:
                     fields = line.split('\t')
                     if len(fields) >= 3 and re.match(r'^\d+$', fields[1]) and re.match(r'^\d+$', fields[2]):
                         return 'bed'
+                    # only read in the first line
+                    break
 
             raise ValueError(
                 "File type could not be determined. Ensure the file follows a recognized format (GenBank, GFF, or BED).")
@@ -1208,7 +1209,7 @@ class Annotation:
 
         def parse_gff(file_path) -> dict:
             """
-            Parse a GFF (General Feature Format) file into a dictionary structure.
+            Parse a GFF3 (General Feature Format) file into a dictionary structure.
 
             :param file_path: path to genebank file
             :return: nested dictionary
@@ -1216,6 +1217,7 @@ class Annotation:
             """
             records = {}
             with open(file_path, 'r') as file:
+                previous_id, previous_feature = None, None
                 for line in file:
                     if line.startswith('#') or not line.strip():
                         continue
@@ -1231,7 +1233,6 @@ class Annotation:
 
                     feature_id = len(records[seqid]['features'][feature_type])
                     feature = {
-                        'location': [[int(start) - 1, int(end)]],
                         'strand': strand,
                     }
 
@@ -1241,11 +1242,18 @@ class Annotation:
                             key, value = attr.split('=', 1)
                             feature[key.strip()] = value.strip()
 
-                    records[seqid]['features'][feature_type][feature_id] = feature
+                    # check if feature are the same --> possible splicing
+                    if previous_id is not None and previous_feature == feature:
+                        records[seqid]['features'][feature_type][previous_id]['location'].append([int(start)-1, int(end)])
+                    else:
+                        records[seqid]['features'][feature_type][feature_id] = feature
+                        records[seqid]['features'][feature_type][feature_id]['location'] = [[int(start) - 1, int(end)]]
+                    # set new previous id and features -> new dict as 'location' is pointed in current feature and this
+                    # is the only key different if next feature has the same entries
+                    previous_id, previous_feature = feature_id, {key:value for key, value in feature.items() if key != 'location'}
 
             return records
 
-        # TODO: test parsing
         def parse_bed(file_path) -> dict:
             """
             Parse a BED file into a dictionary structure.
@@ -1294,8 +1302,8 @@ class Annotation:
         # determine the annotation content -> should be standard formatted
         try:
             annotation_type = detect_annotation_type(annotation_path)
-        except ValueError as e:
-            print(e)
+        except ValueError as err:
+            raise err
 
         # read in the annotation
         annotations = parse_functions[annotation_type](annotation_path)

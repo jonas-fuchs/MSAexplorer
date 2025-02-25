@@ -600,7 +600,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
         annotation_dict = aln_temp.get_conserved_orfs(min_length=min_length)
     # filter dict for zoom
     if aln.zoom is not None:
-        annotation_dict = {key:val for key, val in annotation_dict.items() if aln.zoom[0] < val['positions'][0] <= aln.zoom[1]}
+        annotation_dict = {key:val for key, val in annotation_dict.items() if aln.zoom[0] < val['location'][0][0] <= aln.zoom[1] or aln.zoom[0] < val['location'][0][1] <= aln.zoom[1]}
 
     # add track for plotting
     _add_track_positions(annotation_dict)
@@ -620,7 +620,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     ax.set_yticklabels([])
     ax.set_title('conserved orfs', loc='left')
 
-
+# TODO: Plot gene names?
 def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', direction_marker_size: int = 5, show_x_label: bool = False):
 
     # try to parse annotation --> str could be path
@@ -630,11 +630,15 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     _validate_input_parameters(aln, ax, annotation)
     if not is_color_like(color):
         raise ValueError(f'{color} for reference is not a color')
-    # try to subset the annotation dict
-    try:
-        annotation_dict = annotation.features[feature_to_plot]
-    except KeyError:
-        raise KeyError(f'Feature {feature_to_plot} not found. Use annotation.features.keys() to see available features.')
+    if annotation.ann_type == 'bed':
+        annotation_dict = annotation.features['region']
+        feature_to_plot = 'bed regions'
+    else:
+        # try to subset the annotation dict
+        try:
+            annotation_dict = annotation.features[feature_to_plot]
+        except KeyError:
+            raise KeyError(f'Feature {feature_to_plot} not found. Use annotation.features.keys() to see available features.')
 
     _add_track_positions(annotation_dict)
     _plot_annotation(annotation_dict, ax, show_direction=True, direction_marker_size=direction_marker_size, color=color)
