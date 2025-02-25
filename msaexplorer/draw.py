@@ -416,10 +416,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         ax.set_yticklabels(['0', '100'])
 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
-    if rolling_average > 1:
-        ax.set_ylabel(f'{stat_type}\n {2*rolling_average}c mean')
-    else:
-        ax.set_ylabel(f'{stat_type}')
+    ax.set_ylabel(f'{stat_type}')
 
 
 def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, colors: dict | None = None, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1.15)):
@@ -597,8 +594,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
         annotation_dict = aln_temp.get_conserved_orfs(min_length=min_length)
     # filter dict for zoom
     if aln.zoom is not None:
-        annotation_dict = {key:val for key, val in annotation_dict.items() if aln.zoom[0] < val['location'][0][0] <= aln.zoom[1] or aln.zoom[0] < val['location'][0][1] <= aln.zoom[1]}
-
+        annotation_dict = {key:val for key, val in annotation_dict.items() if max(val['location'][0][0], aln.zoom[0]) <= min(val['location'][0][1], aln.zoom[1])}
     # add track for plotting
     _add_track_positions(annotation_dict)
     # plot
