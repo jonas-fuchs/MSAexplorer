@@ -15,7 +15,7 @@ app_ui = ui.page_fluid(
             'Advanced Settings',
             ui.input_numeric('rolling_avg', 'Rolling Average (Statistic Plot):', value=20, min=1),
             ui.input_checkbox('show_gaps', 'Show Gaps in Alignment:', value=True),
-            ui.input_checkbox('show_annotation', 'Show Annotations (else ORF Plot):', value=True),
+            #ui.input_checkbox('show_annotation', 'Show Annotations (else ORF Plot):', value=True),
             ui.input_numeric('min_orf_length', 'Minimum ORF Length:', value=150, min=1),
             ui.input_selectize('reference', 'Reference sequence', ['first' ,'consensus'], selected='first'),
         ),
@@ -24,7 +24,8 @@ app_ui = ui.page_fluid(
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.input_radio_buttons('stat_type', 'Select Statistic Type:', ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
-                    ui.input_radio_buttons( 'alignment_type', 'Alignment Type:', ['identity', 'similarity'], selected='identity'),
+                    ui.input_radio_buttons( 'alignment_type', 'Select Alignment Type:', ['identity', 'similarity'], selected='identity'),
+                    ui.input_radio_buttons('annotation', 'Select Annotation Type', ['SNPs','Conserved ORFs', 'Annotation'], selected='SNPs')
                 ),
                 ui.output_plot('msa_plot', height='90vh', width='90vw'),
                 ),
@@ -123,9 +124,9 @@ def server(input, output, session):
                 cbar_fraction=0.02,
                 show_x_label=False
             )
-
+        'SNPs', 'Conserved ORFs'
         # Subplot 3: Annotation or ORF Plot
-        if input.show_annotation() and input.annotation_file():
+        if input.annotation() == 'annotation' and input.annotation_file():
             annotation_file = input.annotation_file()
             draw.annotation_plot(
                 aln, annotation_file[0]['datapath'],
@@ -133,7 +134,7 @@ def server(input, output, session):
                 feature_to_plot='gene',
                 show_x_label=True
             )
-        else:
+        elif input.annotation() == 'Conserved ORFs':
             draw.orf_plot(
                 aln, axes[2],
                 cmap='hsv',
@@ -141,6 +142,10 @@ def server(input, output, session):
                 show_cbar=True,
                 cbar_fraction=0.2,
                 min_length=input.min_orf_length()
+            )
+        elif input.annotation() == 'SNPs':
+            draw.variant_plot(
+                aln, axes[2]
             )
 
         # Adjust layout
