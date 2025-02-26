@@ -1,6 +1,6 @@
 from shiny import App, render, ui, reactive
 import matplotlib.pyplot as plt
-from msaexplorer import explore, draw
+from msaexplorer import explore, draw, config
 
 # Define the UI
 app_ui = ui.page_fluid(
@@ -14,10 +14,10 @@ app_ui = ui.page_fluid(
         ui.nav_panel(
             'Advanced Settings',
             ui.input_numeric('rolling_avg', 'Rolling Average (Statistic Plot):', value=20, min=1),
-            ui.input_checkbox('show_gaps', 'Show Gaps in Alignment:', value=True),
-            #ui.input_checkbox('show_annotation', 'Show Annotations (else ORF Plot):', value=True),
+            ui.input_checkbox('show_gaps', 'Show Gaps in Alignment', value=True),
             ui.input_numeric('min_orf_length', 'Minimum ORF Length:', value=150, min=1),
             ui.input_selectize('reference', 'Reference sequence', ['first' ,'consensus'], selected='first'),
+            ui.input_selectize('matrix', 'Substitution Matrix (Similarity)', [])
         ),
         ui.nav_panel(
             'Visualization',
@@ -25,7 +25,7 @@ app_ui = ui.page_fluid(
                 ui.sidebar(
                     ui.input_radio_buttons('stat_type', 'Select Statistic Type:', ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
                     ui.input_radio_buttons( 'alignment_type', 'Select Alignment Type:', ['identity', 'similarity'], selected='identity'),
-                    ui.input_radio_buttons('annotation', 'Select Annotation Type', ['SNPs','Conserved ORFs', 'Annotation'], selected='SNPs')
+                    ui.input_radio_buttons('annotation', 'Select Annotation Type', ['SNPs','Conserved ORFs', 'Annotation'], selected='Annotation')
                 ),
                 ui.output_plot('msa_plot', height='90vh', width='90vw'),
                 ),
@@ -60,6 +60,15 @@ def server(input, output, session):
         aln = reactive.alignment.get()
         ui.update_selectize(
             id='reference', choices=['first' ,'consensus']+list(aln.alignment.keys()), selected='first'
+        )
+    @reactive.Effect
+    @reactive.event(input.alignment_file)
+    def subsitution_matrix():
+        aln = reactive.alignment.get()
+        ui.update_selectize(
+            id='matrix',
+            choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
+            selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
         )
 
     @output
@@ -111,7 +120,7 @@ def server(input, output, session):
                 show_mismatches=True,
                 reference_color='lightsteelblue',
                 show_seq_names=False,
-                show_x_label=False,
+                show_x_label=True if input.annotation() == 'Annotation' and not input.annotation_file() else False,
                 show_legend=True
             )
         else:
@@ -119,12 +128,12 @@ def server(input, output, session):
                 aln, axes[1],
                 fancy_gaps=True,
                 show_gaps=input.show_gaps(),
-                matrix_type='TRANS',
+                matrix_type=input.matrix(),
                 show_cbar=True,
                 cbar_fraction=0.02,
-                show_x_label=False
+                show_x_label=True if input.annotation() == 'Annotation' and not input.annotation_file() else False
             )
-        'SNPs', 'Conserved ORFs'
+
         # Subplot 3: Annotation or ORF Plot
         if input.annotation() == 'annotation' and input.annotation_file():
             annotation_file = input.annotation_file()
@@ -139,16 +148,20 @@ def server(input, output, session):
                 aln, axes[2],
                 cmap='hsv',
                 non_overlapping_orfs=False,
+                show_x_label=True,
                 show_cbar=True,
                 cbar_fraction=0.2,
                 min_length=input.min_orf_length()
             )
         elif input.annotation() == 'SNPs':
             draw.variant_plot(
-                aln, axes[2]
+                aln, axes[2],
+                show_x_label=True
             )
+        # turn everything off
+        else:
+            axes[2].axis('off')
 
-        # Adjust layout
         return fig
 
 
