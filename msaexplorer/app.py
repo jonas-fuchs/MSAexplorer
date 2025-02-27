@@ -79,9 +79,9 @@ app_ui = ui.page_fluid(
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.input_switch('seq_names', 'show sequence names', value=False),
-                    ui.input_radio_buttons('stat_type', 'Select plot type:', ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
-                    ui.input_radio_buttons( 'alignment_type', 'Select plot type:', ['identity', 'similarity'], selected='identity'),
-                    ui.input_radio_buttons('annotation', 'Select plot type', ['SNPs','Conserved ORFs', 'Annotation'], selected='Annotation')
+                    ui.input_radio_buttons('stat_type', ui.h6('Select plot type:'), ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
+                    ui.input_radio_buttons( 'alignment_type', ui.h6('Select plot type:'), ['identity', 'similarity'], selected='identity'),
+                    ui.input_radio_buttons('annotation', ui.h6('Select plot type:'), ['SNPs','Conserved ORFs', 'Annotation'], selected='Annotation')
                 ),
                 ui.output_plot('msa_plot', height='90vh', width='90vw'),
                 ),
