@@ -1,0 +1,29 @@
+/* Custom style sheet for MSAexplorer */
+
+.row {
+    text-align: left;
+    margin-top: 1em;
+}
+
+h6 {
+    font-weight: bold;
+    color: #303030;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.selectize-dropdown-content div[data-value="indigo"] {
+    color: indigo;
+}
+.selectize-dropdown-content div[data-value="darkblue"] {
+    color: darkblue;
+}
+.selectize-dropdown-content div[data-value="grey"] {
+    color: grey;
+}
+.selectize-dropdown-content div[data-value="black"] {
+    color: black;
+}
+.selectize-dropdown-content div[data-value="burlywood"] {
+    color: burlywood;
+}

@@ -1,3 +1,6 @@
+# build in
+from pathlib import Path
+
 # libs
 from shiny import App, render, ui, reactive
 import matplotlib.pyplot as plt
@@ -6,36 +9,34 @@ import matplotlib.pyplot as plt
 from msaexplorer import explore, draw, config
 
 # define the UI
+
+
 app_ui = ui.page_fluid(
     ui.h2('MSAexplorer'),
+    ui.include_css(
+        Path(__file__).parent / 'www/styles.css'
+    ),
     ui.navset_tab(
         ui.nav_panel(
             'Upload Files',
-            ui.input_file('alignment_file', 'Upload Alignment File (.aln)', multiple=False),
-            ui.input_file('annotation_file', 'Optional Annotation File (.gff3, .bed, .gb)', multiple=False),
+            ui.input_file('alignment_file', ui.h6('Upload Alignment File (.aln)'), multiple=False),
+            ui.input_file('annotation_file', ui.h6('Annotation File (.gff3, .bed, .gb)'), multiple=False),
         ),
         ui.nav_panel(
         'Advanced Settings',
             ui.row(
-                ui.h6('First plot:', style='font-weight: bold; color: black'),
+                ui.h6('First plot:'),
                 ui.column(
                     4,
                     ui.input_numeric('rolling_avg', 'Rolling average', value=20, min=1)
                 ),
                 ui.column(
                     4,
-                ui.tags.style("""
-                    .selectize-dropdown-content div[data-value="indigo"] { color: indigo; }
-                    .selectize-dropdown-content div[data-value="darkblue"] { color: darkblue; }
-                    .selectize-dropdown-content div[data-value="grey"] { color: grey; }
-                    .selectize-dropdown-content div[data-value="black"] { color: black; }
-                    .selectize-dropdown-content div[data-value="burlywood"] { color: burlywood; }
-                    """),
                     ui.input_selectize('stat_color', 'Line color', ['indigo', 'darkblue', 'grey', 'black', 'burlywood'], selected='grey')
                 )
             ),
             ui.row(
-            ui.h6('Second plot:', style='font-weight: bold; color: black'),
+                ui.h6('Second plot:', class_='section-title'),
                 ui.column(
                     4,
                     ui.input_switch('show_gaps', 'Show gaps', value=True),
@@ -51,7 +52,7 @@ app_ui = ui.page_fluid(
                 )
             ),
             ui.row(
-                ui.h6('Third plot:',  style='font-weight: bold; color: black'),
+                ui.h6('Third plot:',  class_='section-title'),
                 ui.column(
                     4,
                 ui.h6('SNP plot', style='font-weight: bold; color: black'),
@@ -69,13 +70,6 @@ app_ui = ui.page_fluid(
                     4,
                 ui.h6('Annotation plot', style='font-weight: bold; color: black'),
                     ui.input_selectize('feature_display', 'Feature to display', ['None']),
-                    ui.tags.style("""
-                    .selectize-dropdown-content div[data-value="indigo"] { color: indigo; }
-                    .selectize-dropdown-content div[data-value="darkblue"] { color: darkblue; }
-                    .selectize-dropdown-content div[data-value="grey"] { color: grey; }
-                    .selectize-dropdown-content div[data-value="black"] { color: black; }
-                    .selectize-dropdown-content div[data-value="burlywood"] { color: burlywood; }
-                    """),
                     ui.input_selectize('feature_color', 'Feature color', ['indigo', 'darkblue', 'grey', 'black', 'burlywood'], selected='grey')
                 ),
             )
