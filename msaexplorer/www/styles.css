@@ -1,17 +1,205 @@
 /* Custom style sheet for MSAexplorer */
 
-.row {
-    text-align: left;
-    margin-top: 1em;
+/* General Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+h2 {
+    color: #0056b3;
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 10px;
 }
 
 h6 {
+    font-size: 1rem;
     font-weight: bold;
-    color: #303030;
-    margin-top: 1em;
-    margin-bottom: 1em;
+    color: #343a40;
+    margin-bottom: 10px;
 }
 
+.section-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #0056b3;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+    background-color: #ffffff;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    font-size: 1rem;
+    padding: 10px 20px;
+    transition: color 0.3s, background-color 0.3s;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #0056b3;
+    color: #ffffff;
+    border-color: #0056b3;
+    border-bottom: none;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #0056b3;
+}
+
+/* Inputs and Controls */
+input, select {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    box-sizing: border-box;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+input[type="range"] {
+    width: 90%;
+    margin-top: 10px;
+}
+
+/* Sliders */
+.ui-slider {
+    margin: 15px 0;
+    background-color: #dee2e6;
+    height: 6px;
+    border-radius: 3px;
+    position: relative;
+}
+
+.ui-slider-thumb {
+    background-color: #0056b3;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    position: absolute;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.ui-slider-thumb:hover {
+    background-color: #004085;
+}
+
+/* Buttons */
+button {
+    padding: 10px 20px;
+    background-color: #0056b3;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #004085;
+}
+
+/* Plots and Visualizations */
+#msa_plot {
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    padding: 10px;
+}
+
+/* Sidebar Layout */
+.sidebar {
+    background-color: #ffffff;
+    padding: 20px;
+    border-right: 1px solid #dee2e6;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h6 {
+    font-size: 1rem;
+    color: #343a40;
+    margin-bottom: 10px;
+}
+
+/* Custom Tooltips */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: 140px;
+    background-color: #343a40;
+    color: #ffffff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -70px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* mobile Responsiveness */
+@media (max-width: 768px) {
+    .sidebar {
+        padding: 10px;
+    }
+
+    .ui-slider {
+        width: 100%;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+    }
+}
+
+/* Dropdown menu colors */
 .selectize-dropdown-content div[data-value="indigo"] {
     color: indigo;
 }

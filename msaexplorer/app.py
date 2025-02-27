@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 from msaexplorer import explore, draw, config
 
 # define the UI
-
-
 app_ui = ui.page_fluid(
     ui.h2('MSAexplorer'),
     ui.include_css(
@@ -19,13 +17,13 @@ app_ui = ui.page_fluid(
     ui.navset_tab(
         ui.nav_panel(
             'Upload Files',
-            ui.input_file('alignment_file', ui.h6('Upload Alignment File (.aln)'), multiple=False),
-            ui.input_file('annotation_file', ui.h6('Annotation File (.gff3, .bed, .gb)'), multiple=False),
+            ui.input_file('alignment_file', ui.h6('Upload Alignment File (.aln)', class_='section-title'), multiple=False),
+            ui.input_file('annotation_file', ui.h6('Annotation File (.gff3, .bed, .gb)', class_='section-title'), multiple=False),
         ),
         ui.nav_panel(
         'Advanced Settings',
             ui.row(
-                ui.h6('First plot:'),
+                ui.h6('First plot:', class_='section-title'),
                 ui.column(
                     4,
                     ui.input_numeric('rolling_avg', 'Rolling average', value=20, min=1)
@@ -55,20 +53,20 @@ app_ui = ui.page_fluid(
                 ui.h6('Third plot:',  class_='section-title'),
                 ui.column(
                     4,
-                ui.h6('SNP plot', style='font-weight: bold; color: black'),
+                ui.h6('SNP plot'),
                     ui.input_numeric('head_size', 'Variant size (Head)', value=3, min=1),
                     ui.input_numeric('stem_size', 'Variant size (Stem)', value=1, min=1),
                     ui.input_switch('show_legend_variants', 'Show legend', value=True)
                 ),
                 ui.column(
                     4,
-                ui.h6('ORF plot', style='font-weight: bold; color: black'),
+                ui.h6('ORF plot'),
                     ui.input_numeric('min_orf_length', 'Minimum ORF length', value=150, min=1),
                     ui.input_switch('non_overlapping', 'Non-Overlapping ORFs', value=False),
                 ),
                 ui.column(
                     4,
-                ui.h6('Annotation plot', style='font-weight: bold; color: black'),
+                ui.h6('Annotation plot'),
                     ui.input_selectize('feature_display', 'Feature to display', ['None']),
                     ui.input_selectize('feature_color', 'Feature color', ['indigo', 'darkblue', 'grey', 'black', 'burlywood'], selected='grey')
                 ),
