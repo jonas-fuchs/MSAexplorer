@@ -1,4 +1,8 @@
-# build in
+"""
+This contains the code to create the MSAexplorer shiny application
+"""
+
+# build-in
 from pathlib import Path
 
 # libs
@@ -14,16 +18,25 @@ app_ui = ui.page_fluid(
     ui.include_css(
         Path(__file__).parent / 'www/styles.css'
     ),
+    ui.div(
+        ui.a(
+            ui.img(src='https://github.githubassets.com/assets/GitHub-Logo-ee398b662d42.png', height='30px'),
+            href='https://github.com/jonas-fuchs/MSAexplorer',
+            target='_blank',
+            title='View on GitHub'
+        ),
+        style='position: fixed; top: 10px; right: 10px; z-index: 1000;'
+    ),
     ui.navset_tab(
         ui.nav_panel(
             'Upload Files',
-            ui.input_file('alignment_file', ui.h6('Upload Alignment File (.aln)', class_='section-title'), multiple=False),
-            ui.input_file('annotation_file', ui.h6('Annotation File (.gff3, .bed, .gb)', class_='section-title'), multiple=False),
+            ui.input_file('alignment_file', ui.h6('Multiple sequence alignment', class_='section-title'), multiple=False),
+            ui.input_file('annotation_file', ui.h6('Optional .gff3, .bed or .gb', class_='section-title'), multiple=False),
         ),
         ui.nav_panel(
         'Advanced Settings',
             ui.row(
-                ui.h6('First plot:', class_='section-title'),
+                ui.h6('First plot', class_='section-title'),
                 ui.column(
                     4,
                     ui.input_numeric('rolling_avg', 'Rolling average', value=20, min=1)
@@ -34,7 +47,7 @@ app_ui = ui.page_fluid(
                 )
             ),
             ui.row(
-                ui.h6('Second plot:', class_='section-title'),
+                ui.h6('Second plot', class_='section-title'),
                 ui.column(
                     4,
                     ui.input_switch('show_gaps', 'Show gaps', value=True),
@@ -50,7 +63,7 @@ app_ui = ui.page_fluid(
                 )
             ),
             ui.row(
-                ui.h6('Third plot:',  class_='section-title'),
+                ui.h6('Third plot',  class_='section-title'),
                 ui.column(
                     4,
                 ui.h6('SNP plot'),
@@ -76,17 +89,15 @@ app_ui = ui.page_fluid(
             'Visualization',
             ui.layout_sidebar(
                 ui.sidebar(
-                    ui.input_switch('seq_names', 'show sequence names', value=False),
-                    ui.input_radio_buttons('stat_type', ui.h6('Select plot type:'), ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
-                    ui.input_radio_buttons( 'alignment_type', ui.h6('Select plot type:'), ['identity', 'similarity'], selected='identity'),
-                    ui.input_radio_buttons('annotation', ui.h6('Select plot type:'), ['SNPs','Conserved ORFs', 'Annotation'], selected='Annotation')
+                    ui.input_radio_buttons('stat_type', ui.h6('First plot'), ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
+                    ui.input_radio_buttons( 'alignment_type', ui.h6('Second plot'), ['identity', 'similarity'], selected='identity'),
+                    ui.input_radio_buttons('annotation', ui.h6('Third plot'), ['SNPs','Conserved ORFs', 'Annotation'], selected='Annotation'),
+                    ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1),
+                    ui.input_switch('seq_names', 'show names', value=False),
+                    ui.download_button('download_pdf', 'PDF')
                 ),
                 ui.output_plot('msa_plot', height='90vh', width='90vw'),
-                ),
-                ui.div(
-                    ui.input_slider('zoom_range', 'Zoom Range (Start - Stop):', min=0, max=1000, value=(0, 1000), step=1),
-                    style='position: absolute; top: 5px; right: 10px;'
-            )
+            ),
         )
     )
 )
@@ -245,5 +256,9 @@ def server(input, output, session):
 
         return fig
 
+    # TODO: Proper download
+    #@render.download(filename="image.png")
+    #def download_pdf():
+    #   pass
 
 app = App(app_ui, server)
