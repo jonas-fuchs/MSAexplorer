@@ -779,6 +779,7 @@ AA_COLORS = {
 
 # shiny app specific settings
 STANDARD_HEIGHT_RATIOS = {
+        5: (1, 5, 2),
         10: (1, 10, 2),
         20: (1, 20, 2),
         30: (1, 30, 2),
