@@ -92,7 +92,7 @@ app_ui = ui.page_fluid(
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity'], selected='gc'),
                     ui.input_numeric('plot_1_size', 'Plot size',1, min=1, max=200),
                     ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'similarity'], selected='identity'),
-                    ui.input_numeric('plot_2_size', 'Plot size', 1, min=1,step=10, max=200),
+                    ui.input_numeric('plot_2_size', 'Plot size', 1, min=1,step=2, max=200),
                     ui.input_selectize('annotation', ui.h6('Third plot'), ['Off', 'SNPs','Conserved ORFs', 'Annotation'], selected='Annotation'),
                     ui.input_numeric('plot_3_size', 'Plot size', 1, min=1, max=200),
                     ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1),
@@ -140,7 +140,7 @@ def server(input, output, session):
             for ratio in config.STANDARD_HEIGHT_RATIOS.keys():
                 if aln_len >= ratio:
                     seq_threshold = ratio
-                    break
+
             ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
             ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
             ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
@@ -166,6 +166,7 @@ def server(input, output, session):
         # Ensure an alignment file has been uploaded
         aln = reactive.alignment.get()
         ann = reactive.annotation.get()
+
         if not aln:
             return None
 
@@ -248,7 +249,7 @@ def server(input, output, session):
         else:
             axes[2].axis('off')
 
-        fig.tight_layout()
+        #fig.tight_layout()
 
         return fig
 
