@@ -65,10 +65,6 @@ input, select {
     border-radius: 4px;
 }
 
-input[type="number"] {
-    -moz-appearance: textfield;
-}
-
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -142,12 +138,6 @@ button:hover {
     padding: 20px;
     border-right: 1px solid #dee2e6;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-}
-
-.sidebar h6 {
-    font-size: 1rem;
-    color: #343a40;
-    margin-bottom: 10px;
 }
 
 /* Custom Tooltips */

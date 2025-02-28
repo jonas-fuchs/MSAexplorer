@@ -16,7 +16,7 @@ from msaexplorer import explore, draw, config
 app_ui = ui.page_fluid(
     ui.h2('MSAexplorer'),
     ui.include_css(
-        Path(__file__).parent / 'www/styles.css'
+        Path(__file__).parent/'www/styles.css'
     ),
     ui.div(
         ui.a(
@@ -89,9 +89,12 @@ app_ui = ui.page_fluid(
             'Visualization',
             ui.layout_sidebar(
                 ui.sidebar(
-                    ui.input_radio_buttons('stat_type', ui.h6('First plot'), ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
-                    ui.input_radio_buttons( 'alignment_type', ui.h6('Second plot'), ['identity', 'similarity'], selected='identity'),
-                    ui.input_radio_buttons('annotation', ui.h6('Third plot'), ['SNPs','Conserved ORFs', 'Annotation'], selected='Annotation'),
+                    ui.input_selectize('stat_type', ui.h6('First plot'), ['gc', 'entropy', 'coverage', 'identity'], selected='gc'),
+                    ui.input_numeric('plot_1_size', 'Plot size',1, min=1, max=200),
+                    ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['identity', 'similarity'], selected='identity'),
+                    ui.input_numeric('plot_2_size', 'Plot size', 1, min=1, max=200),
+                    ui.input_selectize('annotation', ui.h6('Third plot'), ['SNPs','Conserved ORFs', 'Annotation'], selected='Annotation'),
+                    ui.input_numeric('plot_3_size', 'Plot size', 1, min=1, max=200),
                     ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1),
                     ui.input_switch('seq_names', 'show names', value=False),
                     ui.download_button('download_pdf', 'PDF')
@@ -119,7 +122,28 @@ def server(input, output, session):
             reactive.alignment.set(aln)
             # Update zoom slider based on alignment length
             alignment_length = len(next(iter(aln.alignment.values())))-1
+            # Update zoom slider
             ui.update_slider('zoom_range', max=alignment_length, value=(0, alignment_length))
+            # Update reference
+            ui.update_selectize(
+                id='reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
+            )
+            # Update substitution matrix
+            ui.update_selectize(
+                id='matrix',
+                choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
+                selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
+            )
+            # update plot size sliders
+            # Adjust the size depending on the number of alignment sequences
+            aln_len, seq_threshold = len(aln.alignment.keys()), 10
+            for seq_threshold in config.STANDARD_HEIGHT_RATIOS.keys():
+                if aln_len >= seq_threshold:
+                    break
+            ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
+            ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
+            ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
+
 
     @reactive.Effect
     @reactive.event(input.annotation_file)
@@ -127,35 +151,13 @@ def server(input, output, session):
         annotation_file = input.annotation_file()
         if annotation_file:
             ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
-            reactive.annotation.set(ann)
-
-    @reactive.Effect
-    @reactive.event(input.alignment_file)
-    def update_reference():
-        aln = reactive.alignment.get()
-        ui.update_selectize(
-            id='reference', choices=['first' ,'consensus']+list(aln.alignment.keys()), selected='first'
-        )
-
-    @reactive.Effect
-    @reactive.event(input.alignment_file)
-    def subsitution_matrix():
-        aln = reactive.alignment.get()
-        ui.update_selectize(
-            id='matrix',
-            choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
-            selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
-        )
-
-    @reactive.Effect
-    @reactive.event(input.annotation_file)
-    def define_annotation_to_display():
-        ann = reactive.annotation.get()
-        ui.update_selectize(
-            id='feature_display',
-            choices=list(ann.features.keys()),
-            selected=list(ann.features.keys())[0]
-        )
+            reactive.annotation.set(ann)  # load alignment
+            # update features to display
+            ui.update_selectize(
+                id='feature_display',
+                choices=list(ann.features.keys()),
+                selected=list(ann.features.keys())[0]
+            )
 
     @output
     @render.plot
@@ -177,17 +179,8 @@ def server(input, output, session):
         # Update zoom level from slider
         aln.zoom = tuple(input.zoom_range())
 
-        # Adjust the size depending on the number of alignment sequences
-        aln_len, current_height_ratio = len(aln.alignment.keys()), 0.1
-        for n_seq, height_ratio in zip(
-                [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 500],
-                [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 7.5, 10]
-        ):
-            if aln_len >= n_seq:
-                current_height_ratio = height_ratio
-                break
         # Prepare the plot with 3 subplots
-        fig, axes = plt.subplots(nrows=3, height_ratios=[0.05, current_height_ratio, 0.1])
+        fig, axes = plt.subplots(nrows=3, height_ratios=[input.plot_1_size(), input.plot_2_size(), input.plot_3_size()])
 
         # Subplot 1: Stats Plot
         draw.stat_plot(
