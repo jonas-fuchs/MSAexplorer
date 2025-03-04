@@ -38,8 +38,14 @@ app_ui = ui.page_fluid(
     ui.navset_tab(
         ui.nav_panel(
             'Upload Files',
-            ui.input_file('alignment_file', ui.h6('Multiple sequence alignment', class_='section-title'), multiple=False),
-            ui.input_file('annotation_file', ui.h6('Optional .gff3, .bed or .gb', class_='section-title'), multiple=False),
+            ui.tooltip(
+                ui.input_file('alignment_file', ui.h6('MSA', class_='section-title'), multiple=False),
+                'Multiple sequence alignment file to display.'
+            ),
+            ui.tooltip(
+                ui.input_file('annotation_file', ui.h6('Optional .gff3, .bed or .gb', class_='section-title'), multiple=False),
+                'Optional annotation file to display. Sequence id must be present in the alignment for correct mapping.'
+            )
         ),
         ui.nav_panel(
         'Advanced Settings',
@@ -47,27 +53,44 @@ app_ui = ui.page_fluid(
                 ui.h6('First plot', class_='section-title'),
                 ui.column(
                     4,
-                    ui.input_numeric('rolling_avg', 'Rolling average', value=20, min=1)
+                    ui.tooltip(
+                        ui.input_numeric('rolling_avg', 'Average', value=20, min=1),
+                        'Rolling average over character intervals'
+                    )
                 ),
                 ui.column(
                     4,
-                    ui.input_selectize('stat_color', 'Line color', list(matplotlib.colors.cnames.keys()), selected='grey')
+                    ui.tooltip(
+                        ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
+                        'Any named matplotlib color for the line'
+                    )
                 )
             ),
             ui.row(
                 ui.h6('Second plot', class_='section-title'),
                 ui.column(
-                    4,
-                    ui.input_switch('show_gaps', 'Show gaps', value=True),
-                    ui.input_switch('show_legend', 'Show legend', value=True)
+                    4,ui.tooltip(
+                        ui.input_switch('show_gaps', 'Gaps', value=True),
+                        'Whether to show gaps'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('show_legend', 'Legend', value=True),
+                        'Whether to show legend'
+                    )
                 ),
                 ui.column(
                     4,
-                    ui.input_selectize('reference', 'Reference sequence', ['first' ,'consensus'], selected='first'),
+                    ui.tooltip(
+                        ui.input_selectize('reference', 'Reference', ['first' ,'consensus'], selected='first'),
+                        'Which reference sequence to calculate identity/similarity'
+                    )
                 ),
                 ui.column(
                     4,
-                    ui.input_selectize('matrix', 'Substitution matrix (similarity)', ['None'])
+                    ui.tooltip(
+                        ui.input_selectize('matrix', 'Matrix', ['None']),
+                        'Substitution matrix for similarity mapping'
+                    )
                 )
             ),
             ui.row(
@@ -75,23 +98,46 @@ app_ui = ui.page_fluid(
                 ui.column(
                     4,
                 ui.h6('SNP plot'),
-                    ui.input_numeric('head_size', 'Variant size (Head)', value=3, min=1),
-                    ui.input_numeric('stem_size', 'Variant size (Stem)', value=1, min=1),
-                    ui.input_switch('show_legend_variants', 'Show legend', value=True)
+                    ui.tooltip(
+                        ui.input_numeric('head_size', 'Head size', value=3, min=1),
+                        'Size of the head dot'
+                    ),
+                    ui.tooltip(
+                        ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
+                        'Length of the stem'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('show_legend_variants', 'Legend', value=True),
+                        'Whether to show legend'
+                    )
                 ),
                 ui.column(
                     4,
                 ui.h6('ORF plot'),
-                    ui.input_numeric('min_orf_length', 'Minimum ORF length', value=150, min=1),
-                    ui.input_switch('non_overlapping', 'Non-Overlapping ORFs', value=False),
-                    ui.input_selectize('color_mapping', 'Colormap for conservation', choices=list(colormaps.keys()), selected='jet'
-                                       ),
+                    ui.tooltip(
+                        ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
+                        'Minimum ORF length to calculate'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('non_overlapping', 'Overlapping', value=False),
+                        'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime'
+                    ),
+                    ui.tooltip(
+                        ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
+                        'colormap for conservation - any matplotlib colormap'
+                    ),
                 ),
                 ui.column(
                     4,
                 ui.h6('Annotation plot'),
-                    ui.input_selectize('feature_display', 'Feature to display', ['None']),
-                    ui.input_selectize('feature_color', 'Feature color', list(matplotlib.colors.cnames.keys()), selected='grey')
+                    ui.tooltip(
+                        ui.input_selectize('feature_display', 'Feature', ['None']),
+                        'Which feature to display'
+                    ),
+                    ui.tooltip(
+                        ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
+                        'Color of the feature'
+                    )
                 ),
             )
         ),
@@ -100,14 +146,30 @@ app_ui = ui.page_fluid(
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity'], selected='gc'),
-                    ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
+                    ui.tooltip(
+                        ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
+                        'Fraction of the total plot size'
+                    ),
                     ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'similarity'], selected='identity'),
-                    ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1,step=2, max=200),
+                    ui.tooltip(
+                        ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
+                        'Fraction of the total plot size'
+                    ),
                     ui.input_selectize('annotation', ui.h6('Third plot'), ['Off', 'SNPs','Conserved ORFs', 'Annotation'], selected='Annotation'),
-                    ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
+                    ui.tooltip(
+                        ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
+                        'Fraction of the total plot size'
+                    ),
                     ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1),
-                    ui.input_switch('seq_names', 'show names', value=False),
-                    ui.download_button('download_pdf', 'PDF')
+                    ui.tooltip(
+                        ui.input_switch('seq_names', 'show names', value=False),
+                        'Whether to show sequence names at the left side of the alignment'
+                    ),
+
+                    ui.tooltip(
+                        ui.download_button('download_pdf', 'PDF'),
+                        'Get the plot as a pdf.'
+                    )
                 ),
                 ui.output_plot('msa_plot', height='90vh', width='90vw'),
             ),
