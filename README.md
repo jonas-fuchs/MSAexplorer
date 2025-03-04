@@ -15,9 +15,9 @@ _"Explore multiple sequence alignments with a simple python package."_
 
 MSAexplorer can be used in three different ways:
 
-*[As a python extension](docs/python-package.md)
-*[As a command line tool](docs/standalone.md)
-*[As a shiny app in your browser](docs/shiny-app.md)
+* [As a python extension](docs/python-package.md)
+* [As a command line tool](docs/standalone.md)
+* [As a shiny app in your browser](docs/shiny-app.md)
 
 ## Planned features
 
