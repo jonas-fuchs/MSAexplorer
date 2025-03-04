@@ -10,8 +10,7 @@ import os
 from numpy import ndarray
 
 # MSAexplorer
-from msaexplorer import explore
-from msaexplorer import config
+from msaexplorer import explore, config
 
 # libs
 import numpy as np
