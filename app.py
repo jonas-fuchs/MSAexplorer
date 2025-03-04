@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 from msaexplorer import explore, draw, config
 
 # file paths for css and js
-css_file = Path(__file__).parent / "css" / "styles.css"
-js_file = Path(__file__).parent / "js" / "window_dimensions.js"
+css_file = Path(__file__).parent / 'www' /'css' / 'styles.css'
+js_file = Path(__file__).parent / 'www' / 'js' / 'window_dimensions.js'
 
 # define the UI
 app_ui = ui.page_fluid(

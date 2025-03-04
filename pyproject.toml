@@ -16,10 +16,9 @@ keywords = ["msa"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["msaexplorer"]
-exclude = ["app"]
+exclude = []
 namespaces = false
 
-#TODO: FIX IT FIX IT!
 [project.scripts]
 msaexplorer = "msaexplorer.command:main"
 
