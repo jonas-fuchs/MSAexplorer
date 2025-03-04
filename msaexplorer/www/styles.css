@@ -188,20 +188,3 @@ button:hover {
         padding: 8px 12px;
     }
 }
-
-/* Dropdown menu colors */
-.selectize-dropdown-content div[data-value="indigo"] {
-    color: indigo;
-}
-.selectize-dropdown-content div[data-value="darkblue"] {
-    color: darkblue;
-}
-.selectize-dropdown-content div[data-value="grey"] {
-    color: grey;
-}
-.selectize-dropdown-content div[data-value="black"] {
-    color: black;
-}
-.selectize-dropdown-content div[data-value="burlywood"] {
-    color: burlywood;
-}

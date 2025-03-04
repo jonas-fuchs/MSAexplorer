@@ -7,6 +7,8 @@ from pathlib import Path
 
 # libs
 from shiny import App, render, ui, reactive
+import matplotlib
+from matplotlib import colormaps
 import matplotlib.pyplot as plt
 
 # msaexplorer
@@ -43,7 +45,7 @@ app_ui = ui.page_fluid(
                 ),
                 ui.column(
                     4,
-                    ui.input_selectize('stat_color', 'Line color', ['indigo', 'darkblue', 'grey', 'black', 'burlywood'], selected='grey')
+                    ui.input_selectize('stat_color', 'Line color', list(matplotlib.colors.cnames.keys()), selected='grey')
                 )
             ),
             ui.row(
@@ -76,18 +78,14 @@ app_ui = ui.page_fluid(
                 ui.h6('ORF plot'),
                     ui.input_numeric('min_orf_length', 'Minimum ORF length', value=150, min=1),
                     ui.input_switch('non_overlapping', 'Non-Overlapping ORFs', value=False),
-                    ui.input_selectize('color_mapping', 'Colormap for conservation', choices=[
-                        'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu','RdYlBu', 'RdYlGn', 'Spectral', 'coolwarm',
-                        'bwr', 'seismic', 'berlin', 'managua', 'vanimo', 'flag', 'prism', 'ocean', 'gist_earth',
-                        'terrain', 'gist_stern', 'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg', 'gist_rainbow',
-                        'rainbow', 'jet', 'turbo', 'nipy_spectral', 'gist_ncar'], selected='jet'
+                    ui.input_selectize('color_mapping', 'Colormap for conservation', choices=list(colormaps.keys()), selected='jet'
                                        ),
                 ),
                 ui.column(
                     4,
                 ui.h6('Annotation plot'),
                     ui.input_selectize('feature_display', 'Feature to display', ['None']),
-                    ui.input_selectize('feature_color', 'Feature color', ['indigo', 'darkblue', 'grey', 'black', 'burlywood'], selected='grey')
+                    ui.input_selectize('feature_color', 'Feature color', list(matplotlib.colors.cnames.keys()), selected='grey')
                 ),
             )
         ),
