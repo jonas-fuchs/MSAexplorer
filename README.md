@@ -4,6 +4,7 @@
 
 _"Explore multiple sequence alignments with a simple python package."_ 
 
+
 ## Requirements
 
 - python >= 3.12

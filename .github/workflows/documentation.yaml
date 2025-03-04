@@ -25,9 +25,10 @@ jobs:
 
       # ADJUST THIS: install all dependencies (including pdoc)
       - run: pip install .
+      - run: pip install pdoc
       # ADJUST THIS: build your documentation into docs/.
       # We use a custom build script for pdoc itself, ideally you just run `pdoc -o docs/ ...` here.
-      - run: python docs/make.py
+      - run: pdoc msaexplorer
 
       - uses: actions/upload-pages-artifact@v3
         with:
