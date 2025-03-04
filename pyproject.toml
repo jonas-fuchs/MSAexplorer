@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "msaexplorer"
 version = "0.1"
-dependencies = ["numpy~=2.1", "matplotlib~=3.9"]
+dependencies = ["numpy~=2.1", "matplotlib~=3.9", "shiny~=1.2"]
 requires-python = ">= 3.10"
 authors = [{name = "Jonas Fuchs", email = "jonas.fuchs@uniklinik-freiburg.de"}]
 maintainers = [{name = "Jonas Fuchs", email = "jonas.fuchs@uniklinik-freiburg.de"}]
@@ -18,5 +18,9 @@ where = ["."]
 include = ["msaexplorer"]
 exclude = []
 namespaces = false
+
+#TODO: FIX IT FIX IT!
+[project.scripts]
+msaexplorer = "timmins:hello_world"
 
 

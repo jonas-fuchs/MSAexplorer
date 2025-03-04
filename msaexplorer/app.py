@@ -90,11 +90,11 @@ app_ui = ui.page_fluid(
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity'], selected='gc'),
-                    ui.input_numeric('plot_1_size', 'Plot size',1, min=1, max=200),
+                    ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
                     ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'similarity'], selected='identity'),
-                    ui.input_numeric('plot_2_size', 'Plot size', 1, min=1,step=2, max=200),
+                    ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1,step=2, max=200),
                     ui.input_selectize('annotation', ui.h6('Third plot'), ['Off', 'SNPs','Conserved ORFs', 'Annotation'], selected='Annotation'),
-                    ui.input_numeric('plot_3_size', 'Plot size', 1, min=1, max=200),
+                    ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
                     ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1),
                     ui.input_switch('seq_names', 'show names', value=False),
                     ui.download_button('download_pdf', 'PDF')
@@ -261,6 +261,5 @@ app = App(app_ui, server)
 
 # TODO: Proper download
 # TODO: on/off for plots
-# TODO: fix the legends (at least standard settings)
 # TODO: on/off for plots for as alignments
 

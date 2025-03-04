@@ -104,7 +104,8 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
         if custom_seq_names:
             ax.set_yticklabels(custom_seq_names[::-1])
         else:
-            ax.set_yticklabels(list(aln.alignment.keys())[::-1])
+            names = [x.split(' ')[0] for x in list(aln.alignment.keys())[::-1]]
+            ax.set_yticklabels(names)
     else:
         ax.set_yticks([])
 
@@ -176,7 +177,7 @@ def _add_track_positions(annotation_dic):
     return annotation_dic
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1.15)):
+def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
@@ -244,7 +245,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
         ax.legend(
             custom_legend,
             [aln_colors[x]['type'] for x in detected_identity_values],
-            loc='upper right',
+            loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
             ncols=len(detected_identity_values),
             frameon=False
@@ -419,7 +420,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     ax.set_ylabel(f'{stat_type}')
 
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, colors: dict | None = None, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1.15)):
+def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, colors: dict | None = None, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
     """
     Plots variants.
     :param aln: alignment MSA class
@@ -508,7 +509,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
         ax.legend(
             custom_legend,
             detected_var,
-            loc='upper right',
+            loc='lower right',
             title='variant',
             bbox_to_anchor=bbox_to_anchor,
             ncols=len(detected_var),
