@@ -382,8 +382,8 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         raise ValueError('line color is not a color')
 
     # validate rolling average
-    if rolling_average < 0 or rolling_average > aln.length:
-        raise ValueError('rolling_average must be between 0 and length of sequence')
+    if rolling_average < 1 or rolling_average > aln.length:
+        raise ValueError('rolling_average must be between 1 and length of sequence')
 
     # generate input data
     array = stat_functions[stat_type]()
@@ -399,9 +399,9 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         array = np.mean(array, axis=0)
 
     data, plot_idx = moving_average(array, rolling_average)
-    # plot
-    ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
-
+    # plot lines only if there is a rolling average calculated
+    if rolling_average > 1:
+        ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
     # specific visual cues for individual plots
     if stat_type != 'gc':
         ax.fill_between(plot_idx, data, color=(line_color, 0.5))
