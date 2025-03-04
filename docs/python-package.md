@@ -26,7 +26,7 @@ msa.reference_id = 'your_ref_id'
 msa.calc_pairwise_identity_matrix()
 ```
 
-[Full API documentation](https://jonas-fuchs.github.io/MSAexplorer/msaexplorer.html)
+[Full API documentation](https://jonas-fuchs.github.io/MSAexplorer/)
 
 
 ### Alignment drawing
