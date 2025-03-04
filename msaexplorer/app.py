@@ -4,6 +4,7 @@ This contains the code to create the MSAexplorer shiny application
 
 # build-in
 from pathlib import Path
+import tempfile
 
 # libs
 from shiny import App, render, ui, reactive
@@ -14,12 +15,17 @@ import matplotlib.pyplot as plt
 # msaexplorer
 from msaexplorer import explore, draw, config
 
+# file paths for css and js
+css_file = Path(__file__).parent / "css" / "styles.css"
+js_file = Path(__file__).parent / "js" / "window_dimensions.js"
+
 # define the UI
 app_ui = ui.page_fluid(
     ui.h2('MSAexplorer'),
-    ui.include_css(
-        Path(__file__).parent/'www/styles.css'
-    ),
+    # include css
+    ui.include_css(css_file),
+    # get the input dimensions (separate js)
+    ui.include_js(js_file),
     ui.div(
         ui.a(
             ui.img(src='https://github.githubassets.com/assets/GitHub-Logo-ee398b662d42.png', height='15px'),
@@ -164,12 +170,7 @@ def server(input, output, session):
                 selected=list(ann.features.keys())[0]
             )
 
-    @output
-    @render.plot
-    def msa_plot():
-        # Ensure an alignment file has been uploaded
-        aln = reactive.alignment.get()
-        ann = reactive.annotation.get()
+    def create_msa_plot(aln, ann, inputs, fig_size=None):
 
         if not aln:
             return None
@@ -180,90 +181,172 @@ def server(input, output, session):
         elif input.reference() == 'consensus':
             aln.reference_id = None
         else:
-            aln.reference_id = input.reference()
+            aln.reference_id = inputs['reference']
 
         # Update zoom level from slider
-        aln.zoom = tuple(input.zoom_range())
+        aln.zoom = tuple(inputs['zoom_range'])
 
         # Prepare the plot with 3 subplots
-        fig, axes = plt.subplots(nrows=3, height_ratios=[input.plot_1_size(), input.plot_2_size(), input.plot_3_size()])
-
+        # Fig_size is needed for pdf download
+        if fig_size is not None:
+            fig, axes = plt.subplots(nrows=3, height_ratios=[inputs['plot_1_size'], inputs['plot_2_size'], inputs['plot_3_size']], figsize=fig_size)
+        else:
+            fig, axes = plt.subplots(nrows=3, height_ratios=[inputs['plot_1_size'], inputs['plot_2_size'], inputs['plot_3_size']])
         # Subplot 1: Stats Plot
         draw.stat_plot(
             aln,
             axes[0],
-            stat_type=input.stat_type(),
+            stat_type=inputs['stat_type'],
             line_width=1,
-            rolling_average=input.rolling_avg(),
-            line_color=input.stat_color()
+            rolling_average=inputs['rolling_average'],
+            line_color=inputs['stat_color']
         )
 
         # Subplot 2: Alignment Plot (Identity or Similarity)
-        if input.alignment_type() == 'identity':
+        if inputs['alignment_type'] == 'identity':
             draw.identity_alignment(
                 aln, axes[1],
-                fancy_gaps=input.show_gaps(),
-                show_gaps=input.show_gaps(),
+                fancy_gaps=inputs['show_gaps'],
+                show_gaps=inputs['show_gaps'],
                 show_mask=True,
                 show_mismatches=True,
                 show_ambiguities=True,
                 reference_color='lightsteelblue',
-                show_seq_names=input.seq_names(),
-                show_x_label=True if input.annotation() == 'Annotation' and not input.annotation_file() else False,
-                show_legend=input.show_legend()
+                show_seq_names=inputs['seq_names'],
+                show_x_label=True if inputs['annotation'] == 'Annotation' and not inputs['annotation_file'] else False,
+                show_legend=inputs['show_legend']
             )
         else:
             draw.similarity_alignment(
                 aln, axes[1],
-                fancy_gaps=input.show_gaps(),
-                show_gaps=input.show_gaps(),
-                matrix_type=input.matrix(),
-                show_seq_names=input.seq_names(),
-                show_cbar=input.show_legend(),
+                fancy_gaps=inputs['show_gaps'],
+                show_gaps=inputs['show_gaps'],
+                matrix_type=inputs['matrix'],
+                show_seq_names=inputs['seq_names'],
+                show_cbar=inputs['show_legend'],
                 cbar_fraction=0.02,
-                show_x_label=True if input.annotation() == 'Annotation' and not input.annotation_file() else False
+                show_x_label=True if inputs['annotation'] == 'Annotation' and not inputs['annotation_file'] else False
             )
 
         # Subplot 3: Annotation or ORF Plot
-        if input.annotation() == 'Annotation' and input.annotation_file():
+        if inputs['annotation'] == 'Annotation' and inputs['annotation_file']:
             draw.annotation_plot(
                 aln, ann,
                 axes[2],
-                feature_to_plot=input.feature_display(),
+                feature_to_plot=inputs['feature_display'],
                 show_x_label=True
             )
-        elif input.annotation() == 'Conserved ORFs':
+        elif inputs['annotation'] == 'Conserved ORFs':
             draw.orf_plot(
                 aln, axes[2],
-                cmap=input.color_mapping(),
-                non_overlapping_orfs=input.non_overlapping(),
+                cmap=inputs['color_mapping'],
+                non_overlapping_orfs=inputs['non_overlapping'],
                 show_x_label=True,
                 show_cbar=True,
                 cbar_fraction=0.2,
-                min_length=input.min_orf_length()
+                min_length=inputs['min_orf_length']
             )
-        elif input.annotation() == 'SNPs':
+        elif inputs['annotation'] == 'SNPs':
             draw.variant_plot(
                 aln, axes[2],
                 show_x_label=True,
-                lollisize=(input.stem_size(), input.head_size()),
-                show_legend=input.show_legend_variants()
+                lollisize=(inputs['stem_size'], inputs['head_size']),
+                show_legend=inputs['show_legend_variants']
             )
         # turn everything off
         else:
             axes[2].axis('off')
 
-        #fig.tight_layout()
-
         return fig
 
-    #@render.download(filename="image.png")
-    #def download_pdf():
-    #   pass
+    @output
+    @render.plot
+    def msa_plot():
+        aln = reactive.alignment.get()
+        ann = reactive.annotation.get()
+
+        # Collect inputs from the UI
+        inputs = {
+            'reference': input.reference(),
+            'zoom_range': input.zoom_range(),
+            'plot_1_size': input.plot_1_size(),
+            'plot_2_size': input.plot_2_size(),
+            'plot_3_size': input.plot_3_size(),
+            'stat_type': input.stat_type(),
+            'rolling_average': input.rolling_avg(),
+            'stat_color': input.stat_color(),
+            'alignment_type': input.alignment_type(),
+            'matrix': input.matrix(),
+            'show_gaps': input.show_gaps(),
+            'seq_names': input.seq_names(),
+            'show_legend': input.show_legend(),
+            'annotation': input.annotation(),
+            'annotation_file': input.annotation_file(),
+            'feature_display': input.feature_display(),
+            'color_mapping': input.color_mapping(),
+            'non_overlapping': input.non_overlapping(),
+            'min_orf_length': input.min_orf_length(),
+            'stem_size': input.stem_size(),
+            'head_size': input.head_size(),
+            'show_legend_variants': input.show_legend_variants(),
+        }
+
+        fig = create_msa_plot(aln, ann, inputs)
+        return fig
+
+    @output
+    @render.download
+    def download_pdf():
+        aln = reactive.alignment.get()
+        ann = reactive.annotation.get()
+
+        # Access the window dimensions
+        dimensions = input.window_dimensions()
+        if not dimensions:
+            raise ValueError("Window dimensions not available.")
+
+        # Convert window dimensions (pixels) to inches
+        screen_dpi = 96  # Typical screen DPI
+        figure_width_inches = dimensions['width'] / screen_dpi
+        figure_height_inches = dimensions['height'] / screen_dpi
+
+
+        # Collect inputs from the UI
+        inputs = {
+            'reference': input.reference(),
+            'zoom_range': input.zoom_range(),
+            'plot_1_size': input.plot_1_size(),
+            'plot_2_size': input.plot_2_size(),
+            'plot_3_size': input.plot_3_size(),
+            'stat_type': input.stat_type(),
+            'rolling_average': input.rolling_avg(),
+            'stat_color': input.stat_color(),
+            'alignment_type': input.alignment_type(),
+            'matrix': input.matrix(),
+            'show_gaps': input.show_gaps(),
+            'seq_names': input.seq_names(),
+            'show_legend': input.show_legend(),
+            'annotation': input.annotation(),
+            'annotation_file': input.annotation_file(),
+            'feature_display': input.feature_display(),
+            'color_mapping': input.color_mapping(),
+            'non_overlapping': input.non_overlapping(),
+            'min_orf_length': input.min_orf_length(),
+            'stem_size': input.stem_size(),
+            'head_size': input.head_size(),
+            'show_legend_variants': input.show_legend_variants(),
+        }
+        # plot with a temp name
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmpfile:
+            fig = create_msa_plot(aln, ann, inputs, fig_size=(figure_width_inches, figure_height_inches))
+            # tight layout needed here to plot everything correctly
+            fig.tight_layout()
+            fig.savefig(tmpfile.name, format="pdf")
+            plt.close(fig)
+            return tmpfile.name
 
 app = App(app_ui, server)
 
-# TODO: Proper download
 # TODO: on/off for plots
 # TODO: on/off for plots for as alignments
 
