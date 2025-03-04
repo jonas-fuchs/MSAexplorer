@@ -13,3 +13,4 @@ shiny run app
 ```
 
 This will run the shiny app which can be accessed in the browser.
+![shiny app](../docs/shiny-app.png)

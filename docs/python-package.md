@@ -61,4 +61,4 @@ plt.show()
 ```
 
 **Will result in:**
-![example](../example_alignments/BoDV.png)
+![example](../docs/BoDV.png)
