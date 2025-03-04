@@ -1,13 +1,10 @@
 name: website
 
-# build the documentation whenever there are new commits on main
+# build the documentation whenever there are new commits
 on:
   push:
     branches:
-      - shiny-app
-    # Alternative: only build for tags.
-    # tags:
-    #   - '*'
+      - master
 
 # security: restrict permissions for CI jobs.
 permissions:
@@ -22,12 +19,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-
-      # ADJUST THIS: install all dependencies (including pdoc)
+      # install dependencies and pdoc
       - run: pip install .
       - run: pip install pdoc
-      # ADJUST THIS: build your documentation into docs/.
-      # We use a custom build script for pdoc itself, ideally you just run `pdoc -o docs/ ...` here.
+      # Automatically build documentation
       - run: pdoc ./msaexplorer -o docs/
 
       - uses: actions/upload-pages-artifact@v3
@@ -35,7 +30,6 @@ jobs:
           path: docs/
 
   # Deploy the artifact to GitHub pages.
-  # This is a separate job so that only actions/deploy-pages has the necessary permissions.
   deploy:
     needs: build
     runs-on: ubuntu-latest
