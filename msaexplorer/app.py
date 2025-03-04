@@ -13,7 +13,7 @@ from matplotlib import colormaps
 import matplotlib.pyplot as plt
 
 # msaexplorer
-from msaexplorer import explore, draw, config
+import explore, draw, config
 
 # file paths for css and js
 css_file = Path(__file__).parent / "css" / "styles.css"
