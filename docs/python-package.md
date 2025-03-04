@@ -8,10 +8,12 @@ cd MSAexplorer
 pip install .
 ```
 
-## Analysis
+## Usage
+### [Full API documentation](https://jonas-fuchs.github.io/MSAexplorer/)
 
-Allows to read in multiple sequence alignment and compute several statistics.
+### Alignment exploration
 
+Read in multiple sequence alignment and compute several statistics.
 ```python
 from msaexplorer import explore
 
@@ -26,7 +28,7 @@ msa.reference_id = 'your_ref_id'
 msa.calc_pairwise_identity_matrix()
 ```
 
-[Full API documentation](https://jonas-fuchs.github.io/MSAexplorer/)
+
 
 
 ### Alignment drawing
