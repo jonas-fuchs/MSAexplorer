@@ -23,7 +23,7 @@ jobs:
       - run: pip install .
       - run: pip install pdoc
       # Automatically build documentation
-      - run: pdoc ./msaexplorer -o docs/
+      - run: pdoc ./msaexplorer  --logo 'https://github.com/jonas-fuchs/MSAexplorer/tree/master/docs/logo.png' -o docs/
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -11,4 +11,5 @@ pip install .
 ## [Full API documentation](https://jonas-fuchs.github.io/MSAexplorer/)
 
 **Example plot:**
+
 ![example](../docs/BoDV.png)

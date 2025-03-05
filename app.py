@@ -16,12 +16,14 @@ import matplotlib.pyplot as plt
 from msaexplorer import explore, draw, config
 
 # file paths for css and js
-css_file = Path(__file__).parent / 'www' /'css' / 'styles.css'
-js_file = Path(__file__).parent / 'www' / 'js' / 'window_dimensions.js'
+css_file = Path(__file__).resolve().parent / 'www' /'css' / 'styles.css'
+js_file = Path(__file__).resolve().parent / 'www' / 'js' / 'window_dimensions.js'
 
 # define the UI
 app_ui = ui.page_fluid(
-    ui.h2('MSAexplorer'),
+    ui.img(
+            src='docs/logo.svg', height='100px'
+    ),
     # include css
     ui.include_css(css_file),
     # get the input dimensions (separate js)
@@ -407,7 +409,7 @@ def server(input, output, session):
             plt.close(fig)
             return tmpfile.name
 
-app = App(app_ui, server)
+app = App(app_ui, server, static_assets={'/docs': Path(__file__).parent/"docs"})
 
 # TODO: on/off for plots
 # TODO: on/off for plots for as alignments
