@@ -11,5 +11,6 @@ cd MSAexplorer
 shiny run app.py
 ```
 
-This will run the shiny app which can be accessed in the [browser](http://127.0.0.1:8000).
+This will run the shiny app which can be accessed through your browser.
+
 ![shiny app](../docs/shiny-app.png)

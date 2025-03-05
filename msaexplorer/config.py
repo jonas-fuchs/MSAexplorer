@@ -1,3 +1,11 @@
+"""
+# Configuration module
+
+This file contains all relevant configuration parameters for MSAexplorer, including
+similarity matrices.
+"""
+
+
 import numpy as np
 
 POSSIBLE_CHARS = [

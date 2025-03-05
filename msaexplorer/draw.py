@@ -1,6 +1,16 @@
+r"""
+# The draw module
+
+The draw module lets you draw alignments and statistic plots such as SNPs, ORFs, entropy and much more. For each plot a
+`matplotlib axes` has to be passed to the plotting function.
+
+Importantly some of the plotting features can only be accessed for nucleotide alignments but not for amino acid alignments.
+The functions will raise the appropriate exception in such a case.
+
+## Functions
+
 """
-contains the functions for drawing graphs
-"""
+
 # built-in
 from itertools import chain
 from typing import Callable, Dict

@@ -1,5 +1,11 @@
 """
-This contains the MSA class
+# Explore module
+
+This module contains the two classes `MSA` and `Annotation` which are used to read in the respective files
+and can be used to compute several statistics or be used as the input for the `draw` module functions.
+
+## Classes
+
 """
 
 # built-in
