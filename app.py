@@ -87,8 +87,13 @@ app_ui = ui.page_fluid(
                         'Which reference sequence to calculate identity/similarity'
                     )
                 ),
+                # TODO: add color mapping for similarity plot
                 ui.column(
                     4,
+                    ui.tooltip(
+                        ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
+                        'colormap for conservation - any matplotlib colormap'
+                    ),
                     ui.tooltip(
                         ui.input_selectize('matrix', 'Matrix', ['None']),
                         'Substitution matrix for similarity mapping'
@@ -147,7 +152,7 @@ app_ui = ui.page_fluid(
             'Visualization',
             ui.layout_sidebar(
                 ui.sidebar(
-                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity'], selected='gc'),
+                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity'], selected='gc'),
                     ui.tooltip(
                         ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
                         'Fraction of the total plot size'
@@ -218,6 +223,9 @@ def server(input, output, session):
             ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
             ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
             ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
+            if aln.aln_type == 'AA':
+                ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='coverage')
+                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'])
 
 
     @reactive.Effect

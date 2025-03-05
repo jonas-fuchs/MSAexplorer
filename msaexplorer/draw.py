@@ -404,7 +404,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     if stat_type in ['identity', 'similarity']:
         # for the mean nan values get handled as the lowest possible number in the matrix
-        array = np.nan_to_num(array, True, 0 if stat_type == 'identity' else min_value)
+        array = np.nan_to_num(array, True, min_value)
         array = np.mean(array, axis=0)
 
     data, plot_idx = moving_average(array, rolling_average)

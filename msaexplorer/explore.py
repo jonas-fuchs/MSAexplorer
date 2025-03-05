@@ -165,7 +165,7 @@ class MSA:
         if counter / len(alignment) >= 0.7 * len(alignment[list(alignment.keys())[0]]):
             return 'DNA'
         else:
-            return 'AS'
+            return 'AA'
 
     # Properties with setters
     @property
@@ -195,7 +195,7 @@ class MSA:
     def aln_type(self) -> str:
         """
         define the aln type:
-        RNA, DNA or AS
+        RNA, DNA or AA
         """
         return self._aln_type
 
@@ -732,7 +732,10 @@ class MSA:
             is_gap = np.full(sequences.shape, False)
 
         if encode_mask:
-            is_n_or_x = np.isin(sequences, ['N', 'X'])
+            if self.aln_type == 'AA':
+                is_n_or_x = np.isin(sequences, ['X'])
+            else:
+                is_n_or_x = np.isin(sequences, ['N'])
         else:
             is_n_or_x = np.full(sequences.shape, False)
 
@@ -756,7 +759,7 @@ class MSA:
     def calc_similarity_alignment(self, matrix_type:str|None=None) -> np.ndarray:
         """
         Calculate the similarity score between the alignment and the reference seq. Gaps are encoded as np.nan
-        :param: matrix_type: type of similarity score (if not set - AS: BLOSSUM65, RNA/DNA: BLASTN)
+        :param: matrix_type: type of similarity score (if not set - AA: BLOSSUM65, RNA/DNA: BLASTN)
         :return: identity array
         """
 
