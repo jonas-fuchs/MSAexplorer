@@ -50,7 +50,7 @@ def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left
     General axis formatting.
     """
     ax.set_xlim(
-            (aln.zoom[0], aln.zoom[0] + aln.length) if aln.zoom is not None else (0, aln.length)
+            (aln.zoom[0]- 0.5, aln.zoom[0] + aln.length + 0.5) if aln.zoom is not None else (-0.5, aln.length + 0.5)
         )
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -124,7 +124,7 @@ def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y
     Creates the initial patch.
     """
 
-    col.append(patches.Rectangle((zoom[0], y_position), zoom[1] - zoom[0],0.8,
+    col.append(patches.Rectangle((zoom[0] - 0.5, y_position), zoom[1] - zoom[0] + 0.5,0.8,
                                                    facecolor=reference_color if seq_name == aln.reference_id else identity_color
                                                    )
                                  )
@@ -137,7 +137,7 @@ def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_p
     for stretch in stretches:
         col.append(
             patches.Rectangle(
-                (stretch[0] + zoom[0], y_position),
+                (stretch[0] - 0.5 + zoom[0], y_position),
                 stretch[1],
                 0.8,
                 color=colors,
@@ -150,7 +150,7 @@ def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_p
             continue
         col.append(
             patches.Rectangle(
-                (stretch[0] + zoom[0], y_position + 0.375),
+                (stretch[0] - 0.5 + zoom[0], y_position + 0.375),
                 stretch[1],
                 0.05,
                 color='black',
@@ -263,7 +263,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
-    ax.set_ylim(0, len(aln.alignment)+0.2)
+    ax.set_ylim(-0.5, len(aln.alignment)+0.2)
     if show_title:
         ax.set_title('identity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
