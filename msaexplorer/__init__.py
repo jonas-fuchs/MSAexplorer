@@ -19,7 +19,7 @@ a small example on how to use the MSAexplorer package
 from msaexplorer import explore
 
 # load MSA
-msa = explore.MSA('example_alignments/nt.aln')
+msa = explore.MSA('example_alignments/nt.fasta')
 annotation = explore.Annotation(msa, 'example_alignments/nt.gff3')
 
 # you can set the zoom range and the reference id if needed
@@ -57,7 +57,7 @@ import matplotlib.pyplot as plt
 from msaexplorer import explore
 from msaexplorer import draw
 
-aln = explore.MSA("example_alignments/nt.aln", reference_id=None, zoom_range=None)
+aln = explore.MSA("example_alignments/nt.fasta", reference_id=None, zoom_range=None)
 aln.reference_id = list(aln.alignment.keys())[0]
 fig, ax = plt.subplots(nrows=9, height_ratios=[0.2,0.2,0.2,0.2,2,0.2,2,0.2,0.5], sharex=False)
 
