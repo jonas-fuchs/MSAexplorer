@@ -120,7 +120,11 @@ app_ui = ui.page_fluid(
                 ),
                 ui.column(
                     4,
-                ui.h6('ORF plot'),
+                ui.tooltip(
+                    ui.h6('ORF plot'),
+                    'Only relevant for nt alignments',
+                    placement='left'
+                ),
                     ui.tooltip(
                         ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
                         'Minimum ORF length to calculate'

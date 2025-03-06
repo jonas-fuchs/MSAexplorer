@@ -401,7 +401,6 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
     else:
         min_value, max_value = 0, 1
-
     if stat_type in ['identity', 'similarity']:
         # for the mean nan values get handled as the lowest possible number in the matrix
         array = np.nan_to_num(array, True, min_value)
@@ -413,7 +412,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
     # specific visual cues for individual plots
     if stat_type != 'gc':
-        ax.fill_between(plot_idx, data, color=(line_color, 0.5))
+        ax.fill_between(plot_idx, y1=data, y2=min_value, color=(line_color, 0.5))
     else:
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
 
