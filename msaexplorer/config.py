@@ -740,13 +740,13 @@ SUBS_MATRICES = {
 }
 
 IDENTITY_COLORS = {
-        0: {'type': 'different',
-            'color': 'peru'},
-        1: {'type': 'identical',
+        0: {'type': 'identical',
             'color': 'lightgrey'},
-        2: {'type': 'mask',
+        -1: {'type': 'different',
+            'color': 'peru'},
+        -2: {'type': 'mask',
             'color': 'dimgrey'},
-        3: {'type': 'ambiguity',
+        -3: {'type': 'ambiguity',
             'color': 'black'},
         np.nan: {'type': 'deletion',
                  'color': 'white'},

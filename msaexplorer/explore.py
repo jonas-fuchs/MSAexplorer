@@ -722,7 +722,7 @@ class MSA:
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
         # ini matrix
-        identity_matrix = np.full(sequences.shape, 1, dtype=float)
+        identity_matrix = np.full(sequences.shape, 0, dtype=float)
 
         is_identical = sequences == reference
 
@@ -749,10 +749,10 @@ class MSA:
         else:
             is_mismatch = np.full(sequences.shape, False)
         # assign values based on conditions
-        identity_matrix[is_mismatch] = 0  # mismatch
+        identity_matrix[is_mismatch] = -1  # mismatch
         identity_matrix[is_gap] = np.nan  # gap
-        identity_matrix[is_n_or_x] = 2  # 'N' or 'X'
-        identity_matrix[is_ambig] = 3  # ambiguities
+        identity_matrix[is_n_or_x] = -2  # 'N' or 'X'
+        identity_matrix[is_ambig] = -3  # ambiguities
 
         return identity_matrix
 
