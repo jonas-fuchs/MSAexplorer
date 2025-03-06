@@ -704,14 +704,15 @@ class MSA:
 
         return reverse_complement_dict
 
-    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False) -> np.ndarray:
+    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False, encode_each_mismatch_char:bool=False) -> np.ndarray:
         """
-        Converts alignment to identity array (identical=1) compared to majority consensus or reference:\n
+        Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
 
-        :param encode_mismatches: encode mismatch as 0
-        :param encode_mask: encode mask with value=2 --> also in the reference
+        :param encode_mismatches: encode mismatch as -1
+        :param encode_mask: encode mask with value=-2 --> also in the reference
         :param encode_gaps: encode gaps with np.nan --> also in the reference
-        :param encode_ambiguities: encode ambiguities with value=3
+        :param encode_ambiguities: encode ambiguities with value=-3
+        :param encode_each_mismatch_char: for each mismatch encode characters separately - these values represent the idx+1 values of config.DNA_colors, config.RNA_colors or config.AA_colors
         :return: identity alignment
         """
 
@@ -748,8 +749,16 @@ class MSA:
             is_mismatch = ~is_gap & ~is_identical & ~is_n_or_x & ~is_ambig
         else:
             is_mismatch = np.full(sequences.shape, False)
-        # assign values based on conditions
-        identity_matrix[is_mismatch] = -1  # mismatch
+
+        # encode every different character
+        if encode_each_mismatch_char:
+            for idx, char in enumerate(config.CHAR_COLORS[self.aln_type]):
+                new_encoding = np.isin(sequences, [char]) & is_mismatch
+                identity_matrix[new_encoding] = idx + 1
+        # or encode different with a single value
+        else:
+            identity_matrix[is_mismatch] = -1  # mismatch
+
         identity_matrix[is_gap] = np.nan  # gap
         identity_matrix[is_n_or_x] = -2  # 'N' or 'X'
         identity_matrix[is_ambig] = -3  # ambiguities

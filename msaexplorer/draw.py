@@ -186,7 +186,7 @@ def _add_track_positions(annotation_dic):
     return annotation_dic
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
+def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
@@ -195,12 +195,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
-    :param aln_colors: dictionary containing colors: dict(0: color0, 1: color0, 2: color0, 3: color0) -> 0: match, 1: mismatch, 2: mask (N|X), 3: gap
     :param show_mask: whether to show N or X chars otherwise it will be shown as match or mismatch
     :param show_gaps: whether to show gaps otherwise it will be shown as match or mismatch
     :param fancy_gaps: show gaps with a small black bar
     :param show_mismatches: whether to show mismatches otherwise it will be shown as match
     :param show_ambiguities: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
+    :param color_mismatching_chars: color mismatching chars with their unique color
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
@@ -212,19 +212,19 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     # validate colors
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
-    if aln_colors.keys() != config.IDENTITY_COLORS.keys():
-        raise ValueError('configure your dictionary like config.IDENTITY_COLORS')
-    for key in aln_colors.keys():
-        for key2 in aln_colors[key]:
-            if key2 not in ['type', 'color']:
-                raise ValueError('configure your dictionary like config.IDENTITY_COLORS')
-    if not all([is_color_like(aln_colors[x]['color']) for x in aln_colors.keys()]):
-        raise ValueError(f'one of the specified colors for the alignment is not a color')
+
+    # extend colors - only needed if each char should be colour coded
+    aln_colors, identity_values = config.IDENTITY_COLORS, [np.nan, -1, -2, -3]
+    if color_mismatching_chars:
+        colors_to_extend = config.CHAR_COLORS[aln.aln_type]
+        identity_values = identity_values + list(range(len(colors_to_extend)))[1:]
+        for idx, char in enumerate(colors_to_extend):
+            aln_colors[idx + 1] = {'type': char, 'color': colors_to_extend[char]}
 
     if fancy_gaps:
         show_gaps = True
     # get alignment and identity array
-    identity_aln = aln.calc_identity_alignment(encode_mask=show_mask, encode_gaps=show_gaps, encode_mismatches=show_mismatches, encode_ambiguities=show_ambiguities)
+    identity_aln = aln.calc_identity_alignment(encode_mask=show_mask, encode_gaps=show_gaps, encode_mismatches=show_mismatches, encode_ambiguities=show_ambiguities, encode_each_mismatch_char=color_mismatching_chars)
     # define zoom to plot
     if aln.zoom is None:
         zoom = (0, aln.length)
@@ -232,13 +232,13 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
         zoom = aln.zoom
     # define the y position of the first sequence
     y_position = len(aln.alignment) - 0.8
-    detected_identity_values = {1}
+    detected_identity_values = {0}
     # ini collection for patches
     col = []
     for sequence, seq_name in zip(identity_aln, aln.alignment.keys()):
         # ini identity patches
-        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, aln_colors[1]['color'])
-        for identity_value in [np.nan, 0, 2, 3]:
+        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, aln_colors[0]['color'])
+        for identity_value in identity_values:
             stretches = _find_stretches(sequence, identity_value)
             if not stretches:
                 continue
@@ -256,9 +256,10 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
             [aln_colors[x]['type'] for x in detected_identity_values],
             loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=len(detected_identity_values),
+            ncols=len(detected_identity_values) / 2 if aln.aln_type == 'AA' and color_mismatching_chars else len(detected_identity_values),
             frameon=False
         )
+
     # format seq names
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
     # configure axis
@@ -428,14 +429,13 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     ax.set_ylabel(f'{stat_type}')
 
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, colors: dict | None = None, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
+def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
     """
     Plots variants.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param lollisize: (stem_size, head_size)
     :param show_x_label:  whether to show the x-axis label
-    :param colors: colors for variants - if None standard colors are used (config.AA_colors or config.NT_colors)
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
     """
@@ -449,25 +449,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
             raise ValueError('lollisize must be floats greater than zero')
 
     # define colors
-    if colors is None:
-        # define colors to use
-        if aln.aln_type == 'AA':
-            colors = config.AA_COLORS
-        else:
-            colors = config.NT_COLORS
-    else:
-        if colors is not dict:
-            raise TypeError('Format colors like in config.AA_COLORS or config.NT_COLORS')
-        if aln.aln_type == 'AA':
-            if colors.keys() != config.AA_COLORS.keys():
-                raise TypeError('Format colors like in config.AA_COLORS')
-        if aln.aln_type == 'NT':
-            if colors.keys() != config.NT_COLORS.keys():
-                raise TypeError('Format colors like in config.NT_COLORS')
-        for char in colors:
-            if not is_color_like(colors[char]):
-                raise TypeError(f'{colors[char]} is not a color')
-
+    colors = config.CHAR_COLORS[aln.aln_type]
     # get snps
     snps = aln.get_snps()
     # define where to plot (each ref type gets a separate line)
@@ -503,8 +485,8 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     for y_char in ref_y_positions:
         ax.hlines(
             ref_y_positions[y_char],
-            xmin=aln.zoom[0] if aln.zoom is not None else 0,
-            xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length,
+            xmin=aln.zoom[0] - 0.5 if aln.zoom is not None else -0.5,
+            xmax=aln.zoom[0] + aln.length + 0.5 if aln.zoom is not None else aln.length + 0.5,
             color='black',
             linestyle='-',
             zorder=0,
@@ -520,7 +502,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
             loc='lower right',
             title='variant',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=len(detected_var),
+            ncols=len(detected_var)/2 if aln.aln_type == 'AA' else len(detected_var),
             frameon=False
         )
 

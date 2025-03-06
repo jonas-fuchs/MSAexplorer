@@ -78,10 +78,7 @@ app_ui = ui.page_fluid(
                     ui.tooltip(
                         ui.input_switch('show_legend', 'Legend', value=True),
                         'Whether to show legend'
-                    )
-                ),
-                ui.column(
-                    4,
+                    ),
                     ui.tooltip(
                         ui.input_selectize('reference', 'Reference', ['first' ,'consensus'], selected='first'),
                         'Which reference sequence to calculate identity/similarity'
@@ -92,7 +89,7 @@ app_ui = ui.page_fluid(
                     4,
                     ui.tooltip(
                         ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
-                        'colormap for conservation - any matplotlib colormap'
+                        'colormap for similarity plots - any matplotlib colormap'
                     ),
                     ui.tooltip(
                         ui.input_selectize('matrix', 'Matrix', ['None']),
@@ -161,7 +158,7 @@ app_ui = ui.page_fluid(
                         ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
-                    ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'similarity'], selected='identity'),
+                    ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'colored identity', 'similarity'], selected='identity'),
                     ui.tooltip(
                         ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
                         'Fraction of the total plot size'
@@ -279,7 +276,7 @@ def server(input, output, session):
         )
 
         # Subplot 2: Alignment Plot (Identity or Similarity)
-        if inputs['alignment_type'] == 'identity':
+        if inputs['alignment_type'] == 'identity' or inputs['alignment_type'] == 'colored identity':
             draw.identity_alignment(
                 aln, axes[1],
                 fancy_gaps=inputs['show_gaps'],
@@ -287,6 +284,7 @@ def server(input, output, session):
                 show_mask=True,
                 show_mismatches=True,
                 show_ambiguities=True,
+                color_mismatching_chars=True if inputs['alignment_type'] == 'colored identity' else False,
                 reference_color='lightsteelblue',
                 show_seq_names=inputs['seq_names'],
                 show_x_label=True if inputs['annotation'] == 'Annotation' and not inputs['annotation_file'] else False,
