@@ -19,8 +19,8 @@ a small example on how to use the MSAexplorer package
 from msaexplorer import explore
 
 # load MSA
-msa = explore.MSA('example_alignments/nt.fasta')
-annotation = explore.Annotation(msa, 'example_alignments/nt.gff3')
+msa = explore.MSA('example_alignments/DNA.fasta')
+annotation = explore.Annotation(msa, 'example_alignments/DNA_RNA.gff3')
 
 # you can set the zoom range and the reference id if needed
 msa.zoom = (0, 1500)
@@ -57,7 +57,7 @@ import matplotlib.pyplot as plt
 from msaexplorer import explore
 from msaexplorer import draw
 
-aln = explore.MSA("example_alignments/nt.fasta", reference_id=None, zoom_range=None)
+aln = explore.MSA("example_alignments/DNA.fasta", reference_id=None, zoom_range=None)
 aln.reference_id = list(aln.alignment.keys())[0]
 fig, ax = plt.subplots(nrows=9, height_ratios=[0.2,0.2,0.2,0.2,2,0.2,2,0.2,0.5], sharex=False)
 
@@ -69,7 +69,7 @@ draw.identity_alignment(aln, ax[4], show_gaps=False, show_mask=True, show_mismat
 draw.stat_plot(aln, ax[5], stat_type="similarity", rolling_average=1, line_color="darkblue")
 draw.similarity_alignment(aln, ax[6], fancy_gaps=True, show_gaps=True, matrix_type='TRANS', show_cbar=True, cbar_fraction=0.02,  show_x_label=False)
 draw.orf_plot(aln, ax[7], cmap='hsv', non_overlapping_orfs=False, show_cbar=True, cbar_fraction=0.2, min_length=150)
-draw.annotation_plot(aln, 'example_alignments/nt.gff3',  ax[8], feature_to_plot='gene', show_x_label=False)
+draw.annotation_plot(aln, 'example_alignments/DNA_RNA.gff3',  ax[8], feature_to_plot='gene', show_x_label=False)
 draw.variant_plot(aln, ax[9], show_x_label=True, show_legend=True, bbox_to_anchor=(1,1.35))
 
 fig.set_size_inches(14, 29)

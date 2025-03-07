@@ -1,0 +1,26 @@
+name: Deploy to shinyapps.io
+on:
+  push:
+    branches:
+      - master
+
+  # run on request (via button in actions menu)
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to shinyapps
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: deploy
+        uses: BDSI-Utwente/shinyapps-deploy-github-action@v1
+        with:
+          # account and application name (https://<accountName>.shinyapps.io/<appName>)
+          appName: MSAexplorer
+          accountName: foxlabs
+
+          # token and secret obtained from https://www.shinyapps.io/admin/#/tokens
+          accountToken: ${{ secrets.SHINYAPPS_TOKEN }}
+          accountSecret: ${{ secrets.SHINYAPPS_SECRET }}
