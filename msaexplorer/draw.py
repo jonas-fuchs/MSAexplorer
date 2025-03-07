@@ -400,6 +400,8 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     if stat_type == 'similarity':
         matrix = config.SUBS_MATRICES[aln.aln_type][array.dtype.metadata['matrix']]
         min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
+    elif stat_type == 'identity':
+        min_value, max_value = -1, 0
     else:
         min_value, max_value = 0, 1
     if stat_type in ['identity', 'similarity']:

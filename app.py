@@ -101,7 +101,11 @@ app_ui = ui.page_fluid(
                 ui.h6('Third plot',  class_='section-title'),
                 ui.column(
                     4,
-                ui.h6('SNP plot'),
+                    ui.tooltip(
+                        ui.input_switch('show_legend_third_plot', 'Legend', value=True),
+                        'Whether to show legend for the third plot'
+                    ),
+                    ui.h6('SNP plot'),
                     ui.tooltip(
                         ui.input_numeric('head_size', 'Head size', value=3, min=1),
                         'Size of the head dot'
@@ -110,29 +114,26 @@ app_ui = ui.page_fluid(
                         ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
                         'Length of the stem'
                     ),
-                    ui.tooltip(
-                        ui.input_switch('show_legend_variants', 'Legend', value=True),
-                        'Whether to show legend'
-                    )
                 ),
                 ui.column(
                     4,
-                ui.tooltip(
+                    ui.br(),
+                    ui.tooltip(
                     ui.h6('ORF plot'),
                     'Only relevant for nt alignments',
                     placement='left'
-                ),
+                     ),
                     ui.tooltip(
                         ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
                         'Minimum ORF length to calculate'
                     ),
                     ui.tooltip(
-                        ui.input_switch('non_overlapping', 'Overlapping', value=False),
-                        'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime'
-                    ),
-                    ui.tooltip(
                         ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
                         'colormap for conservation - any matplotlib colormap'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('non_overlapping', 'non-overlapping', value=False),
+                        'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime'
                     ),
                 ),
                 ui.column(
@@ -153,7 +154,7 @@ app_ui = ui.page_fluid(
             'Visualization',
             ui.layout_sidebar(
                 ui.sidebar(
-                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity'], selected='gc'),
+                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off'),
                     ui.tooltip(
                         ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
                         'Fraction of the total plot size'
@@ -163,7 +164,7 @@ app_ui = ui.page_fluid(
                         ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
-                    ui.input_selectize('annotation', ui.h6('Third plot'), ['Off', 'SNPs','Conserved ORFs', 'Annotation'], selected='Annotation'),
+                    ui.input_selectize('annotation', ui.h6('Third plot'), ['Off', 'SNPs'], selected='Off'),
                     ui.tooltip(
                         ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
                         'Fraction of the total plot size'
@@ -185,6 +186,116 @@ app_ui = ui.page_fluid(
     )
 )
 
+
+# Define the plotting function
+def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
+    """
+    :param aln: MSA object
+    :param ann: Annotation object
+    :param inputs: all user inputs
+    :param fig_size: size of the figure -> for pdf plotting
+    :return: figure
+    """
+    if not aln:
+        return None
+
+    # set the reference sequence
+    if inputs['reference'] == 'first':
+        aln.reference_id = list(aln.alignment.keys())[0]
+    elif inputs['reference'] == 'consensus':
+        aln.reference_id = None
+    else:
+        aln.reference_id = inputs['reference']
+
+    # Update zoom level from slider
+    aln.zoom = tuple(inputs['zoom_range'])
+
+
+    # Collect height ratios and corresponding axes
+    height_ratios = []
+    plot_functions = []
+
+    # First plot
+    if inputs['stat_type'] != 'Off':
+        height_ratios.append(inputs['plot_1_size'])
+        plot_functions.append(lambda ax: draw.stat_plot(
+            aln, ax,
+            stat_type=inputs['stat_type'],
+            line_width=1,
+            rolling_average=inputs['rolling_average'],
+            show_x_label=True if inputs['annotation'] == 'Off' and inputs['alignment_type'] == 'Off' else False,
+            line_color=inputs['stat_color']
+        ))
+
+    # Second plot
+    if inputs['alignment_type'] != 'Off':
+        height_ratios.append(inputs['plot_2_size'])
+        plot_functions.append(lambda ax: draw.identity_alignment(
+            aln, ax,
+            fancy_gaps=inputs['show_gaps'],
+            show_gaps=inputs['show_gaps'],
+            show_mask=True,
+            show_mismatches=True,
+            show_ambiguities=True,
+            color_mismatching_chars=True if inputs['alignment_type'] == 'colored identity' else False,
+            reference_color='lightsteelblue',
+            show_seq_names=inputs['seq_names'],
+            show_x_label=True if inputs['annotation'] == 'Off' else False,
+            show_legend=inputs['show_legend']
+        ) if inputs['alignment_type'] == 'identity' or inputs[
+            'alignment_type'] == 'colored identity' else draw.similarity_alignment(
+            aln, ax,
+            fancy_gaps=inputs['show_gaps'],
+            show_gaps=inputs['show_gaps'],
+            matrix_type=inputs['matrix'],
+            show_seq_names=inputs['seq_names'],
+            show_cbar=inputs['show_legend'],
+            cbar_fraction=0.02,
+            show_x_label=True if inputs['annotation'] == 'Off' else False
+        ))
+
+    # Third Plot
+    if inputs['annotation'] != 'Off':
+        height_ratios.append(inputs['plot_3_size'])
+        plot_functions.append(lambda ax: draw.annotation_plot(
+            aln, ann, ax,
+            feature_to_plot=inputs['feature_display'],
+            show_x_label=True
+        ) if inputs['annotation'] == 'Annotation' and inputs['annotation_file'] else draw.orf_plot(
+            aln, ax,
+            cmap=inputs['color_mapping'],
+            non_overlapping_orfs=inputs['non_overlapping'],
+            show_x_label=True,
+            show_cbar=True,
+            cbar_fraction=0.2,
+            min_length=inputs['min_orf_length']
+        ) if inputs['annotation'] == 'Conserved ORFs' else draw.variant_plot(
+            aln, ax,
+            show_x_label=True,
+            lollisize=(inputs['stem_size'], inputs['head_size']),
+            show_legend=inputs['show_legend_third_plot']
+        ))
+    # do not plot anything if all plots are off
+    if not height_ratios:
+        return None
+
+    # Prepare the plot with dynamic number of subplots
+    if fig_size is not None:
+        fig, axes = plt.subplots(nrows=len(height_ratios), height_ratios=height_ratios, figsize=fig_size)
+    else:
+        fig, axes = plt.subplots(nrows=len(height_ratios), height_ratios=height_ratios)
+
+    # If there is only one plot, `axes` is not a list
+    if len(height_ratios) == 1:
+        axes = [axes]
+
+    # Render each enabled plot
+    for ax, plot_func in zip(axes, plot_functions):
+        plot_func(ax)
+
+    return fig
+
+
 # Define the server logic
 def server(input, output, session):
 
@@ -197,23 +308,27 @@ def server(input, output, session):
         alignment_file = input.alignment_file()
         if alignment_file:
             aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
+
             # set standard ref
             aln.reference_id = list(aln.alignment.keys())[0]
             reactive.alignment.set(aln)
-            # Update zoom slider based on alignment length
+
+            # Update zoom slider based on alignment length and user input
             alignment_length = len(next(iter(aln.alignment.values())))-1
-            # Update zoom slider
             ui.update_slider('zoom_range', max=alignment_length, value=(0, alignment_length))
+
             # Update reference
             ui.update_selectize(
                 id='reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
             )
+
             # Update substitution matrix
             ui.update_selectize(
                 id='matrix',
                 choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
                 selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
             )
+
             # update plot size sliders
             # Adjust the size depending on the number of alignment sequences
             aln_len, seq_threshold = len(aln.alignment.keys()), 5
@@ -221,21 +336,26 @@ def server(input, output, session):
                 if aln_len >= ratio:
                     seq_threshold = ratio
 
+            # update possible user inputs
             ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
             ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
             ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
+            # Some of the function highly depend on the alignment type
             if aln.aln_type == 'AA':
                 ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='coverage')
-                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'])
-
+                ui.update_selectize('annotation', choices=['Off', 'SNPs'])
+            else:
+                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
 
     @reactive.Effect
     @reactive.event(input.annotation_file)
     def load_annotation():
+        # read annotation file
         annotation_file = input.annotation_file()
         if annotation_file:
             ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
-            reactive.annotation.set(ann)  # load alignment
+            reactive.annotation.set(ann)
+
             # update features to display
             ui.update_selectize(
                 id='feature_display',
@@ -243,95 +363,11 @@ def server(input, output, session):
                 selected=list(ann.features.keys())[0]
             )
 
-    def create_msa_plot(aln, ann, inputs, fig_size=None):
-
-        if not aln:
-            return None
-
-        # set the reference sequence
-        if input.reference() == 'first':
-            aln.reference_id = list(aln.alignment.keys())[0]
-        elif input.reference() == 'consensus':
-            aln.reference_id = None
-        else:
-            aln.reference_id = inputs['reference']
-
-        # Update zoom level from slider
-        aln.zoom = tuple(inputs['zoom_range'])
-
-        # Prepare the plot with 3 subplots
-        # Fig_size is needed for pdf download
-        if fig_size is not None:
-            fig, axes = plt.subplots(nrows=3, height_ratios=[inputs['plot_1_size'], inputs['plot_2_size'], inputs['plot_3_size']], figsize=fig_size)
-        else:
-            fig, axes = plt.subplots(nrows=3, height_ratios=[inputs['plot_1_size'], inputs['plot_2_size'], inputs['plot_3_size']])
-        # Subplot 1: Stats Plot
-        draw.stat_plot(
-            aln,
-            axes[0],
-            stat_type=inputs['stat_type'],
-            line_width=1,
-            rolling_average=inputs['rolling_average'],
-            line_color=inputs['stat_color']
-        )
-
-        # Subplot 2: Alignment Plot (Identity or Similarity)
-        if inputs['alignment_type'] == 'identity' or inputs['alignment_type'] == 'colored identity':
-            draw.identity_alignment(
-                aln, axes[1],
-                fancy_gaps=inputs['show_gaps'],
-                show_gaps=inputs['show_gaps'],
-                show_mask=True,
-                show_mismatches=True,
-                show_ambiguities=True,
-                color_mismatching_chars=True if inputs['alignment_type'] == 'colored identity' else False,
-                reference_color='lightsteelblue',
-                show_seq_names=inputs['seq_names'],
-                show_x_label=True if inputs['annotation'] == 'Annotation' and not inputs['annotation_file'] else False,
-                show_legend=inputs['show_legend']
-            )
-        else:
-            draw.similarity_alignment(
-                aln, axes[1],
-                fancy_gaps=inputs['show_gaps'],
-                show_gaps=inputs['show_gaps'],
-                matrix_type=inputs['matrix'],
-                show_seq_names=inputs['seq_names'],
-                show_cbar=inputs['show_legend'],
-                cbar_fraction=0.02,
-                show_x_label=True if inputs['annotation'] == 'Annotation' and not inputs['annotation_file'] else False
-            )
-
-        # Subplot 3: Annotation or ORF Plot
-        if inputs['annotation'] == 'Annotation' and inputs['annotation_file']:
-            draw.annotation_plot(
-                aln, ann,
-                axes[2],
-                feature_to_plot=inputs['feature_display'],
-                show_x_label=True
-            )
-        elif inputs['annotation'] == 'Conserved ORFs':
-            draw.orf_plot(
-                aln, axes[2],
-                cmap=inputs['color_mapping'],
-                non_overlapping_orfs=inputs['non_overlapping'],
-                show_x_label=True,
-                show_cbar=True,
-                cbar_fraction=0.2,
-                min_length=inputs['min_orf_length']
-            )
-        elif inputs['annotation'] == 'SNPs':
-            draw.variant_plot(
-                aln, axes[2],
-                show_x_label=True,
-                lollisize=(inputs['stem_size'], inputs['head_size']),
-                show_legend=inputs['show_legend_variants']
-            )
-        # turn everything off
-        else:
-            axes[2].axis('off')
-
-        return fig
+            # update possible user inputs
+            if reactive.alignment.get().aln_type == 'AA':
+                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'])
+            else:
+                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'])
 
     @output
     @render.plot
@@ -362,30 +398,30 @@ def server(input, output, session):
             'min_orf_length': input.min_orf_length(),
             'stem_size': input.stem_size(),
             'head_size': input.head_size(),
-            'show_legend_variants': input.show_legend_variants(),
+            'show_legend_third_plot': input.show_legend_third_plot(),
         }
 
-        fig = create_msa_plot(aln, ann, inputs)
-        return fig
+        return create_msa_plot(aln, ann, inputs)
 
     @output
     @render.download
     def download_pdf():
+        # get annotation and alignment
         aln = reactive.alignment.get()
         ann = reactive.annotation.get()
 
-        # Access the window dimensions
+        # access the window dimensions
         dimensions = input.window_dimensions()
         if not dimensions:
             raise ValueError("Window dimensions not available.")
 
-        # Convert window dimensions (pixels) to inches
+        # convert window dimensions (pixels) to inches
         screen_dpi = 96  # Typical screen DPI
         figure_width_inches = dimensions['width'] / screen_dpi
         figure_height_inches = dimensions['height'] / screen_dpi
 
 
-        # Collect inputs from the UI
+        # collect inputs from the UI
         inputs = {
             'reference': input.reference(),
             'zoom_range': input.zoom_range(),
@@ -408,7 +444,7 @@ def server(input, output, session):
             'min_orf_length': input.min_orf_length(),
             'stem_size': input.stem_size(),
             'head_size': input.head_size(),
-            'show_legend_variants': input.show_legend_variants(),
+            'show_legend_third_plot': input.show_legend_third_plot(),
         }
         # plot with a temp name
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmpfile:
@@ -419,8 +455,5 @@ def server(input, output, session):
             plt.close(fig)
             return tmpfile.name
 
+# run the app
 app = App(app_ui, server, static_assets={'/docs': Path(__file__).parent/"docs"})
-
-# TODO: on/off for plots
-# TODO: on/off for plots for as alignments
-

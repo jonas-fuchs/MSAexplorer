@@ -22,7 +22,6 @@ from numpy import ndarray
 # msaexplorer
 from msaexplorer import config
 
-# TODO: test with as alignment
 class MSA:
     """
     An alignment class that allows computation of several stats
@@ -449,11 +448,10 @@ class MSA:
             return False
 
         def calculate_identity(identity_matrix: ndarray, aln_slice:list) -> float:
-            sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]]
+            sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]] + 1  # identical = 0, different = -1 --> add 1
             return np.sum(np.all(sliced_array == 1, axis=0))/(aln_slice[1] - aln_slice[0]) * 100
 
         # checks for arguments
-
         if self.aln_type == 'AA':
             raise TypeError('ORF search only for RNA/DNA alignments')
 
