@@ -545,11 +545,11 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
                     linestyle='',
                     markersize=5
                 )
-            ) for char in detected_var
+            ) for char in colors if char in detected_var
         ]
         ax.legend(
             custom_legend,
-            detected_var,
+            [char for char in colors if char in detected_var],  # ensures correct sorting
             loc='lower right',
             title='variant',
             bbox_to_anchor=bbox_to_anchor,
