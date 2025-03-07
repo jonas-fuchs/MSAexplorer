@@ -27,7 +27,6 @@ jobs:
         SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
       run: |
         rsconnect deploy shiny ./ \
-          --name foxlabs \
           --title MSAexplorer \
-          --token $SHINYAPPS_TOKEN \
-          --secret $SHINYAPPS_SECRET
+          --token {{ secrets.SHINYAPPS_TOKEN }}\
+          --secret {{ secrets.SHINYAPPS_SECRET }}
