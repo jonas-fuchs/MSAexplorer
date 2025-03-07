@@ -4,7 +4,7 @@ name: website
 on:
   push:
     branches:
-      - master
+      - shiny-app
 
 # security: restrict permissions for CI jobs.
 permissions:
@@ -20,11 +20,11 @@ jobs:
         with:
           python-version: '3.13'
       # install dependencies and pdoc
-      - run: pip install .
-      - run: pip install pdoc
-      # Automatically build documentation
-      - run: pdoc ./msaexplorer  --logo 'https://github.com/jonas-fuchs/MSAexplorer/tree/master/docs/logo.png' -o docs/
-
+      - run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pdoc
+          pdoc ./msaexplorer  --logo 'https://github.com/jonas-fuchs/MSAexplorer/tree/master/docs/logo.png' -o docs/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/
