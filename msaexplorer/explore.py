@@ -1048,7 +1048,6 @@ class MSA:
                     snp_dict['POS'][pos]['ALT'][alt]['AF'] /= len(aln)
 
         return snp_dict
-    # TODO: add functions to manipulate alignments
 
 
 class Annotation:
@@ -1393,5 +1392,3 @@ class Annotation:
                 original_locations = feature_data['location']
                 aligned_locations = map_location(self._position_map, original_locations)
                 feature_data['location'] = aligned_locations
-
-    # TODO: transfer of annotations to other sequences (return respective ungapped seq and adapted annotation)

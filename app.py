@@ -84,7 +84,6 @@ app_ui = ui.page_fluid(
                         'Which reference sequence to calculate identity/similarity'
                     )
                 ),
-                # TODO: add color mapping for similarity plot
                 ui.column(
                     4,
                     ui.tooltip(
@@ -180,7 +179,7 @@ app_ui = ui.page_fluid(
                         'Get the plot as a pdf.'
                     )
                 ),
-                ui.output_plot('msa_plot', height='90vh', width='90vw'),
+                ui.output_plot('msa_plot', height='90vh', width='90vw', hover=True),
             ),
         )
     )
