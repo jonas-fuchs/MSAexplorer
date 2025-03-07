@@ -119,7 +119,7 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
         ax.set_yticks([])
 
 
-def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y_position: float | int, reference_color: str, seq_name: str, identity_color: str):
+def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y_position: float | int, reference_color: str, seq_name: str, identity_color: str | ndarray):
     """
     Creates the initial patch.
     """
@@ -213,16 +213,6 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
 
-    # define colors and identity values (correspond to values in the alignment matrix)
-    aln_colors, identity_values = config.IDENTITY_COLORS, [np.nan, -1, -2, -3]
-
-    # extend colors - only needed if each char should be colour coded
-    if color_mismatching_chars:
-        colors_to_extend = config.CHAR_COLORS[aln.aln_type]
-        identity_values = identity_values + list(range(len(colors_to_extend)))[1:]
-        for idx, char in enumerate(colors_to_extend):
-            aln_colors[idx + 1] = {'type': char, 'color': colors_to_extend[char]}
-
     # Both options for gaps work hand in hand
     if fancy_gaps:
         show_gaps = True
@@ -232,6 +222,17 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
         zoom = (0, aln.length)
     else:
         zoom = aln.zoom
+
+    # define colors and identity values (correspond to values in the alignment matrix)
+    aln_colors = config.IDENTITY_COLORS
+    if color_mismatching_chars:
+        identity_values = [np.nan, -2, -3] if show_gaps else [-2, -3]
+        colors_to_extend = config.CHAR_COLORS[aln.aln_type]
+        identity_values = identity_values + [x+1 for x in list(range(len(colors_to_extend)))]  # x+1 is needed to allow correct mapping
+        for idx, char in enumerate(colors_to_extend):
+            aln_colors[idx + 1] = {'type': char, 'color': colors_to_extend[char]}
+    else:
+        identity_values = [np.nan, -1, -2, -3]
 
     # get alignment and identity array
     identity_aln = aln.calc_identity_alignment(
@@ -269,12 +270,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
                 plt.Line2D(
                     [],
                     [],
-                    color=aln_colors[val]['color'], marker='s' ,markeredgecolor='grey', linestyle='', markersize=10)) for val in detected_identity_values
+                    color=aln_colors[x]['color'], marker='s' ,markeredgecolor='grey', linestyle='', markersize=10)) for x in aln_colors if x in detected_identity_values
         ]
         # plot it
         ax.legend(
             custom_legend,
-            [aln_colors[x]['type'] for x in detected_identity_values],
+            [aln_colors[x]['type'] for x in aln_colors if x in detected_identity_values],
             loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
             ncols=len(detected_identity_values) / 2 if aln.aln_type == 'AA' and color_mismatching_chars else len(detected_identity_values),
@@ -292,7 +293,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'PuBu_r', gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot.
     :param aln: alignment MSA class
@@ -302,7 +303,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
-    :param similarity_colors: first color - not similar, second color - similar --> create a colormap
+    :param cmap: color mapping for % identity - see https://matplotlib.org/stable/users/explain/colors/colormaps.html
     :param gap_color: color for gaps
     :param show_gaps: whether to show gaps otherwise it will be ignored
     :param fancy_gaps: show gaps with a small black bar
@@ -316,9 +317,6 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     # validate colors
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
-    for color in similarity_colors:
-        if not is_color_like(color):
-            raise ValueError(f'{color} for similarity is not a color')
 
     # Both options for gaps work hand in hand
     if fancy_gaps:
@@ -341,7 +339,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
             vmin=min_value,
             vmax=max_value
         ),
-        cmap=LinearSegmentedColormap.from_list('', colors=similarity_colors)
+        cmap=plt.get_cmap(cmap)
     )
 
     # create plot
@@ -349,7 +347,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     y_position = len(aln.alignment) - 0.8
     for sequence, seq_name in zip(similarity_aln, aln.alignment.keys()):
         # create initial patch for each sequence
-        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, similarity_colors[1])
+        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, cmap.to_rgba(max_value))
         # get all similarity values present in the current sequence
         similarity_values = np.append([np.nan], np.arange(start=min_value, stop=max_value), 0) if show_gaps else np.arange(start=min_value, stop=max_value)
         # find and plot stretches
@@ -623,6 +621,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     :param cbar_fraction: fraction of the original ax reserved for the colorbar
     """
 
+    # normalize colorbar
     cmap = ScalarMappable(norm=Normalize(0, 100), cmap=plt.get_cmap(cmap))
 
     # validate input
@@ -661,7 +660,6 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     ax.set_title('conserved orfs', loc='left')
 
 
-# TODO: Plot gene names?
 def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
     """
     Plot annotations from bed, gff or gb files. Are automatically mapped to alignment.

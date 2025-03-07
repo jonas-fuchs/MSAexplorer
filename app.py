@@ -33,7 +33,7 @@ app_ui = ui.page_fluid(
             ui.img(src='https://github.githubassets.com/assets/GitHub-Logo-ee398b662d42.png', height='15px'),
             href='https://github.com/jonas-fuchs/MSAexplorer',
             target='_blank',
-            title='View on GitHub'
+            title='Give it a star!'
         ),
         style='position: fixed; top: 10px; right: 10px; z-index: 1000;'
     ),
@@ -57,14 +57,14 @@ app_ui = ui.page_fluid(
                     4,
                     ui.tooltip(
                         ui.input_numeric('rolling_avg', 'Average', value=20, min=1),
-                        'Rolling average over character intervals'
+                        'Rolling average over character intervals.'
                     )
                 ),
                 ui.column(
                     4,
                     ui.tooltip(
                         ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
-                        'Any named matplotlib color for the line'
+                        'Any named matplotlib color for the line.'
                     )
                 )
             ),
@@ -73,26 +73,42 @@ app_ui = ui.page_fluid(
                 ui.column(
                     4,ui.tooltip(
                         ui.input_switch('show_gaps', 'Gaps', value=True),
-                        'Whether to show gaps'
+                        'Whether to show gaps as an actual gap.'
                     ),
                     ui.tooltip(
                         ui.input_switch('show_legend', 'Legend', value=True),
                         'Whether to show legend'
                     ),
                     ui.tooltip(
-                        ui.input_selectize('reference', 'Reference', ['first' ,'consensus'], selected='first'),
-                        'Which reference sequence to calculate identity/similarity'
+                        ui.input_switch('show_mask', 'Show mask', value=True),
+                        'Show masked charaters "X" or "N" - only relevant for identity alignments.'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
+                        'Show masked ambiguities - only relevant for nt identity alignments.'
+                    ),
+                ),
+                ui.column(
+                    4,
+                    ui.tooltip(
+                        ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
+                        'Which reference sequence to calculate identity/similarity.'
+                    ),
+                    ui.tooltip(
+                        ui.input_selectize('reference_color', label='Reference color', choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
+                        'Color for the reference sequence.'
                     )
                 ),
                 ui.column(
                     4,
                     ui.tooltip(
-                        ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
-                        'colormap for similarity plots - any matplotlib colormap'
-                    ),
-                    ui.tooltip(
                         ui.input_selectize('matrix', 'Matrix', ['None']),
-                        'Substitution matrix for similarity mapping'
+                        'Substitution matrix for similarity mapping.'
+                    ),
+                        ui.tooltip(
+                            ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
+                                               selected='PuBu_r'),
+                            'colormap for similarity plots - any matplotlib colormap.'
                     )
                 )
             ),
@@ -102,42 +118,41 @@ app_ui = ui.page_fluid(
                     4,
                     ui.tooltip(
                         ui.input_switch('show_legend_third_plot', 'Legend', value=True),
-                        'Whether to show legend for the third plot'
+                        'Whether to show legend for the third plot.'
                     ),
                 )
             ),
             ui.row(
                 ui.column(
                     4,
-
                     ui.h6('SNP plot'),
                     ui.tooltip(
                         ui.input_numeric('head_size', 'Head size', value=3, min=1),
-                        'Size of the head dot'
+                        'Size of the head dot.'
                     ),
                     ui.tooltip(
                         ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
-                        'Length of the stem'
+                        'Length of the stem.'
                     ),
                 ),
                 ui.column(
                     4,
                     ui.tooltip(
-                    ui.h6('ORF plot'),
-                    'Only relevant for nt alignments',
-                    placement='left'
+                        ui.h6('ORF plot'),
+                        'Only relevant for nt alignments.',
+                        placement='left'
                      ),
                     ui.tooltip(
                         ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
-                        'Minimum ORF length to calculate'
+                        'Minimum ORF length to calculate.'
                     ),
                     ui.tooltip(
                         ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
-                        'colormap for conservation - any matplotlib colormap'
+                        'Colormap for conservation - any matplotlib colormap.'
                     ),
                     ui.tooltip(
                         ui.input_switch('non_overlapping', 'non-overlapping', value=False),
-                        'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime'
+                        'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime.'
                     ),
                 ),
                 ui.column(
@@ -145,11 +160,11 @@ app_ui = ui.page_fluid(
                 ui.h6('Annotation plot'),
                     ui.tooltip(
                         ui.input_selectize('feature_display', 'Feature', ['None']),
-                        'Which feature to display'
+                        'Which feature to display.'
                     ),
                     ui.tooltip(
                         ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
-                        'Color of the feature'
+                        'Color of the feature.'
                     )
                 ),
             )
@@ -222,63 +237,68 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     # First plot
     if inputs['stat_type'] != 'Off':
         height_ratios.append(inputs['plot_1_size'])
-        plot_functions.append(lambda ax: draw.stat_plot(
-            aln, ax,
-            stat_type=inputs['stat_type'],
-            line_width=1,
-            rolling_average=inputs['rolling_average'],
-            show_x_label=True if inputs['annotation'] == 'Off' and inputs['alignment_type'] == 'Off' else False,
-            line_color=inputs['stat_color']
-        ))
+        plot_functions.append(
+            lambda ax: draw.stat_plot(
+                aln, ax,
+                stat_type=inputs['stat_type'],
+                line_width=1,
+                rolling_average=inputs['rolling_average'],
+                show_x_label=True if inputs['annotation'] == 'Off' and inputs['alignment_type'] == 'Off' else False,
+                line_color=inputs['stat_color'])
+        )
 
     # Second plot
     if inputs['alignment_type'] != 'Off':
         height_ratios.append(inputs['plot_2_size'])
-        plot_functions.append(lambda ax: draw.identity_alignment(
-            aln, ax,
-            fancy_gaps=inputs['show_gaps'],
-            show_gaps=inputs['show_gaps'],
-            show_mask=True,
-            show_mismatches=True,
-            show_ambiguities=True,
-            color_mismatching_chars=True if inputs['alignment_type'] == 'colored identity' else False,
-            reference_color='lightsteelblue',
-            show_seq_names=inputs['seq_names'],
-            show_x_label=True if inputs['annotation'] == 'Off' else False,
-            show_legend=inputs['show_legend']
+        plot_functions.append(
+            lambda ax: draw.identity_alignment(
+                aln, ax,
+                fancy_gaps=inputs['show_gaps'],
+                show_gaps=inputs['show_gaps'],
+                show_mask=inputs['show_mask'],
+                show_mismatches=True,
+                show_ambiguities=inputs['show_ambiguities'],
+                color_mismatching_chars=True if inputs['alignment_type'] == 'colored identity' else False,
+                reference_color=inputs['reference_color'],
+                show_seq_names=inputs['seq_names'],
+                show_x_label=True if inputs['annotation'] == 'Off' else False,
+                show_legend=inputs['show_legend']
         ) if inputs['alignment_type'] == 'identity' or inputs[
             'alignment_type'] == 'colored identity' else draw.similarity_alignment(
-            aln, ax,
-            fancy_gaps=inputs['show_gaps'],
-            show_gaps=inputs['show_gaps'],
-            matrix_type=inputs['matrix'],
-            show_seq_names=inputs['seq_names'],
-            show_cbar=inputs['show_legend'],
-            cbar_fraction=0.02,
-            show_x_label=True if inputs['annotation'] == 'Off' else False
-        ))
+                aln, ax,
+                fancy_gaps=inputs['show_gaps'],
+                show_gaps=inputs['show_gaps'],
+                reference_color=inputs['reference_color'],
+                matrix_type=inputs['matrix'],
+                show_seq_names=inputs['seq_names'],
+                cmap=inputs['matrix_color_mapping'],
+                show_cbar=inputs['show_legend'],
+                cbar_fraction=0.02,
+                show_x_label=True if inputs['annotation'] == 'Off' else False)
+    )
 
     # Third Plot
     if inputs['annotation'] != 'Off':
         height_ratios.append(inputs['plot_3_size'])
-        plot_functions.append(lambda ax: draw.annotation_plot(
-            aln, ann, ax,
-            feature_to_plot=inputs['feature_display'],
-            show_x_label=True
+        plot_functions.append(
+            lambda ax: draw.annotation_plot(
+                aln, ann, ax,
+                feature_to_plot=inputs['feature_display'],
+                show_x_label=True
         ) if inputs['annotation'] == 'Annotation' and inputs['annotation_file'] else draw.orf_plot(
-            aln, ax,
-            cmap=inputs['color_mapping'],
-            non_overlapping_orfs=inputs['non_overlapping'],
-            show_x_label=True,
-            show_cbar=True,
-            cbar_fraction=0.2,
-            min_length=inputs['min_orf_length']
+                aln, ax,
+                cmap=inputs['color_mapping'],
+                non_overlapping_orfs=inputs['non_overlapping'],
+                show_x_label=True,
+                show_cbar=True,
+                cbar_fraction=0.2,
+                min_length=inputs['min_orf_length']
         ) if inputs['annotation'] == 'Conserved ORFs' else draw.variant_plot(
-            aln, ax,
-            show_x_label=True,
-            lollisize=(inputs['stem_size'], inputs['head_size']),
-            show_legend=inputs['show_legend_third_plot']
-        ))
+                aln, ax,
+                show_x_label=True,
+                lollisize=(inputs['stem_size'], inputs['head_size']),
+                show_legend=inputs['show_legend_third_plot'])
+    )
     # do not plot anything if all plots are off
     if not height_ratios:
         return None
@@ -306,6 +326,39 @@ def server(input, output, session):
     reactive.alignment = reactive.Value(None)
     reactive.annotation = reactive.Value(None)
 
+    # create inputs for plotting and pdf
+    def _create_inputs():
+        # Collect inputs from the UI
+        return {
+            'reference': input.reference(),
+            'reference_color': input.reference_color(),
+            'show_mask': input.show_mask(),
+            'show_ambiguities': input.show_ambiguities(),
+            'zoom_range': input.zoom_range(),
+            'plot_1_size': input.plot_1_size(),
+            'plot_2_size': input.plot_2_size(),
+            'plot_3_size': input.plot_3_size(),
+            'stat_type': input.stat_type(),
+            'rolling_average': input.rolling_avg(),
+            'stat_color': input.stat_color(),
+            'alignment_type': input.alignment_type(),
+            'matrix': input.matrix(),
+            'matrix_color_mapping': input.matrix_color_mapping(),
+            'show_gaps': input.show_gaps(),
+            'seq_names': input.seq_names(),
+            'show_legend': input.show_legend(),
+            'annotation': input.annotation(),
+            'annotation_file': input.annotation_file(),
+            'feature_display': input.feature_display(),
+            'color_mapping': input.color_mapping(),
+            'non_overlapping': input.non_overlapping(),
+            'min_orf_length': input.min_orf_length(),
+            'stem_size': input.stem_size(),
+            'head_size': input.head_size(),
+            'show_legend_third_plot': input.show_legend_third_plot(),
+        }
+
+
     @reactive.Effect
     @reactive.event(input.alignment_file)
     def load_alignment():
@@ -331,6 +384,12 @@ def server(input, output, session):
                 id='matrix',
                 choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
                 selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
+            )
+
+            # update default rolling average
+            ui.update_numeric(
+                id='rolling_avg',
+                value=int(aln.length/300) if aln.length > 600 else 2
             )
 
             # update plot size sliders
@@ -373,39 +432,14 @@ def server(input, output, session):
             else:
                 ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'])
 
+
     @output
     @render.plot
     def msa_plot():
         aln = reactive.alignment.get()
         ann = reactive.annotation.get()
 
-        # Collect inputs from the UI
-        inputs = {
-            'reference': input.reference(),
-            'zoom_range': input.zoom_range(),
-            'plot_1_size': input.plot_1_size(),
-            'plot_2_size': input.plot_2_size(),
-            'plot_3_size': input.plot_3_size(),
-            'stat_type': input.stat_type(),
-            'rolling_average': input.rolling_avg(),
-            'stat_color': input.stat_color(),
-            'alignment_type': input.alignment_type(),
-            'matrix': input.matrix(),
-            'show_gaps': input.show_gaps(),
-            'seq_names': input.seq_names(),
-            'show_legend': input.show_legend(),
-            'annotation': input.annotation(),
-            'annotation_file': input.annotation_file(),
-            'feature_display': input.feature_display(),
-            'color_mapping': input.color_mapping(),
-            'non_overlapping': input.non_overlapping(),
-            'min_orf_length': input.min_orf_length(),
-            'stem_size': input.stem_size(),
-            'head_size': input.head_size(),
-            'show_legend_third_plot': input.show_legend_third_plot(),
-        }
-
-        return create_msa_plot(aln, ann, inputs)
+        return create_msa_plot(aln, ann, _create_inputs())
 
     @output
     @render.download
@@ -424,35 +458,9 @@ def server(input, output, session):
         figure_width_inches = dimensions['width'] / screen_dpi
         figure_height_inches = dimensions['height'] / screen_dpi
 
-
-        # collect inputs from the UI
-        inputs = {
-            'reference': input.reference(),
-            'zoom_range': input.zoom_range(),
-            'plot_1_size': input.plot_1_size(),
-            'plot_2_size': input.plot_2_size(),
-            'plot_3_size': input.plot_3_size(),
-            'stat_type': input.stat_type(),
-            'rolling_average': input.rolling_avg(),
-            'stat_color': input.stat_color(),
-            'alignment_type': input.alignment_type(),
-            'matrix': input.matrix(),
-            'show_gaps': input.show_gaps(),
-            'seq_names': input.seq_names(),
-            'show_legend': input.show_legend(),
-            'annotation': input.annotation(),
-            'annotation_file': input.annotation_file(),
-            'feature_display': input.feature_display(),
-            'color_mapping': input.color_mapping(),
-            'non_overlapping': input.non_overlapping(),
-            'min_orf_length': input.min_orf_length(),
-            'stem_size': input.stem_size(),
-            'head_size': input.head_size(),
-            'show_legend_third_plot': input.show_legend_third_plot(),
-        }
         # plot with a temp name
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmpfile:
-            fig = create_msa_plot(aln, ann, inputs, fig_size=(figure_width_inches, figure_height_inches))
+            fig = create_msa_plot(aln, ann, _create_inputs(), fig_size=(figure_width_inches, figure_height_inches))
             # tight layout needed here to plot everything correctly
             fig.tight_layout()
             fig.savefig(tmpfile.name, format="pdf")
