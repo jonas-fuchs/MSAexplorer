@@ -28,5 +28,5 @@ jobs:
       run: |
         rsconnect deploy shiny ./ \
           --title MSAexplorer \
-          --token {{ secrets.SHINYAPPS_TOKEN }}\
-          --secret {{ secrets.SHINYAPPS_SECRET }}
+          --token $SHINYAPPS_TOKEN\
+          --secret $SHINYAPPS_SECRET
