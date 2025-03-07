@@ -389,7 +389,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
-    :param stat_type: 'entropy', 'gc', 'coverage', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
+    :param stat_type: 'entropy', 'gc', 'coverage', 'ts/tv', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
     :param line_color: color of the line
     :param line_width: width of the line
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
@@ -418,6 +418,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         'coverage': aln.calc_coverage,
         'identity': aln.calc_identity_alignment,
         'similarity': aln.calc_similarity_alignment,
+        'ts/tv': aln.calc_transition_transversion_score
     }
 
     if stat_type not in stat_functions:
@@ -439,6 +440,8 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
     elif stat_type == 'identity':
         min_value, max_value = -1, 0
+    elif stat_type == 'ts/tv':
+        min_value, max_value = -1, 1
     else:
         min_value, max_value = 0, 1
     if stat_type in ['identity', 'similarity']:
@@ -449,21 +452,25 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     # plot the data
     # plot lines only if there is a rolling average calculated or if gc should be displayed
-    if rolling_average > 1 or stat_type == 'gc':
+    if rolling_average > 1 or stat_type in ['ts/tv', 'gc']:
         ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
+
     # specific visual cues for individual plots
-    if stat_type != 'gc':
+    if stat_type not in ['ts/tv', 'gc']:
         ax.fill_between(plot_idx, y1=data, y2=min_value, color=(line_color, 0.5))
-    else:
+    if stat_type == 'gc':
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
 
     # format axis
     ax.set_ylim(min_value, max_value*0.1+max_value)
     ax.set_yticks([min_value, max_value])
-    if stat_type != 'gc':
-        ax.set_yticklabels(['low', 'high'])
-    else:
+    if stat_type == 'gc':
         ax.set_yticklabels(['0', '100'])
+    elif stat_type == 'ts/tv':
+        ax.set_yticklabels(['tv', 'ts'])
+    else:
+        ax.set_yticklabels(['low', 'high'])
+
 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
     ax.set_ylabel(f'{stat_type}')

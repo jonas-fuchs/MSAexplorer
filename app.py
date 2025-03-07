@@ -173,7 +173,7 @@ app_ui = ui.page_fluid(
             'Visualization',
             ui.layout_sidebar(
                 ui.sidebar(
-                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off'),
+                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts/tv'], selected='Off'),
                     ui.tooltip(
                         ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
                         'Fraction of the total plot size'
@@ -199,7 +199,7 @@ app_ui = ui.page_fluid(
                         'Get the plot as a pdf.'
                     )
                 ),
-                ui.output_plot('msa_plot', height='90vh', width='90vw'),
+                ui.output_plot('msa_plot', height='100vh', width='80vw'),
             ),
         )
     )
@@ -386,12 +386,6 @@ def server(input, output, session):
                 selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
             )
 
-            # update default rolling average
-            ui.update_numeric(
-                id='rolling_avg',
-                value=int(aln.length/300) if aln.length > 600 else 2
-            )
-
             # update plot size sliders
             # Adjust the size depending on the number of alignment sequences
             aln_len, seq_threshold = len(aln.alignment.keys()), 5
@@ -409,6 +403,27 @@ def server(input, output, session):
                 ui.update_selectize('annotation', choices=['Off', 'SNPs'])
             else:
                 ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
+
+    # try to set good standard values for the rolling average
+    @reactive.Effect
+    @reactive.event(input.stat_type)
+    def find_good_average():
+        if input.stat_type() == 'gc':
+            # update default rolling average
+            ui.update_numeric(
+                id='rolling_avg',
+                value=10
+            )
+        elif input.stat_type() in ['entropy', 'ts/tv']:
+            ui.update_numeric(
+                id='rolling_avg',
+                value=1
+            )
+        else:
+            ui.update_numeric(
+                id='rolling_avg',
+                value=20
+            )
 
     @reactive.Effect
     @reactive.event(input.annotation_file)

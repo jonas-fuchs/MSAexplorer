@@ -1049,6 +1049,32 @@ class MSA:
 
         return snp_dict
 
+    def calc_transition_transversion_score(self) -> list:
+        """
+        Based on the snp positions, calculates a transition/transversions score.
+        A positive score means higher ratio of transitions and negative score means
+        a higher ratio of transversions.
+        :return: list
+        """
+
+        if self.aln_type == 'AA':
+            raise TypeError('TS/TV scoring only for RNA/DNA alignments')
+
+        # ini
+        snps = self.get_snps()
+        score = [0]*self.length
+
+        for pos in snps['POS']:
+            t_score_temp = 0
+            for alt in snps['POS'][pos]['ALT']:
+                # check the type of substitution
+                if snps['POS'][pos]['ref'] + alt in ['AG', 'GA', 'CT', 'TC', 'CU', 'UC']:
+                    score[pos] += snps['POS'][pos]['ALT'][alt]['AF']
+                else:
+                    score[pos] -= snps['POS'][pos]['ALT'][alt]['AF']
+
+        return score
+
 
 class Annotation:
     """
