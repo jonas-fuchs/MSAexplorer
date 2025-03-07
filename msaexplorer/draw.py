@@ -410,8 +410,8 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         array = np.mean(array, axis=0)
 
     data, plot_idx = moving_average(array, rolling_average)
-    # plot lines only if there is a rolling average calculated
-    if rolling_average > 1:
+    # plot lines only if there is a rolling average calculated or if gc should be displayed
+    if rolling_average > 1 or stat_type == 'gc':
         ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
     # specific visual cues for individual plots
     if stat_type != 'gc':

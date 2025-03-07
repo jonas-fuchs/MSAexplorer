@@ -104,6 +104,12 @@ app_ui = ui.page_fluid(
                         ui.input_switch('show_legend_third_plot', 'Legend', value=True),
                         'Whether to show legend for the third plot'
                     ),
+                )
+            ),
+            ui.row(
+                ui.column(
+                    4,
+
                     ui.h6('SNP plot'),
                     ui.tooltip(
                         ui.input_numeric('head_size', 'Head size', value=3, min=1),
@@ -116,7 +122,6 @@ app_ui = ui.page_fluid(
                 ),
                 ui.column(
                     4,
-                    ui.br(),
                     ui.tooltip(
                     ui.h6('ORF plot'),
                     'Only relevant for nt alignments',
@@ -179,7 +184,7 @@ app_ui = ui.page_fluid(
                         'Get the plot as a pdf.'
                     )
                 ),
-                ui.output_plot('msa_plot', height='90vh', width='90vw', hover=True),
+                ui.output_plot('msa_plot', height='90vh', width='90vw'),
             ),
         )
     )
