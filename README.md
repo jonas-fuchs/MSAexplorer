@@ -23,6 +23,6 @@ pip install -r requirements.txt
 
 ### [Plotting](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer/draw.html) 
 
-#### [Mayhem example _(lets just go nuts :bomb: )_](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html#plotting)
+#### [Mayhem example _(lets just go nuts )_ :bomb: ](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html#plotting)
 
 ![png](assets/BoDV.png)
