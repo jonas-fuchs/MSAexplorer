@@ -3,3 +3,4 @@ venv/
 ./example_alignments
 test.py
 test
+msaexplorer.egg-info

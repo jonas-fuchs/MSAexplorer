@@ -22,7 +22,7 @@ js_file = Path(__file__).resolve().parent / 'www' / 'js' / 'window_dimensions.js
 # define the UI
 app_ui = ui.page_fluid(
     ui.img(
-            src='docs/logo.svg', height='100px'
+            src='assets/logo.svg', height='100px'
     ),
     # include css
     ui.include_css(css_file),
@@ -483,4 +483,4 @@ def server(input, output, session):
             return tmpfile.name
 
 # run the app
-app = App(app_ui, server, static_assets={'/docs': Path(__file__).parent/"docs"})
+app = App(app_ui, server, static_assets={'/assets': Path(__file__).parent/"assets"})
