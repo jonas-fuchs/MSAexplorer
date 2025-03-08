@@ -3,7 +3,7 @@ name: Deploy Shiny Python App to shinyapps.io
 on:
   push:
     branches:
-      - shiny-app
+      - master
 
 jobs:
   deploy:

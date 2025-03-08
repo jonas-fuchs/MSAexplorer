@@ -1,0 +1,75 @@
+name: Deploy Website
+
+on:
+  push:
+    branches:
+      - shiny-app
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Set up Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Install dependencies (your package, pdoc, and shiny live)
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pdoc
+          pip install shinylive
+
+      # Export the Shiny app as a static site
+      - name: Export Shiny App
+        run: |
+          shinylive export ./ site
+
+      # Generate API documentation with pdoc
+      - name: Generate API Docs
+        run: |
+          # Adjust the command below with your package name and desired options.
+          pdoc ./msaexplorer --logo 'https://github.com/jonas-fuchs/MSAexplorer/tree/master/docs/logo.png' -o docs --force
+
+      # Prepare the deployment directory
+      - name: Prepare Deployment Directory
+        run: |
+          # Remove any previous deployment folder
+          rm -rf public
+          mkdir public
+          # Create subdirectories for the Shiny app and the API docs.
+          mkdir -p public/shiny
+          mkdir -p public/docs
+          # Move the entire exported Shiny app (with its directory structure) into public/shiny.
+          cp -r site/* public/shiny/
+          # Move the pdoc-generated docs into public/docs.
+          cp -r docs/* public/docs/
+
+      # Upload the combined public directory as an artifact for GitHub Pages deployment
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

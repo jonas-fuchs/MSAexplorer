@@ -290,7 +290,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 cmap=inputs['color_mapping'],
                 non_overlapping_orfs=inputs['non_overlapping'],
                 show_x_label=True,
-                show_cbar=True,
+                show_cbar=inputs['show_legend_third_plot'],
                 cbar_fraction=0.2,
                 min_length=inputs['min_orf_length']
         ) if inputs['annotation'] == 'Conserved ORFs' else draw.variant_plot(
