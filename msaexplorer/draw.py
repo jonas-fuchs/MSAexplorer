@@ -1,6 +1,16 @@
+r"""
+# The draw module
+
+The draw module lets you draw alignments and statistic plots such as SNPs, ORFs, entropy and much more. For each plot a
+`matplotlib axes` has to be passed to the plotting function.
+
+Importantly some of the plotting features can only be accessed for nucleotide alignments but not for amino acid alignments.
+The functions will raise the appropriate exception in such a case.
+
+## Functions
+
 """
-contains the functions for drawing graphs
-"""
+
 # built-in
 from itertools import chain
 from typing import Callable, Dict
@@ -10,8 +20,7 @@ import os
 from numpy import ndarray
 
 # MSAexplorer
-from msaexplorer import explore
-from msaexplorer import config
+from msaexplorer import explore, config
 
 # libs
 import numpy as np
@@ -41,7 +50,7 @@ def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left
     General axis formatting.
     """
     ax.set_xlim(
-            (aln.zoom[0], aln.zoom[0] + aln.length) if aln.zoom is not None else (0, aln.length)
+            (aln.zoom[0]- 0.5, aln.zoom[0] + aln.length + 0.5) if aln.zoom is not None else (-0.5, aln.length + 0.5)
         )
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -104,17 +113,18 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
         if custom_seq_names:
             ax.set_yticklabels(custom_seq_names[::-1])
         else:
-            ax.set_yticklabels(list(aln.alignment.keys())[::-1])
+            names = [x.split(' ')[0] for x in list(aln.alignment.keys())[::-1]]
+            ax.set_yticklabels(names)
     else:
         ax.set_yticks([])
 
 
-def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y_position: float | int, reference_color: str, seq_name: str, identity_color: str):
+def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y_position: float | int, reference_color: str, seq_name: str, identity_color: str | ndarray):
     """
     Creates the initial patch.
     """
 
-    col.append(patches.Rectangle((zoom[0], y_position), zoom[1] - zoom[0],0.8,
+    col.append(patches.Rectangle((zoom[0] - 0.5, y_position), zoom[1] - zoom[0] + 0.5,0.8,
                                                    facecolor=reference_color if seq_name == aln.reference_id else identity_color
                                                    )
                                  )
@@ -127,7 +137,7 @@ def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_p
     for stretch in stretches:
         col.append(
             patches.Rectangle(
-                (stretch[0] + zoom[0], y_position),
+                (stretch[0] - 0.5 + zoom[0], y_position),
                 stretch[1],
                 0.8,
                 color=colors,
@@ -140,7 +150,7 @@ def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_p
             continue
         col.append(
             patches.Rectangle(
-                (stretch[0] + zoom[0], y_position + 0.375),
+                (stretch[0] - 0.5 + zoom[0], y_position + 0.375),
                 stretch[1],
                 0.05,
                 color='black',
@@ -176,7 +186,7 @@ def _add_track_positions(annotation_dic):
     return annotation_dic
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', aln_colors: dict = config.IDENTITY_COLORS, show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1.15)):
+def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
@@ -185,12 +195,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
-    :param aln_colors: dictionary containing colors: dict(0: color0, 1: color0, 2: color0, 3: color0) -> 0: match, 1: mismatch, 2: mask (N|X), 3: gap
     :param show_mask: whether to show N or X chars otherwise it will be shown as match or mismatch
     :param show_gaps: whether to show gaps otherwise it will be shown as match or mismatch
     :param fancy_gaps: show gaps with a small black bar
     :param show_mismatches: whether to show mismatches otherwise it will be shown as match
     :param show_ambiguities: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
+    :param color_mismatching_chars: color mismatching chars with their unique color
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
@@ -202,33 +212,48 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     # validate colors
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
-    if aln_colors.keys() != config.IDENTITY_COLORS.keys():
-        raise ValueError('configure your dictionary like config.IDENTITY_COLORS')
-    for key in aln_colors.keys():
-        for key2 in aln_colors[key]:
-            if key2 not in ['type', 'color']:
-                raise ValueError('configure your dictionary like config.IDENTITY_COLORS')
-    if not all([is_color_like(aln_colors[x]['color']) for x in aln_colors.keys()]):
-        raise ValueError(f'one of the specified colors for the alignment is not a color')
 
+    # Both options for gaps work hand in hand
     if fancy_gaps:
         show_gaps = True
-    # get alignment and identity array
-    identity_aln = aln.calc_identity_alignment(encode_mask=show_mask, encode_gaps=show_gaps, encode_mismatches=show_mismatches, encode_ambiguities=show_ambiguities)
+
     # define zoom to plot
     if aln.zoom is None:
         zoom = (0, aln.length)
     else:
         zoom = aln.zoom
+
+    # define colors and identity values (correspond to values in the alignment matrix)
+    aln_colors = config.IDENTITY_COLORS
+    if color_mismatching_chars:
+        identity_values = [np.nan, -2, -3] if show_gaps else [-2, -3]
+        colors_to_extend = config.CHAR_COLORS[aln.aln_type]
+        identity_values = identity_values + [x+1 for x in list(range(len(colors_to_extend)))]  # x+1 is needed to allow correct mapping
+        for idx, char in enumerate(colors_to_extend):
+            aln_colors[idx + 1] = {'type': char, 'color': colors_to_extend[char]}
+    else:
+        identity_values = [np.nan, -1, -2, -3]
+
+    # get alignment and identity array
+    identity_aln = aln.calc_identity_alignment(
+        encode_mask=show_mask,
+        encode_gaps=show_gaps,
+        encode_mismatches=show_mismatches,
+        encode_ambiguities=show_ambiguities,
+        encode_each_mismatch_char=color_mismatching_chars
+    )
+
     # define the y position of the first sequence
     y_position = len(aln.alignment) - 0.8
-    detected_identity_values = {1}
+    detected_identity_values = {0}
+
     # ini collection for patches
     col = []
     for sequence, seq_name in zip(identity_aln, aln.alignment.keys()):
         # ini identity patches
-        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, aln_colors[1]['color'])
-        for identity_value in [np.nan, 0, 2, 3]:
+        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, aln_colors[0]['color'])
+        # find and plot stretches that are different
+        for identity_value in identity_values:
             stretches = _find_stretches(sequence, identity_value)
             if not stretches:
                 continue
@@ -239,27 +264,36 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
 
     # custom legend
     if show_legend:
-        custom_legend = [ax.add_line(plt.Line2D([], [], color=aln_colors[val]['color'], marker='s' ,markeredgecolor='grey', linestyle='', markersize=10)) for val in
-                         detected_identity_values]
+        # create it
+        custom_legend = [
+            ax.add_line(
+                plt.Line2D(
+                    [],
+                    [],
+                    color=aln_colors[x]['color'], marker='s' ,markeredgecolor='grey', linestyle='', markersize=10)) for x in aln_colors if x in detected_identity_values
+        ]
+        # plot it
         ax.legend(
             custom_legend,
-            [aln_colors[x]['type'] for x in detected_identity_values],
-            loc='upper right',
+            [aln_colors[x]['type'] for x in aln_colors if x in detected_identity_values],
+            loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=len(detected_identity_values),
+            ncols=len(detected_identity_values) / 2 if aln.aln_type == 'AA' and color_mismatching_chars else len(detected_identity_values),
             frameon=False
         )
+
     # format seq names
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
+
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
-    ax.set_ylim(0, len(aln.alignment)+0.2)
+    ax.set_ylim(-0.5, len(aln.alignment)+0.2)
     if show_title:
         ax.set_title('identity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', similarity_colors: tuple[str, str] | list[str, str] = ('darkblue', 'lightgrey'), gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'PuBu_r', gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot.
     :param aln: alignment MSA class
@@ -269,7 +303,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
-    :param similarity_colors: first color - not similar, second color - similar --> create a colormap
+    :param cmap: color mapping for % identity - see https://matplotlib.org/stable/users/explain/colors/colormaps.html
     :param gap_color: color for gaps
     :param show_gaps: whether to show gaps otherwise it will be ignored
     :param fancy_gaps: show gaps with a small black bar
@@ -279,21 +313,20 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     """
     # input check
     _validate_input_parameters(aln, ax)
-    # always show gaps for fancy gaps
+
+    # validate colors
+    if not is_color_like(reference_color):
+        raise ValueError(f'{reference_color} for reference is not a color')
+
+    # Both options for gaps work hand in hand
     if fancy_gaps:
         show_gaps = True
+
     # define zoom to plot
     if aln.zoom is None:
         zoom = (0, aln.length)
     else:
         zoom = aln.zoom
-
-    # validate colors
-    if not is_color_like(reference_color):
-        raise ValueError(f'{reference_color} for reference is not a color')
-    for color in similarity_colors:
-        if not is_color_like(color):
-            raise ValueError(f'{color} for similarity is not a color')
 
     # get data
     similarity_aln = aln.calc_similarity_alignment(matrix_type=matrix_type)
@@ -301,22 +334,37 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     # determine min max values of the underlying matrix and create cmap
     matrix = config.SUBS_MATRICES[aln.aln_type][similarity_aln.dtype.metadata['matrix']]
     min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
-    cmap = ScalarMappable(norm=Normalize(
-        vmin=min_value,
-        vmax=max_value
-    ), cmap=LinearSegmentedColormap.from_list('', colors=similarity_colors))
+    cmap = ScalarMappable(
+        norm=Normalize(
+            vmin=min_value,
+            vmax=max_value
+        ),
+        cmap=plt.get_cmap(cmap)
+    )
+
     # create plot
     col = []
     y_position = len(aln.alignment) - 0.8
     for sequence, seq_name in zip(similarity_aln, aln.alignment.keys()):
-        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, similarity_colors[1])
+        # create initial patch for each sequence
+        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, cmap.to_rgba(max_value))
+        # get all similarity values present in the current sequence
         similarity_values = np.append([np.nan], np.arange(start=min_value, stop=max_value), 0) if show_gaps else np.arange(start=min_value, stop=max_value)
+        # find and plot stretches
         for similarity_value in similarity_values:
             stretches = _find_stretches(sequence, similarity_value)
             if not stretches:
                 continue
-            _create_stretch_patch(col, stretches, zoom, y_position, cmap.to_rgba(similarity_value) if not np.isnan(similarity_value) else gap_color,
-                                  fancy_gaps, similarity_value)
+            _create_stretch_patch(
+                col,
+                stretches,
+                zoom,
+                y_position,
+                cmap.to_rgba(similarity_value) if not np.isnan(similarity_value) else gap_color,
+                fancy_gaps,
+                similarity_value
+            )
+        # new y position for the next sequence
         y_position -= 1
 
     # legend
@@ -325,9 +373,9 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         cbar.set_ticks([min_value, max_value])
         cbar.set_ticklabels(['low', 'high'])
 
-
     # format seq names
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
+
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
     ax.set_ylim(0, len(aln.alignment)+0.2)
@@ -341,7 +389,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
-    :param stat_type: 'entropy', 'gc', 'coverage', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
+    :param stat_type: 'entropy', 'gc', 'coverage', 'ts/tv', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
     :param line_color: color of the line
     :param line_width: width of the line
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
@@ -370,6 +418,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         'coverage': aln.calc_coverage,
         'identity': aln.calc_identity_alignment,
         'similarity': aln.calc_similarity_alignment,
+        'ts/tv': aln.calc_transition_transversion_score
     }
 
     if stat_type not in stat_functions:
@@ -381,55 +430,59 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         raise ValueError('line color is not a color')
 
     # validate rolling average
-    if rolling_average < 0 or rolling_average > aln.length:
-        raise ValueError('rolling_average must be between 0 and length of sequence')
+    if rolling_average < 1 or rolling_average > aln.length:
+        raise ValueError('rolling_average must be between 1 and length of sequence')
 
     # generate input data
     array = stat_functions[stat_type]()
     if stat_type == 'similarity':
         matrix = config.SUBS_MATRICES[aln.aln_type][array.dtype.metadata['matrix']]
         min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
+    elif stat_type == 'identity':
+        min_value, max_value = -1, 0
+    elif stat_type == 'ts/tv':
+        min_value, max_value = -1, 1
     else:
         min_value, max_value = 0, 1
-
     if stat_type in ['identity', 'similarity']:
         # for the mean nan values get handled as the lowest possible number in the matrix
-        array = np.nan_to_num(array, True, 0 if stat_type == 'identity' else min_value)
+        array = np.nan_to_num(array, True, min_value)
         array = np.mean(array, axis=0)
-
     data, plot_idx = moving_average(array, rolling_average)
-    # plot
-    ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
+
+    # plot the data
+    # plot lines only if there is a rolling average calculated or if gc should be displayed
+    if rolling_average > 1 or stat_type in ['ts/tv', 'gc']:
+        ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
 
     # specific visual cues for individual plots
-    if stat_type != 'gc':
-        ax.fill_between(plot_idx, data, color=(line_color, 0.5))
-    else:
+    if stat_type not in ['ts/tv', 'gc']:
+        ax.fill_between(plot_idx, y1=data, y2=min_value, color=(line_color, 0.5))
+    if stat_type == 'gc':
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
 
     # format axis
     ax.set_ylim(min_value, max_value*0.1+max_value)
     ax.set_yticks([min_value, max_value])
-    if stat_type != 'gc':
-        ax.set_yticklabels(['low', 'high'])
-    else:
+    if stat_type == 'gc':
         ax.set_yticklabels(['0', '100'])
+    elif stat_type == 'ts/tv':
+        ax.set_yticklabels(['tv', 'ts'])
+    else:
+        ax.set_yticklabels(['low', 'high'])
+
 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
-    if rolling_average > 1:
-        ax.set_ylabel(f'{stat_type}\n {2*rolling_average}c mean')
-    else:
-        ax.set_ylabel(f'{stat_type}')
+    ax.set_ylabel(f'{stat_type}')
 
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, colors: dict | None = None, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1.15)):
+def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
     """
     Plots variants.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param lollisize: (stem_size, head_size)
     :param show_x_label:  whether to show the x-axis label
-    :param colors: colors for variants - if None standard colors are used (config.AA_colors or config.NT_colors)
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
     """
@@ -443,25 +496,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
             raise ValueError('lollisize must be floats greater than zero')
 
     # define colors
-    if colors is None:
-        # define colors to use
-        if aln.aln_type == 'AA':
-            colors = config.AA_COLORS
-        else:
-            colors = config.NT_COLORS
-    else:
-        if colors is not dict:
-            raise TypeError('Format colors like in config.AA_COLORS or config.NT_COLORS')
-        if aln.aln_type == 'AA':
-            if colors.keys() != config.AA_COLORS.keys():
-                raise TypeError('Format colors like in config.AA_COLORS')
-        if aln.aln_type == 'NT':
-            if colors.keys() != config.NT_COLORS.keys():
-                raise TypeError('Format colors like in config.NT_COLORS')
-        for char in colors:
-            if not is_color_like(colors[char]):
-                raise TypeError(f'{colors[char]} is not a color')
-
+    colors = config.CHAR_COLORS[aln.aln_type]
     # get snps
     snps = aln.get_snps()
     # define where to plot (each ref type gets a separate line)
@@ -493,12 +528,13 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
                             markersize=lollisize[1]
                             )
                     detected_var.add(alt)
+
     # plot hlines
     for y_char in ref_y_positions:
         ax.hlines(
             ref_y_positions[y_char],
-            xmin=aln.zoom[0] if aln.zoom is not None else 0,
-            xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length,
+            xmin=aln.zoom[0] - 0.5 if aln.zoom is not None else -0.5,
+            xmax=aln.zoom[0] + aln.length + 0.5 if aln.zoom is not None else aln.length + 0.5,
             color='black',
             linestyle='-',
             zorder=0,
@@ -506,15 +542,25 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
         )
     # create a custom legend
     if show_legend:
-        custom_legend = [ax.add_line(plt.Line2D([], [], color=colors[char], marker='o', linestyle='', markersize=5)) for char in
-                         detected_var]
+        custom_legend = [
+            ax.add_line(
+                plt.Line2D(
+                    [],
+                    [],
+                    color=colors[char],
+                    marker='o',
+                    linestyle='',
+                    markersize=5
+                )
+            ) for char in colors if char in detected_var
+        ]
         ax.legend(
             custom_legend,
-            detected_var,
-            loc='upper right',
+            [char for char in colors if char in detected_var],  # ensures correct sorting
+            loc='lower right',
             title='variant',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=len(detected_var),
+            ncols=len(detected_var)/2 if aln.aln_type == 'AA' else len(detected_var),
             frameon=False
         )
 
@@ -582,6 +628,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     :param cbar_fraction: fraction of the original ax reserved for the colorbar
     """
 
+    # normalize colorbar
     cmap = ScalarMappable(norm=Normalize(0, 100), cmap=plt.get_cmap(cmap))
 
     # validate input
@@ -595,12 +642,14 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
         annotation_dict = aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length)
     else:
         annotation_dict = aln_temp.get_conserved_orfs(min_length=min_length)
+
     # filter dict for zoom
     if aln.zoom is not None:
-        annotation_dict = {key:val for key, val in annotation_dict.items() if aln.zoom[0] < val['location'][0][0] <= aln.zoom[1] or aln.zoom[0] < val['location'][0][1] <= aln.zoom[1]}
+        annotation_dict = {key:val for key, val in annotation_dict.items() if max(val['location'][0][0], aln.zoom[0]) <= min(val['location'][0][1], aln.zoom[1])}
 
     # add track for plotting
     _add_track_positions(annotation_dict)
+
     # plot
     _plot_annotation(annotation_dict, ax, direction_marker_size=direction_marker_size, color=cmap)
 
@@ -618,7 +667,6 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     ax.set_title('conserved orfs', loc='left')
 
 
-# TODO: Plot gene names?
 def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
     """
     Plot annotations from bed, gff or gb files. Are automatically mapped to alignment.
@@ -650,10 +698,12 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     # parse from path
     if type(annotation) is str:
         annotation = parse_annotation_from_string(annotation, aln)
+
     # validate input
     _validate_input_parameters(aln, ax, annotation)
     if not is_color_like(color):
         raise ValueError(f'{color} for reference is not a color')
+
     # ignore features to plot for bed files (here it is written into one feature)
     if annotation.ann_type == 'bed':
         annotation_dict = annotation.features['region']
@@ -665,6 +715,7 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
         except KeyError:
             raise KeyError(f'Feature {feature_to_plot} not found. Use annotation.features.keys() to see available features.')
 
+    # plotting and formating
     _add_track_positions(annotation_dict)
     _plot_annotation(annotation_dict, ax, direction_marker_size=direction_marker_size, color=color)
     _format_x_axis(aln, ax, show_x_label, show_left=False)
@@ -672,3 +723,5 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     ax.set_yticks([])
     ax.set_yticklabels([])
     ax.set_title(f'{annotation.locus} ({feature_to_plot})', loc='left')
+
+# TODO: TRANSITION/TRANSVERSION Plot

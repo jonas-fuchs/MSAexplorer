@@ -1,0 +1,8 @@
+##gff-version 3
+##source-version geneious 2019.2.3
+##sequence-region	HypNi_Mx1_cDNA	1	659
+HypNi_Mx1_cDNA	Geneious	domain	71	337	.	.	.	ID=G-Domain
+HypNi_Mx1_cDNA	Geneious	domain	572	627	.	.	.	ID=Stalk1
+HypNi_Mx1_cDNA	Geneious	domain	366	542	.	.	.	ID=Stalk2
+HypNi_Mx1_cDNA	Geneious	domain	339	358	.	.	.	ID=BSE1
+HypNi_Mx1_cDNA	Geneious	domain	43	59	.	.	.	ID=BSE2

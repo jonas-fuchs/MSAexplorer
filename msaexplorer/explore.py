@@ -1,5 +1,11 @@
 """
-This contains the MSA class
+# Explore module
+
+This module contains the two classes `MSA` and `Annotation` which are used to read in the respective files
+and can be used to compute several statistics or be used as the input for the `draw` module functions.
+
+## Classes
+
 """
 
 # built-in
@@ -16,7 +22,6 @@ from numpy import ndarray
 # msaexplorer
 from msaexplorer import config
 
-# TODO: test with as alignment
 class MSA:
     """
     An alignment class that allows computation of several stats
@@ -159,7 +164,7 @@ class MSA:
         if counter / len(alignment) >= 0.7 * len(alignment[list(alignment.keys())[0]]):
             return 'DNA'
         else:
-            return 'AS'
+            return 'AA'
 
     # Properties with setters
     @property
@@ -189,7 +194,7 @@ class MSA:
     def aln_type(self) -> str:
         """
         define the aln type:
-        RNA, DNA or AS
+        RNA, DNA or AA
         """
         return self._aln_type
 
@@ -443,11 +448,10 @@ class MSA:
             return False
 
         def calculate_identity(identity_matrix: ndarray, aln_slice:list) -> float:
-            sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]]
+            sliced_array = identity_matrix[:,aln_slice[0]:aln_slice[1]] + 1  # identical = 0, different = -1 --> add 1
             return np.sum(np.all(sliced_array == 1, axis=0))/(aln_slice[1] - aln_slice[0]) * 100
 
         # checks for arguments
-
         if self.aln_type == 'AA':
             raise TypeError('ORF search only for RNA/DNA alignments')
 
@@ -698,14 +702,15 @@ class MSA:
 
         return reverse_complement_dict
 
-    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False) -> np.ndarray:
+    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False, encode_each_mismatch_char:bool=False) -> np.ndarray:
         """
-        Converts alignment to identity array (identical=1) compared to majority consensus or reference:\n
+        Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
 
-        :param encode_mismatches: encode mismatch as 0
-        :param encode_mask: encode mask with value=2 --> also in the reference
+        :param encode_mismatches: encode mismatch as -1
+        :param encode_mask: encode mask with value=-2 --> also in the reference
         :param encode_gaps: encode gaps with np.nan --> also in the reference
-        :param encode_ambiguities: encode ambiguities with value=3
+        :param encode_ambiguities: encode ambiguities with value=-3
+        :param encode_each_mismatch_char: for each mismatch encode characters separately - these values represent the idx+1 values of config.DNA_colors, config.RNA_colors or config.AA_colors
         :return: identity alignment
         """
 
@@ -716,7 +721,7 @@ class MSA:
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
         # ini matrix
-        identity_matrix = np.full(sequences.shape, 1, dtype=float)
+        identity_matrix = np.full(sequences.shape, 0, dtype=float)
 
         is_identical = sequences == reference
 
@@ -726,7 +731,10 @@ class MSA:
             is_gap = np.full(sequences.shape, False)
 
         if encode_mask:
-            is_n_or_x = np.isin(sequences, ['N', 'X'])
+            if self.aln_type == 'AA':
+                is_n_or_x = np.isin(sequences, ['X'])
+            else:
+                is_n_or_x = np.isin(sequences, ['N'])
         else:
             is_n_or_x = np.full(sequences.shape, False)
 
@@ -739,18 +747,26 @@ class MSA:
             is_mismatch = ~is_gap & ~is_identical & ~is_n_or_x & ~is_ambig
         else:
             is_mismatch = np.full(sequences.shape, False)
-        # assign values based on conditions
-        identity_matrix[is_mismatch] = 0  # mismatch
+
+        # encode every different character
+        if encode_each_mismatch_char:
+            for idx, char in enumerate(config.CHAR_COLORS[self.aln_type]):
+                new_encoding = np.isin(sequences, [char]) & is_mismatch
+                identity_matrix[new_encoding] = idx + 1
+        # or encode different with a single value
+        else:
+            identity_matrix[is_mismatch] = -1  # mismatch
+
         identity_matrix[is_gap] = np.nan  # gap
-        identity_matrix[is_n_or_x] = 2  # 'N' or 'X'
-        identity_matrix[is_ambig] = 3  # ambiguities
+        identity_matrix[is_n_or_x] = -2  # 'N' or 'X'
+        identity_matrix[is_ambig] = -3  # ambiguities
 
         return identity_matrix
 
     def calc_similarity_alignment(self, matrix_type:str|None=None) -> np.ndarray:
         """
         Calculate the similarity score between the alignment and the reference seq. Gaps are encoded as np.nan
-        :param: matrix_type: type of similarity score (if not set - AS: BLOSSUM65, RNA/DNA: BLASTN)
+        :param: matrix_type: type of similarity score (if not set - AA: BLOSSUM65, RNA/DNA: BLASTN)
         :return: identity array
         """
 
@@ -1032,7 +1048,32 @@ class MSA:
                     snp_dict['POS'][pos]['ALT'][alt]['AF'] /= len(aln)
 
         return snp_dict
-    # TODO: add functions to manipulate alignments
+
+    def calc_transition_transversion_score(self) -> list:
+        """
+        Based on the snp positions, calculates a transition/transversions score.
+        A positive score means higher ratio of transitions and negative score means
+        a higher ratio of transversions.
+        :return: list
+        """
+
+        if self.aln_type == 'AA':
+            raise TypeError('TS/TV scoring only for RNA/DNA alignments')
+
+        # ini
+        snps = self.get_snps()
+        score = [0]*self.length
+
+        for pos in snps['POS']:
+            t_score_temp = 0
+            for alt in snps['POS'][pos]['ALT']:
+                # check the type of substitution
+                if snps['POS'][pos]['ref'] + alt in ['AG', 'GA', 'CT', 'TC', 'CU', 'UC']:
+                    score[pos] += snps['POS'][pos]['ALT'][alt]['AF']
+                else:
+                    score[pos] -= snps['POS'][pos]['ALT'][alt]['AF']
+
+        return score
 
 
 class Annotation:
@@ -1377,5 +1418,3 @@ class Annotation:
                 original_locations = feature_data['location']
                 aligned_locations = map_location(self._position_map, original_locations)
                 feature_data['location'] = aligned_locations
-
-    # TODO: transfer of annotations to other sequences (return respective ungapped seq and adapted annotation)

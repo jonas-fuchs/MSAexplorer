@@ -1,3 +1,11 @@
+"""
+# Configuration module
+
+This file contains all relevant configuration parameters for MSAexplorer, including
+similarity matrices.
+"""
+
+
 import numpy as np
 
 POSSIBLE_CHARS = [
@@ -192,6 +200,28 @@ SUBS_MATRICES = {
                          'Y': {'*': -6.0, 'A': -3.0, 'B': -4.0, 'C': -4.0, 'D': -4.0, 'E': -4.0, 'F': 3.0, 'G': -5.0, 'H': 1.0, 'I': -2.0, 'K': -3.0, 'L': -2.0, 'M': -2.0, 'N': -3.0, 'P': -4.0, 'Q': -3.0, 'R': -3.0, 'S': -3.0, 'T': -2.0, 'V': -3.0, 'W': 2.0, 'X': -2.0, 'Y': 8.0, 'Z': -3.0},
                          'Z': {'*': -6.0, 'A': -1.0, 'B': 0.0, 'C': -5.0, 'D': 0.0, 'E': 4.0, 'F': -4.0, 'G': -3.0, 'H': 0.0, 'I': -4.0, 'K': 1.0, 'L': -4.0, 'M': -2.0, 'N': -1.0, 'P': -2.0, 'Q': 4.0, 'R': 0.0, 'S': -1.0, 'T': -1.0, 'V': -3.0, 'W': -4.0, 'X': -1.0, 'Y': -3.0, 'Z': 4.0}
                          },
+                'BLOSUM95': {
+                    'A': {'A': 5, 'R': -2, 'N': -1, 'D': -2, 'C': -1, 'Q': -1, 'E': -1, 'G': 0, 'H': -2, 'I': -2, 'L': -2, 'K': -1, 'M': -1, 'F': -3, 'P': -1, 'S': 1, 'T': 0, 'W': -3, 'Y': -2, 'V': 0},
+                    'R': {'A': -2, 'R': 6, 'N': -1, 'D': -2, 'C': -4, 'Q': 1, 'E': -1, 'G': -3, 'H': 0, 'I': -3, 'L': -3, 'K': 3, 'M': -2, 'F': -3, 'P': -2, 'S': -1, 'T': -1, 'W': -3, 'Y': -1, 'V': -3},
+                    'N': {'A': -1, 'R': -1, 'N': 7, 'D': 2, 'C': -3, 'Q': 0, 'E': -1, 'G': 0, 'H': 1, 'I': -4, 'L': -4, 'K': 0, 'M': -3, 'F': -4, 'P': -2, 'S': 1, 'T': 0, 'W': -4, 'Y': -2, 'V': -4},
+                    'D': {'A': -2, 'R': -2, 'N': 2, 'D': 8, 'C': -4, 'Q': 0, 'E': 2, 'G': -1, 'H': -1, 'I': -4, 'L': -5, 'K': -1, 'M': -4, 'F': -5, 'P': -2, 'S': 0, 'T': -1, 'W': -5, 'Y': -3, 'V': -4},
+                    'C': {'A': -1, 'R': -4, 'N': -3, 'D': -4, 'C': 13, 'Q': -3, 'E': -4, 'G': -3, 'H': -3, 'I': -2, 'L': -2, 'K': -3, 'M': -2, 'F': -3, 'P': -4, 'S': -1, 'T': -1, 'W': -5, 'Y': -3, 'V': -1},
+                    'Q': {'A': -1, 'R': 1, 'N': 0, 'D': 0, 'C': -3, 'Q': 7, 'E': 2, 'G': -2, 'H': 1, 'I': -3, 'L': -2, 'K': 2, 'M': 0, 'F': -4, 'P': -1, 'S': 0, 'T': -1, 'W': -2, 'Y': -1, 'V': -3},
+                    'E': {'A': -1, 'R': -1, 'N': -1, 'D': 2, 'C': -4, 'Q': 2, 'E': 6, 'G': -2, 'H': 0, 'I': -4, 'L': -3, 'K': 1, 'M': -2, 'F': -3, 'P': -1, 'S': 0, 'T': -1, 'W': -3, 'Y': -2, 'V': -3},
+                    'G': {'A': 0, 'R': -3, 'N': 0, 'D': -1, 'C': -3, 'Q': -2, 'E': -2, 'G': 8, 'H': -2, 'I': -4, 'L': -4, 'K': -2, 'M': -3, 'F': -4, 'P': -2, 'S': 0, 'T': -2, 'W': -4, 'Y': -3, 'V': -4},
+                    'H': {'A': -2, 'R': 0, 'N': 1, 'D': -1, 'C': -3, 'Q': 1, 'E': 0, 'G': -2, 'H': 10, 'I': -4, 'L': -3, 'K': -1, 'M': -2, 'F': -2, 'P': -2, 'S': -1, 'T': -2, 'W': -3, 'Y': 2, 'V': -4},
+                    'I': {'A': -2, 'R': -3, 'N': -4, 'D': -4, 'C': -2, 'Q': -3, 'E': -4, 'G': -4, 'H': -4, 'I': 5, 'L': 2, 'K': -3, 'M': 2, 'F': 0, 'P': -3, 'S': -2, 'T': -1, 'W': -3, 'Y': -1, 'V': 4},
+                    'L': {'A': -2, 'R': -3, 'N': -4, 'D': -5, 'C': -2, 'Q': -2, 'E': -3, 'G': -4, 'H': -3, 'I': 2, 'L': 5, 'K': -3, 'M': 3, 'F': 1, 'P': -3, 'S': -3, 'T': -1, 'W': -2, 'Y': -1, 'V': 1},
+                    'K': {'A': -1, 'R': 3, 'N': 0, 'D': -1, 'C': -3, 'Q': 2, 'E': 1, 'G': -2, 'H': -1, 'I': -3, 'L': -3, 'K': 6, 'M': -2, 'F': -3, 'P': -1, 'S': 0, 'T': -1, 'W': -3, 'Y': -2, 'V': -3},
+                    'M': {'A': -1, 'R': -2, 'N': -3, 'D': -4, 'C': -2, 'Q': 0, 'E': -2, 'G': -3, 'H': -2, 'I': 2, 'L': 3, 'K': -2, 'M': 7, 'F': 0, 'P': -2, 'S': -2, 'T': -1, 'W': -1, 'Y': -1, 'V': 1},
+                    'F': {'A': -3, 'R': -3, 'N': -4, 'D': -5, 'C': -3, 'Q': -4, 'E': -3, 'G': -4, 'H': -2, 'I': 0, 'L': 1, 'K': -3, 'M': 0, 'F': 8, 'P': -4, 'S': -3, 'T': -2, 'W': 1, 'Y': 4, 'V': -1},
+                    'P': {'A': -1, 'R': -2, 'N': -2, 'D': -2, 'C': -4, 'Q': -1, 'E': -1, 'G': -2, 'H': -2, 'I': -3, 'L': -3, 'K': -1, 'M': -2, 'F': -4, 'P': 10, 'S': -1, 'T': -1, 'W': -4, 'Y': -3, 'V': -3},
+                    'S': {'A': 1, 'R': -1, 'N': 1, 'D': 0, 'C': -1, 'Q': 0, 'E': 0, 'G': 0, 'H': -1, 'I': -2, 'L': -3, 'K': 0, 'M': -2, 'F': -3, 'P': -1, 'S': 5, 'T': 2, 'W': -4, 'Y': -2, 'V': -2},
+                    'T': {'A': 0, 'R': -1, 'N': 0, 'D': -1, 'C': -1, 'Q': -1, 'E': -1, 'G': -2, 'H': -2, 'I': -1, 'L': -1, 'K': -1, 'M': -1, 'F': -2, 'P': -1, 'S': 2, 'T': 5, 'W': -3, 'Y': -2, 'V': 0},
+                    'W': {'A': -3, 'R': -3, 'N': -4, 'D': -5, 'C': -5, 'Q': -2, 'E': -3, 'G': -4, 'H': -3, 'I': -3, 'L': -2, 'K': -3, 'M': -1, 'F': 1, 'P': -4, 'S': -4, 'T': -3, 'W': 15, 'Y': 2, 'V': -3},
+                    'Y': {'A': -2, 'R': -1, 'N': -2, 'D': -3, 'C': -3, 'Q': -1, 'E': -2, 'G': -3, 'H': 2, 'I': -1, 'L': -1, 'K': -2, 'M': -1, 'F': 4, 'P': -3, 'S': -2, 'T': -2, 'W': 2, 'Y': 8, 'V': -1},
+                    'V': {'A': 0, 'R': -3, 'N': -4, 'D': -4, 'C': -1, 'Q': -3, 'E': -3, 'G': -4, 'H': -4, 'I': 4, 'L': 1, 'K': -3, 'M': 1, 'F': -1, 'P': -3, 'S': -2, 'T': 0, 'W': -3, 'Y': -1, 'V': 5}
+                },
                 'BENNER22': {
                         'A': {'A': 2.5, 'C': -1.2, 'D': -0.2, 'E': -0.3, 'F': -3.1, 'G': 0.8, 'H': -1.6, 'I': -0.4, 'K': -1.0, 'L': -1.7, 'M': -0.8, 'N': 0.0, 'P': 0.8, 'Q': -0.9, 'R': -1.2, 'S': 1.3, 'T': 1.4, 'V': 0.4, 'W': -5.5, 'Y': -3.5},
                         'C': {'A': -1.2, 'C': 12.6, 'D': -3.7, 'E': -4.3, 'F': -0.1, 'G': -1.7, 'H': -1.5, 'I': -2.4, 'K': -3.3, 'L': -2.6, 'M': -2.5, 'N': -1.9, 'P': -3.1, 'Q': -3.3, 'R': -1.6, 'S': 0.3, 'T': -1.1, 'V': -1.7, 'W': 0.5, 'Y': 0.6},
@@ -665,11 +695,6 @@ SUBS_MATRICES = {
                         'W': {'A': -1.0, 'B': -1.0, 'C': -3.0, 'D': -1.0, 'G': -3.0, 'H': -1.0, 'K': -1.0, 'M': -1.0, 'N': -2.0, 'R': -1.0, 'S': -3.0, 'T': -1.0, 'V': -1.0, 'W': -1.0, 'Y': -1.0},
                         'Y': {'A': -3.0, 'B': -1.0, 'C': -1.0, 'D': -1.0, 'G': -3.0, 'H': -1.0, 'K': -1.0, 'M': -1.0, 'N': -2.0, 'R': -3.0, 'S': -1.0, 'T': -1.0, 'V': -1.0, 'W': -1.0, 'Y': -1.0}
                 },
-                'HOXD70': {
-                        'A': {'A': 91.0, 'C': -114.0, 'G': -31.0, 'T': -123.0},
-                        'C': {'A': -114.0, 'C': 100.0, 'G': -125.0, 'T': -31.0},
-                        'G': {'A': -31.0, 'C': -125.0, 'G': 100.0, 'T': -114.0},
-                        'T': {'A': -123.0, 'C': -31.0, 'G': -114.0, 'T': 91.0}},
                 'NUC.4.4': {
                         'A': {'A': 5.0, 'B': -4.0, 'C': -4.0, 'D': -1.0, 'G': -4.0, 'H': -1.0, 'K': -4.0, 'M': 1.0, 'N': -2.0, 'R': 1.0, 'S': -4.0, 'T': -4.0, 'V': -1.0, 'W': 1.0, 'Y': -4.0},
                         'B': {'A': -4.0, 'B': -1.0, 'C': -1.0, 'D': -2.0, 'G': -1.0, 'H': -2.0, 'K': -1.0, 'M': -3.0, 'N': -1.0, 'R': -3.0, 'S': -1.0, 'T': -1.0, 'V': -2.0, 'W': -3.0, 'Y': -1.0},
@@ -710,12 +735,6 @@ SUBS_MATRICES = {
                         'W': {'A': -1.0, 'B': -1.0, 'C': -3.0, 'D': -1.0, 'G': -3.0, 'H': -1.0, 'K': -1.0, 'M': -1.0, 'N': -2.0, 'R': -1.0, 'S': -3.0, 'U': -1.0, 'V': -1.0, 'W': -1.0, 'Y': -1.0},
                         'Y': {'A': -3.0, 'B': -1.0, 'C': -1.0, 'D': -1.0, 'G': -3.0, 'H': -1.0, 'K': -1.0, 'M': -1.0, 'N': -2.0, 'R': -3.0, 'S': -1.0, 'U': -1.0, 'V': -1.0, 'W': -1.0, 'Y': -1.0}
                 },
-                'HOXD70': {
-                        'A': {'A': 91.0, 'C': -114.0, 'G': -31.0, 'U': -123.0},
-                        'C': {'A': -114.0, 'C': 100.0, 'G': -125.0, 'U': -31.0},
-                        'G': {'A': -31.0, 'C': -125.0, 'G': 100.0, 'U': -114.0},
-                        'U': {'A': -123.0, 'C': -31.0, 'G': -114.0, 'U': 91.0}
-                },
                 'NUC.4.4': {
                         'A': {'A': 5.0, 'B': -4.0, 'C': -4.0, 'D': -1.0, 'G': -4.0, 'H': -1.0, 'K': -4.0, 'M': 1.0, 'N': -2.0, 'R': 1.0, 'S': -4.0, 'U': -4.0, 'V': -1.0, 'W': 1.0, 'Y': -4.0},
                         'B': {'A': -4.0, 'B': -1.0, 'C': -1.0, 'D': -2.0, 'G': -1.0, 'H': -2.0, 'K': -1.0, 'M': -3.0, 'N': -1.0, 'R': -3.0, 'S': -1.0, 'U': -1.0, 'V': -2.0, 'W': -3.0, 'Y': -1.0},
@@ -743,47 +762,78 @@ SUBS_MATRICES = {
 }
 
 IDENTITY_COLORS = {
-        0: {'type': 'different',
-            'color': 'peru'},
-        1: {'type': 'identical',
+        0: {'type': 'identical',
             'color': 'lightgrey'},
-        2: {'type': 'mask',
+        -1: {'type': 'different',
+            'color': 'peru'},
+        -2: {'type': 'mask',
             'color': 'dimgrey'},
-        3: {'type': 'ambiguity',
+        -3: {'type': 'ambiguity',
             'color': 'black'},
         np.nan: {'type': 'deletion',
                  'color': 'white'},
 }
 
-NT_COLORS = {
-        'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
-        'T': '#F26D6D',  # Thymine (T) - muted pinkish red
-        'U': '#F26D6D',  # Uracil (U) - same as Thymine
-        'G': '#64A87B',  # Guanine (G) - strong teal-green
-        'C': '#7095D1',  # Cytosine (C) - soft steel blue
-        '-': 'grey'
+
+CHAR_COLORS = {
+        'DNA': {
+                'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
+                'T': '#F26D6D',  # Thymine (T) - muted pinkish red
+                'G': '#64A87B',  # Guanine (G) - strong teal-green
+                'C': '#7095D1',  # Cytosine (C) - soft steel blue
+                '-': 'grey'
+        },
+        'RNA': {
+                'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
+                'U': '#F26D6D',  # Uracil (U) - same as Thymine
+                'G': '#64A87B',  # Guanine (G) - strong teal-green
+                'C': '#7095D1',  # Cytosine (C) - soft steel blue
+                '-': 'grey'
+        },
+        'AA': {
+            # Nonpolar, hydrophobic
+            'A': '#D99058',  # Alanine (A) - warm orange-brown
+            'V': '#E2A876',  # Valine (V) - soft peach-orange
+            'I': '#E0A45F',  # Isoleucine (I) - warm sandy orange
+            'L': '#DA8A54',  # Leucine (L) - light orange
+            'M': '#D99058',  # Methionine (M) - warm orange-brown (same as A)
+            'F': '#B05B61',  # Phenylalanine (F) - muted brick red
+            'W': '#805F9C',  # Tryptophan (W) - deep lavender
+            # Polar, uncharged
+            'S': '#D98B81',  # Serine (S) - warm peach
+            'T': '#D9A86B',  # Threonine (T) - soft caramel
+            'N': '#AB6D9F',  # Asparagine (N) - medium mauve
+            'Q': '#986DB2',  # Glutamine (Q) - medium purple
+            'Y': '#C76F61',  # Tyrosine (Y) - muted terracotta
+            'C': '#D1B758',  # Cysteine (C) - golden yellow
+            # Charged, acidic
+            'D': '#D96666',  # Aspartic Acid (D) - muted red
+            'E': '#D96F5F',  # Glutamic Acid (E) - soft coral
+            # Charged, basic
+            'K': '#5D93C4',  # Lysine (K) - medium blue
+            'R': '#5DA5A4',  # Arginine (R) - soft teal
+            'H': '#916FA7',  # Histidine (H) - muted violet
+            # Unique
+            'G': '#6FAF99',  # Glycine (G) - teal green
+            'P': '#77A86F',  # Proline (P) - muted green
+            # Gap
+            '-': 'grey'
+        }
 }
 
-AA_COLORS = {
-        'A': '#D99058',  # Alanine (A) - warm orange-brown
-        'R': '#5DA5A4',  # Arginine (R) - soft teal
-        'N': '#AB6D9F',  # Asparagine (N) - medium mauve
-        'D': '#D96666',  # Aspartic Acid (D) - muted red
-        'C': '#D1B758',  # Cysteine (C) - golden yellow
-        'Q': '#986DB2',  # Glutamine (Q) - medium purple
-        'E': '#D96F5F',  # Glutamic Acid (E) - soft coral
-        'G': '#6FAF99',  # Glycine (G) - teal green
-        'H': '#916FA7',  # Histidine (H) - muted violet
-        'I': '#E0A45F',  # Isoleucine (I) - warm sandy orange
-        'L': '#DA8A54',  # Leucine (L) - light orange
-        'K': '#5D93C4',  # Lysine (K) - medium blue
-        'M': '#D99058',  # Methionine (M) - warm orange-brown (same as A)
-        'F': '#B05B61',  # Phenylalanine (F) - muted brick red
-        'P': '#77A86F',  # Proline (P) - muted green
-        'S': '#D98B81',  # Serine (S) - warm peach
-        'T': '#D9A86B',  # Threonine (T) - soft caramel
-        'W': '#805F9C',  # Tryptophan (W) - deep lavender
-        'Y': '#C76F61',  # Tyrosine (Y) - muted terracotta
-        'V': '#E2A876',  # Valine (V) - soft peach-orange
-        '-': 'grey'
+# shiny app specific settings
+STANDARD_HEIGHT_RATIOS = {
+        5: (1, 5, 2),
+        10: (1, 10, 2),
+        20: (1, 14, 2),
+        30: (1, 18, 2),
+        40: (1, 22, 2),
+        50: (1, 26, 2),
+        60: (1, 30, 2),
+        70: (1, 34, 2),
+        80: (1, 38, 2),
+        90: (1, 42, 2),
+        100: (1, 46, 2),
+        200: (1, 50, 2),
+        500: (1, 54, 2)
 }

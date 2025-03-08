@@ -1,5 +1,6 @@
 venv/
 .idea/
 ./example_alignments
-command.py
+test.py
 test
+msaexplorer.egg-info
