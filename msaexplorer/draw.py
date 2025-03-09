@@ -130,6 +130,47 @@ def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y
                                  )
 
 
+def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
+    """
+    Plot annotations
+    :param annotation_dict: dict of annotations
+    :param ax: matplotlib Axes
+    :param direction_marker_size: size of marker
+    :param color: color of annotation (color or scalar)
+    """
+    for annotation in annotation_dict:
+        for locations in annotation_dict[annotation]['location']:
+            x_value = locations[0]
+            length = locations[1] - locations[0]
+            ax.add_patch(
+                patches.FancyBboxPatch(
+                    (x_value, annotation_dict[annotation]['track'] + 1),
+                    length,
+                    0.8,
+                    boxstyle="Round, pad=0",
+                    ec="black",
+                    fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
+                )
+            )
+            if direction_marker_size is not None:
+                if annotation_dict[annotation]['strand'] == '-':
+                    marker = '<'
+                else:
+                    marker = '>'
+                ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
+
+        # plot linked annotations (such as splicing)
+        if len(annotation_dict[annotation]['location']) > 1:
+            y_value = annotation_dict[annotation]['track'] + 1.4
+            start = None
+            for locations in annotation_dict[annotation]['location']:
+                if start is None:
+                    start = locations[1]
+                    continue
+                ax.plot([start, locations[0]], [y_value, y_value], '--', linewidth=2, color='black')
+                start = locations[1]
+
+
 def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_position: float | int, colors: dict | ndarray, fancy_gaps: bool, matrix_value: int | float | ndarray):
     """
     Create a patch and add to list.
@@ -573,47 +614,6 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     ax.set_ylabel('reference')
 
 
-def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
-    """
-    Plot annotations
-    :param annotation_dict: dict of annotations
-    :param ax: matplotlib Axes
-    :param direction_marker_size: size of marker
-    :param color: color of annotation (color or scalar)
-    """
-    for annotation in annotation_dict:
-        for locations in annotation_dict[annotation]['location']:
-            x_value = locations[0]
-            length = locations[1] - locations[0]
-            ax.add_patch(
-                patches.FancyBboxPatch(
-                    (x_value, annotation_dict[annotation]['track'] + 1),
-                    length,
-                    0.8,
-                    boxstyle="Round, pad=0",
-                    ec="black",
-                    fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
-                )
-            )
-            if direction_marker_size is not None:
-                if annotation_dict[annotation]['strand'] == '-':
-                    marker = '<'
-                else:
-                    marker = '>'
-                ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
-
-        # plot linked annotations (such as splicing)
-        if len(annotation_dict[annotation]['location']) > 1:
-            y_value = annotation_dict[annotation]['track'] + 1.4
-            start = None
-            for locations in annotation_dict[annotation]['location']:
-                if start is None:
-                    start = locations[1]
-                    continue
-                ax.plot([start, locations[0]], [y_value, y_value], '--', linewidth=2, color='black')
-                start = locations[1]
-
-
 def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Plot conserved ORFs.
@@ -724,4 +724,3 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     ax.set_yticklabels([])
     ax.set_title(f'{annotation.locus} ({feature_to_plot})', loc='left')
 
-# TODO: TRANSITION/TRANSVERSION Plot

@@ -5,6 +5,7 @@ This contains the code to create the MSAexplorer shiny application
 # build-in
 from pathlib import Path
 import tempfile
+from functools import lru_cache
 
 # libs
 from shiny import App, render, ui, reactive
@@ -320,6 +321,12 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     return fig
 
 
+# Cache function for plots
+@lru_cache(maxsize=5)
+def cached_msa_plot(aln, ann, inputs, fig_size=None):
+    return create_msa_plot(aln, ann, inputs, fig_size)
+
+
 # Define the server logic
 def server(input, output, session):
 
@@ -327,7 +334,7 @@ def server(input, output, session):
     reactive.annotation = reactive.Value(None)
 
     # create inputs for plotting and pdf
-    def _create_inputs():
+    def prepare_inputs():
         # Collect inputs from the UI
         return {
             'reference': input.reference(),
@@ -393,7 +400,7 @@ def server(input, output, session):
                 if aln_len >= ratio:
                     seq_threshold = ratio
 
-            # update possible user inputs
+            # update standard settings
             ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
             ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
             ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
@@ -404,25 +411,15 @@ def server(input, output, session):
             else:
                 ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
 
+
     # try to set good standard values for the rolling average
     @reactive.Effect
     @reactive.event(input.stat_type)
-    def find_good_average():
-        if input.stat_type() == 'gc':
-            # update default rolling average
-            ui.update_numeric(
-                id='rolling_avg',
-                value=10
-            )
-        elif input.stat_type() in ['entropy', 'ts/tv']:
+    def update_average():
+        if input.stat_type() in ['entropy', 'ts/tv']:
             ui.update_numeric(
                 id='rolling_avg',
                 value=1
-            )
-        else:
-            ui.update_numeric(
-                id='rolling_avg',
-                value=20
             )
 
     @reactive.Effect
@@ -447,14 +444,13 @@ def server(input, output, session):
             else:
                 ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'])
 
-
     @output
     @render.plot
     def msa_plot():
         aln = reactive.alignment.get()
         ann = reactive.annotation.get()
 
-        return create_msa_plot(aln, ann, _create_inputs())
+        return create_msa_plot(aln, ann, prepare_inputs())
 
     @output
     @render.download
@@ -465,17 +461,12 @@ def server(input, output, session):
 
         # access the window dimensions
         dimensions = input.window_dimensions()
-        if not dimensions:
-            raise ValueError("Window dimensions not available.")
-
-        # convert window dimensions (pixels) to inches
-        screen_dpi = 96  # Typical screen DPI
-        figure_width_inches = dimensions['width'] / screen_dpi
-        figure_height_inches = dimensions['height'] / screen_dpi
+        figure_width_inches = dimensions['width'] / 96
+        figure_height_inches = dimensions['height'] / 96
 
         # plot with a temp name
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmpfile:
-            fig = create_msa_plot(aln, ann, _create_inputs(), fig_size=(figure_width_inches, figure_height_inches))
+            fig = create_msa_plot(aln, ann, prepare_inputs(), fig_size=(figure_width_inches, figure_height_inches))
             # tight layout needed here to plot everything correctly
             fig.tight_layout()
             fig.savefig(tmpfile.name, format="pdf")
