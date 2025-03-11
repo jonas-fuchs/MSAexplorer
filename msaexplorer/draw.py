@@ -425,7 +425,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False):
+def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
     """
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class
@@ -435,6 +435,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     :param line_width: width of the line
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
     :param show_x_label: whether to show the x-axis label
+    :param show_title: whether to show the title
     """
 
     def moving_average(arr, window_size):
@@ -442,8 +443,9 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
             i = 0
             moving_averages, plotting_idx = [], []
             while i < len(arr) + 1:
-                window_left = arr[i- window_size: i] if i > window_size else arr[0:i]
-                window_right = arr[i: i + window_size] if i < len(arr) - window_size else arr[i:len(arr)]
+                half_window_size = window_size // 2
+                window_left = arr[i - half_window_size : i] if i > half_window_size else arr[0:i]
+                window_right = arr[i : i + half_window_size ] if i < len(arr) - half_window_size else arr[i : len(arr)]
                 moving_averages.append((sum(window_left)+ sum(window_right)) / (len(window_left) + len(window_right)))
                 plotting_idx.append(i)
                 i += 1
@@ -459,7 +461,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         'coverage': aln.calc_coverage,
         'identity': aln.calc_identity_alignment,
         'similarity': aln.calc_similarity_alignment,
-        'ts/tv': aln.calc_transition_transversion_score
+        'ts tv score': aln.calc_transition_transversion_score
     }
 
     if stat_type not in stat_functions:
@@ -481,7 +483,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
     elif stat_type == 'identity':
         min_value, max_value = -1, 0
-    elif stat_type == 'ts/tv':
+    elif stat_type == 'ts tv score':
         min_value, max_value = -1, 1
     else:
         min_value, max_value = 0, 1
@@ -493,11 +495,11 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     # plot the data
     # plot lines only if there is a rolling average calculated or if gc should be displayed
-    if rolling_average > 1 or stat_type in ['ts/tv', 'gc']:
+    if rolling_average > 1 or stat_type in ['ts tv score', 'gc']:
         ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
 
     # specific visual cues for individual plots
-    if stat_type not in ['ts/tv', 'gc']:
+    if stat_type not in ['ts tv score', 'gc']:
         ax.fill_between(plot_idx, y1=data, y2=min_value, color=(line_color, 0.5))
     if stat_type == 'gc':
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
@@ -507,14 +509,19 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     ax.set_yticks([min_value, max_value])
     if stat_type == 'gc':
         ax.set_yticklabels(['0', '100'])
-    elif stat_type == 'ts/tv':
+    elif stat_type == 'ts tv score':
         ax.set_yticklabels(['tv', 'ts'])
     else:
         ax.set_yticklabels(['low', 'high'])
 
+    # show title
+    if show_title:
+        ax.set_title(
+            f'{stat_type} (average over {rolling_average} positions)' if rolling_average > 1 else f'{stat_type} for each position',
+            loc='left'
+        )
 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
-    ax.set_ylabel(f'{stat_type}')
 
 
 def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
