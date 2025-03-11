@@ -130,6 +130,47 @@ def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y
                                  )
 
 
+def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
+    """
+    Plot annotations
+    :param annotation_dict: dict of annotations
+    :param ax: matplotlib Axes
+    :param direction_marker_size: size of marker
+    :param color: color of annotation (color or scalar)
+    """
+    for annotation in annotation_dict:
+        for locations in annotation_dict[annotation]['location']:
+            x_value = locations[0]
+            length = locations[1] - locations[0]
+            ax.add_patch(
+                patches.FancyBboxPatch(
+                    (x_value, annotation_dict[annotation]['track'] + 1),
+                    length,
+                    0.8,
+                    boxstyle="Round, pad=0",
+                    ec="black",
+                    fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
+                )
+            )
+            if direction_marker_size is not None:
+                if annotation_dict[annotation]['strand'] == '-':
+                    marker = '<'
+                else:
+                    marker = '>'
+                ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
+
+        # plot linked annotations (such as splicing)
+        if len(annotation_dict[annotation]['location']) > 1:
+            y_value = annotation_dict[annotation]['track'] + 1.4
+            start = None
+            for locations in annotation_dict[annotation]['location']:
+                if start is None:
+                    start = locations[1]
+                    continue
+                ax.plot([start, locations[0]], [y_value, y_value], '--', linewidth=2, color='black')
+                start = locations[1]
+
+
 def _create_stretch_patch(col: list, stretches: list, zoom: tuple[int, int], y_position: float | int, colors: dict | ndarray, fancy_gaps: bool, matrix_value: int | float | ndarray):
     """
     Create a patch and add to list.
@@ -384,7 +425,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False):
+def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
     """
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class
@@ -394,6 +435,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     :param line_width: width of the line
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
     :param show_x_label: whether to show the x-axis label
+    :param show_title: whether to show the title
     """
 
     def moving_average(arr, window_size):
@@ -401,8 +443,9 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
             i = 0
             moving_averages, plotting_idx = [], []
             while i < len(arr) + 1:
-                window_left = arr[i- window_size: i] if i > window_size else arr[0:i]
-                window_right = arr[i: i + window_size] if i < len(arr) - window_size else arr[i:len(arr)]
+                half_window_size = window_size // 2
+                window_left = arr[i - half_window_size : i] if i > half_window_size else arr[0:i]
+                window_right = arr[i : i + half_window_size ] if i < len(arr) - half_window_size else arr[i : len(arr)]
                 moving_averages.append((sum(window_left)+ sum(window_right)) / (len(window_left) + len(window_right)))
                 plotting_idx.append(i)
                 i += 1
@@ -418,7 +461,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         'coverage': aln.calc_coverage,
         'identity': aln.calc_identity_alignment,
         'similarity': aln.calc_similarity_alignment,
-        'ts/tv': aln.calc_transition_transversion_score
+        'ts tv score': aln.calc_transition_transversion_score
     }
 
     if stat_type not in stat_functions:
@@ -440,7 +483,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
     elif stat_type == 'identity':
         min_value, max_value = -1, 0
-    elif stat_type == 'ts/tv':
+    elif stat_type == 'ts tv score':
         min_value, max_value = -1, 1
     else:
         min_value, max_value = 0, 1
@@ -452,11 +495,11 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     # plot the data
     # plot lines only if there is a rolling average calculated or if gc should be displayed
-    if rolling_average > 1 or stat_type in ['ts/tv', 'gc']:
+    if rolling_average > 1 or stat_type in ['ts tv score', 'gc']:
         ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
 
     # specific visual cues for individual plots
-    if stat_type not in ['ts/tv', 'gc']:
+    if stat_type not in ['ts tv score', 'gc']:
         ax.fill_between(plot_idx, y1=data, y2=min_value, color=(line_color, 0.5))
     if stat_type == 'gc':
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
@@ -466,14 +509,19 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     ax.set_yticks([min_value, max_value])
     if stat_type == 'gc':
         ax.set_yticklabels(['0', '100'])
-    elif stat_type == 'ts/tv':
+    elif stat_type == 'ts tv score':
         ax.set_yticklabels(['tv', 'ts'])
     else:
         ax.set_yticklabels(['low', 'high'])
 
+    # show title
+    if show_title:
+        ax.set_title(
+            f'{stat_type} (average over {rolling_average} positions)' if rolling_average > 1 else f'{stat_type} for each position',
+            loc='left'
+        )
 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
-    ax.set_ylabel(f'{stat_type}')
 
 
 def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
@@ -571,47 +619,6 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     ax.set_yticklabels(ref_y_positions.keys())
     ax.set_ylim(0, y_pos)
     ax.set_ylabel('reference')
-
-
-def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
-    """
-    Plot annotations
-    :param annotation_dict: dict of annotations
-    :param ax: matplotlib Axes
-    :param direction_marker_size: size of marker
-    :param color: color of annotation (color or scalar)
-    """
-    for annotation in annotation_dict:
-        for locations in annotation_dict[annotation]['location']:
-            x_value = locations[0]
-            length = locations[1] - locations[0]
-            ax.add_patch(
-                patches.FancyBboxPatch(
-                    (x_value, annotation_dict[annotation]['track'] + 1),
-                    length,
-                    0.8,
-                    boxstyle="Round, pad=0",
-                    ec="black",
-                    fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
-                )
-            )
-            if direction_marker_size is not None:
-                if annotation_dict[annotation]['strand'] == '-':
-                    marker = '<'
-                else:
-                    marker = '>'
-                ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
-
-        # plot linked annotations (such as splicing)
-        if len(annotation_dict[annotation]['location']) > 1:
-            y_value = annotation_dict[annotation]['track'] + 1.4
-            start = None
-            for locations in annotation_dict[annotation]['location']:
-                if start is None:
-                    start = locations[1]
-                    continue
-                ax.plot([start, locations[0]], [y_value, y_value], '--', linewidth=2, color='black')
-                start = locations[1]
 
 
 def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
@@ -724,4 +731,3 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     ax.set_yticklabels([])
     ax.set_title(f'{annotation.locus} ({feature_to_plot})', loc='left')
 
-# TODO: TRANSITION/TRANSVERSION Plot
