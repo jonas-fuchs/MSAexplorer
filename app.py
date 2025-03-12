@@ -426,9 +426,9 @@ def server(input, output, session):
 
             # update possible user inputs
             if reactive.alignment.get().aln_type == 'AA':
-                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'])
+                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'], selected='Annotation')
             else:
-                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'])
+                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'], selected='Annotation')
 
     @output
     @render.plot
