@@ -370,11 +370,11 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         zoom = aln.zoom
 
     # get data
-    similarity_aln = aln.calc_similarity_alignment(matrix_type=matrix_type)
+    similarity_aln = aln.calc_similarity_alignment(matrix_type=matrix_type)  # use normalized values here
+    similarity_aln = similarity_aln.round(2)  # round data for good color mapping
 
     # determine min max values of the underlying matrix and create cmap
-    matrix = config.SUBS_MATRICES[aln.aln_type][similarity_aln.dtype.metadata['matrix']]
-    min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
+    min_value, max_value = 0, 1
     cmap = ScalarMappable(
         norm=Normalize(
             vmin=min_value,
@@ -390,7 +390,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         # create initial patch for each sequence
         _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, cmap.to_rgba(max_value))
         # get all similarity values present in the current sequence
-        similarity_values = np.append([np.nan], np.arange(start=min_value, stop=max_value), 0) if show_gaps else np.arange(start=min_value, stop=max_value)
+        similarity_values = np.append([np.nan], np.arange(start=min_value, stop=max_value, step=0.01), 0) if show_gaps else np.arange(start=min_value, stop=max_value, step=0.01)
         # find and plot stretches
         for similarity_value in similarity_values:
             stretches = _find_stretches(sequence, similarity_value)
@@ -478,10 +478,8 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     # generate input data
     array = stat_functions[stat_type]()
-    if stat_type == 'similarity':
-        matrix = config.SUBS_MATRICES[aln.aln_type][array.dtype.metadata['matrix']]
-        min_value, max_value = min([min(matrix[d].values()) for d in matrix]), max([max(matrix[d].values()) for d in matrix])
-    elif stat_type == 'identity':
+
+    if stat_type == 'identity':
         min_value, max_value = -1, 0
     elif stat_type == 'ts tv score':
         min_value, max_value = -1, 1
@@ -494,13 +492,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     data, plot_idx = moving_average(array, rolling_average)
 
     # plot the data
-    # plot lines only if there is a rolling average calculated or if gc should be displayed
-    if rolling_average > 1 or stat_type in ['ts tv score', 'gc']:
-        ax.plot(plot_idx, data, color=line_color, linewidth=line_width)
-
-    # specific visual cues for individual plots
-    if stat_type not in ['ts tv score', 'gc']:
-        ax.fill_between(plot_idx, y1=data, y2=min_value, color=(line_color, 0.5))
+    ax.fill_between(plot_idx, data, min_value, edgecolor=line_color, step='mid', facecolor=(line_color, 0.6) if stat_type not in ['ts tv score', 'gc'] else 'none')
     if stat_type == 'gc':
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
 

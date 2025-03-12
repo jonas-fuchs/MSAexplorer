@@ -763,11 +763,37 @@ class MSA:
 
         return identity_matrix
 
-    def calc_similarity_alignment(self, matrix_type:str|None=None) -> np.ndarray:
+    def calc_similarity_alignment(self, matrix_type:str|None=None, normalize:bool=True) -> np.ndarray:
         """
-        Calculate the similarity score between the alignment and the reference seq. Gaps are encoded as np.nan
+        Calculate the similarity score between the alignment and the reference sequence, with normalization to highlight
+        differences. The similarity scores are scaled to the range [0, 1] based on the substitution matrix values for the
+        reference residue at each column. Gaps are encoded as np.nan.
+
+        The calculation follows these steps:
+
+        1. **Reference Sequence**: If a reference sequence is provided (via `self.reference_id`), it is used. Otherwise,
+           a consensus sequence is generated to serve as the reference.
+        2. **Substitution Matrix**: The similarity between residues is determined using a substitution matrix, such as
+           BLOSUM65 for amino acids or BLASTN for nucleotides. The matrix is loaded based on the alignment type.
+        3. **Per-Column Normalization (optional)**:
+           - For each column in the alignment:
+             - The residue in the reference sequence is treated as the baseline for that column.
+             - The substitution scores for the reference residue are extracted from the substitution matrix.
+             - The scores are normalized to the range [0, 1] using the minimum and maximum possible scores for the reference
+               residue.
+           - This ensures that identical residues (or those with high similarity to the reference) have high scores,
+             while more dissimilar residues have lower scores.
+        4. **Output**:
+           - The normalized similarity scores are stored in a NumPy array.
+           - Gaps (if any) or residues not present in the substitution matrix are encoded as `np.nan`.
+
         :param: matrix_type: type of similarity score (if not set - AA: BLOSSUM65, RNA/DNA: BLASTN)
-        :return: identity array
+        :param: normalize: whether to normalize the similarity scores to range [0, 1]
+        :return: A 2D NumPy array where each entry corresponds to the normalized similarity score between the aligned residue
+            and the reference residue for that column. Values range from 0 (low similarity) to 1 (high similarity).
+            Gaps and invalid residues are encoded as `np.nan`.
+        :raise: ValueError
+            If the specified substitution matrix is not available for the given alignment type.
         """
 
         aln = self.alignment
@@ -792,11 +818,19 @@ class MSA:
         valid_chars = list(subs_matrix.keys())
         identity_array = np.full(sequences.shape, np.nan, dtype=dtype)
 
-        for i, seq in enumerate(sequences):
-            for j, char in enumerate(seq):
-                if char in valid_chars and reference[j] in valid_chars:
-                    identity_array[i, j] = subs_matrix[char][reference[j]]
+        for j, ref_char in enumerate(reference):
+            if ref_char not in valid_chars:
+                continue
+            # Get local min and max for the reference residue
+            if normalize:
+                local_scores = subs_matrix[ref_char].values()
+                local_min, local_max = min(local_scores), max(local_scores)
 
+            for i, char in enumerate(sequences[:, j]):
+                if char not in valid_chars:
+                    continue
+                similarity_score = subs_matrix[char][ref_char]
+                identity_array[i, j] = (similarity_score - local_min) / (local_max - local_min) if normalize else similarity_score
 
         return identity_array
 
@@ -806,7 +840,7 @@ class MSA:
         or the reference seq.\n
         Defined as:\n
 
-        (1 - sum(N/X/- characters in ungapped ref regions))*100
+        `(1 - sum(N/X/- characters in ungapped ref regions))*100`
 
         This is highly similar to how nextclade calculates recovery over reference.
 

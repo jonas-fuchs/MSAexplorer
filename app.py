@@ -57,7 +57,7 @@ app_ui = ui.page_fluid(
                 ui.column(
                     4,
                     ui.tooltip(
-                        ui.input_numeric('rolling_avg', 'Average', value=20, min=1),
+                        ui.input_numeric('rolling_avg', 'Average', value=1, min=1),
                         'Rolling average over character intervals.'
                     )
                 ),
@@ -176,17 +176,17 @@ app_ui = ui.page_fluid(
                 ui.sidebar(
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off'),
                     ui.tooltip(
-                        ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
+                        ui.input_numeric('plot_1_size', 'Plot size',1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
                     ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'colored identity', 'similarity'], selected='identity'),
                     ui.tooltip(
-                        ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
+                        ui.input_numeric('plot_2_size', 'Plot size', 1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
                     ui.input_selectize('annotation', ui.h6('Third plot'), ['Off', 'SNPs'], selected='Off'),
                     ui.tooltip(
-                        ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
+                        ui.input_numeric('plot_3_size', 'Plot size', 1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
                     ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1),
@@ -327,10 +327,6 @@ def server(input, output, session):
     reactive.alignment = reactive.Value(None)
     reactive.annotation = reactive.Value(None)
 
-    # reactive values for the rolling average settings
-    effective_rolling_avg = reactive.Value()
-    manual_override_flag = reactive.Value(False)
-
     # create inputs for plotting and pdf
     def prepare_inputs():
         # Collect inputs from the UI
@@ -344,7 +340,7 @@ def server(input, output, session):
             'plot_2_size': input.plot_2_size(),
             'plot_3_size': input.plot_3_size(),
             'stat_type': input.stat_type(),
-            'rolling_average': effective_rolling_avg(),
+            'rolling_average': input.rolling_avg(),
             'stat_color': input.stat_color(),
             'alignment_type': input.alignment_type(),
             'matrix': input.matrix(),
@@ -407,35 +403,10 @@ def server(input, output, session):
                 ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='coverage')
                 ui.update_selectize('annotation', choices=['Off', 'SNPs'])
             else:
+                # needed because if an as aln and then a nt aln are loaded it will not change
+                ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='coverage')
                 ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
 
-
-    # The next 3 functions ensure that standard values
-    # are set for individual stat types.
-    # This works by not directly reading input.rolling() average but
-    # to calculate it if the plot stat type switches. However, this
-    # does not trigger a UI update of the rolling average. This needs fixing
-    # in the future -> chaning the UI triggers are second plotting event.
-    # now a title is included that states the rolling average.
-    @reactive.Effect
-    @reactive.event(input.rolling_avg)
-    def set_manual_override():
-        manual_override_flag.set(True)
-
-    @reactive.Effect
-    @reactive.event(input.stat_type)
-    def update_average():
-        manual_override_flag.set(False)
-
-    @reactive.Calc
-    def effective_rolling_avg():
-        if not manual_override_flag.get():
-            if input.stat_type() in ['entropy', 'ts tv score']:
-                return 1
-            else:
-                return 20
-        else:
-            return input.rolling_avg()
 
     @reactive.Effect
     @reactive.event(input.annotation_file)
@@ -464,7 +435,6 @@ def server(input, output, session):
     def msa_plot():
         aln = reactive.alignment.get()
         ann = reactive.annotation.get()
-        print('plot was rendered!')
 
         return create_msa_plot(aln, ann, prepare_inputs())
 
