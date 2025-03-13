@@ -50,7 +50,7 @@ def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left
     General axis formatting.
     """
     ax.set_xlim(
-            (aln.zoom[0]- 0.5, aln.zoom[0] + aln.length + 0.5) if aln.zoom is not None else (-0.5, aln.length + 0.5)
+            (aln.zoom[0], aln.zoom[0] + aln.length) if aln.zoom is not None else (0, aln.length)
         )
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -328,7 +328,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
 
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
-    ax.set_ylim(-0.5, len(aln.alignment)+0.2)
+    ax.set_ylim(0, len(aln.alignment)+0.2)
     if show_title:
         ax.set_title('identity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
@@ -492,7 +492,14 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     data, plot_idx = moving_average(array, rolling_average)
 
     # plot the data
-    ax.fill_between(plot_idx, data, min_value, edgecolor=line_color, step='mid', facecolor=(line_color, 0.6) if stat_type not in ['ts tv score', 'gc'] else 'none')
+    ax.fill_between(
+        plot_idx,
+        data,
+        min_value,
+        edgecolor=line_color,
+        step='mid' if rolling_average == 1 else None,
+        facecolor=(line_color, 0.6) if stat_type not in ['ts tv score', 'gc'] else 'none'
+    )
     if stat_type == 'gc':
         ax.hlines(0.5, xmin=0, xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length, color='black', linestyles='--', linewidth=1)
 
@@ -573,8 +580,8 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     for y_char in ref_y_positions:
         ax.hlines(
             ref_y_positions[y_char],
-            xmin=aln.zoom[0] - 0.5 if aln.zoom is not None else -0.5,
-            xmax=aln.zoom[0] + aln.length + 0.5 if aln.zoom is not None else aln.length + 0.5,
+            xmin=aln.zoom[0] if aln.zoom is not None else 0,
+            xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length,
             color='black',
             linestyle='-',
             zorder=0,

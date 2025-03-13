@@ -9,3 +9,6 @@ Not relevant as a python extension but for the command line feature of MSAexplor
 
 def main():
     print('here will be something soon')
+
+
+# TODO: cmd tool

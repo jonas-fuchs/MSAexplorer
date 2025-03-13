@@ -174,7 +174,7 @@ app_ui = ui.page_fluid(
             'Visualization',
             ui.layout_sidebar(
                 ui.sidebar(
-                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off'),
+                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
                     ui.tooltip(
                         ui.input_numeric('plot_1_size', 'Plot size',1, min=1, max=200),
                         'Fraction of the total plot size'
@@ -184,7 +184,7 @@ app_ui = ui.page_fluid(
                         ui.input_numeric('plot_2_size', 'Plot size', 1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
-                    ui.input_selectize('annotation', ui.h6('Third plot'), ['Off', 'SNPs'], selected='Off'),
+                    ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
                     ui.tooltip(
                         ui.input_numeric('plot_3_size', 'Plot size', 1, min=1, max=200),
                         'Fraction of the total plot size'
@@ -461,3 +461,6 @@ def server(input, output, session):
 
 # run the app
 app = App(app_ui, server, static_assets={'/assets': Path(__file__).parent/"assets"})
+
+
+#TODO: Analysis tab
