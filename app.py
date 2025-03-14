@@ -176,31 +176,34 @@ app_ui = ui.page_fluid(
                 ui.sidebar(
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
                     ui.tooltip(
-                        ui.input_numeric('plot_1_size', 'Plot size',1, min=1, max=200),
+                        ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
                     ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'colored identity', 'similarity'], selected='identity'),
                     ui.tooltip(
-                        ui.input_numeric('plot_2_size', 'Plot size', 1, min=1, max=200),
+                        ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
                     ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
                     ui.tooltip(
-                        ui.input_numeric('plot_3_size', 'Plot size', 1, min=1, max=200),
+                        ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
                         'Fraction of the total plot size'
                     ),
-                    ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1),
+                    ui.tooltip(
+                        ui.input_switch('show_sequence', 'show sequence', value=False),
+                        'Whether to show the sequence if zoomed.'
+                    ),
                     ui.tooltip(
                         ui.input_switch('seq_names', 'show names', value=False),
                         'Whether to show sequence names at the left side of the alignment'
                     ),
-
                     ui.tooltip(
                         ui.download_button('download_pdf', 'PDF'),
                         'Get the plot as a pdf.'
                     )
                 ),
-                ui.output_plot('msa_plot', height='100vh', width='80vw'),
+                ui.output_plot('msa_plot', height='100vh', width='92vw'),
+                ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
             ),
         )
     )
@@ -227,9 +230,8 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     else:
         aln.reference_id = inputs['reference']
 
-    # Update zoom level from slider
-    aln.zoom = tuple(inputs['zoom_range'])
-
+    # Update zoom level from slider -> +1 needed as msaexplorer uses range for zoom
+    aln.zoom = (inputs['zoom_range'][0], inputs['zoom_range'][1] + 1)
 
     # Collect height ratios and corresponding axes
     height_ratios = []
@@ -254,6 +256,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         plot_functions.append(
             lambda ax: draw.identity_alignment(
                 aln, ax,
+                show_sequence=inputs['show_sequence'] if aln.length/inputs['window_width'] <= 0.085 else False,
                 fancy_gaps=inputs['show_gaps'],
                 show_gaps=inputs['show_gaps'],
                 show_mask=inputs['show_mask'],
@@ -267,6 +270,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         ) if inputs['alignment_type'] == 'identity' or inputs[
             'alignment_type'] == 'colored identity' else draw.similarity_alignment(
                 aln, ax,
+                show_sequence=inputs['show_sequence'] if aln.length/inputs['window_width'] <= 0.085 else False,
                 fancy_gaps=inputs['show_gaps'],
                 show_gaps=inputs['show_gaps'],
                 reference_color=inputs['reference_color'],
@@ -335,6 +339,7 @@ def server(input, output, session):
             'reference_color': input.reference_color(),
             'show_mask': input.show_mask(),
             'show_ambiguities': input.show_ambiguities(),
+            'window_width': input.window_dimensions()['width'],
             'zoom_range': input.zoom_range(),
             'plot_1_size': input.plot_1_size(),
             'plot_2_size': input.plot_2_size(),
@@ -347,6 +352,7 @@ def server(input, output, session):
             'matrix_color_mapping': input.matrix_color_mapping(),
             'show_gaps': input.show_gaps(),
             'seq_names': input.seq_names(),
+            'show_sequence': input.show_sequence(),
             'show_legend': input.show_legend(),
             'annotation': input.annotation(),
             'annotation_file': input.annotation_file(),
@@ -373,7 +379,7 @@ def server(input, output, session):
 
             # Update zoom slider based on alignment length and user input
             alignment_length = len(next(iter(aln.alignment.values())))-1
-            ui.update_slider('zoom_range', max=alignment_length, value=(0, alignment_length))
+            ui.update_slider('zoom_range', max=alignment_length-1, value=(0, alignment_length-1))
 
             # Update reference
             ui.update_selectize(
@@ -400,11 +406,11 @@ def server(input, output, session):
             ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
             # Some of the function highly depend on the alignment type
             if aln.aln_type == 'AA':
-                ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='coverage')
+                ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
                 ui.update_selectize('annotation', choices=['Off', 'SNPs'])
             else:
                 # needed because if an as aln and then a nt aln are loaded it will not change
-                ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='coverage')
+                ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
                 ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
 
 

@@ -27,7 +27,7 @@ class MSA:
     An alignment class that allows computation of several stats
     """
 
-    def __init__(self, alignment_path: str, reference_id: str = None, zoom_range: tuple = None):
+    def __init__(self, alignment_path: str, reference_id: str = None, zoom_range: tuple | int = None):
         """
         Initialise an Alignment object.
         :param alignment_path: path to alignment file
@@ -824,23 +824,24 @@ class MSA:
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
         valid_chars = list(subs_matrix.keys())
-        identity_array = np.full(sequences.shape, np.nan, dtype=dtype)
+        similarity_array = np.full(sequences.shape, np.nan, dtype=dtype)
 
         for j, ref_char in enumerate(reference):
-            if ref_char not in valid_chars:
+            if ref_char not in valid_chars + ['-']:
                 continue
             # Get local min and max for the reference residue
-            if normalize:
+            if normalize and ref_char != '-':
                 local_scores = subs_matrix[ref_char].values()
                 local_min, local_max = min(local_scores), max(local_scores)
 
             for i, char in enumerate(sequences[:, j]):
                 if char not in valid_chars:
                     continue
-                similarity_score = subs_matrix[char][ref_char]
-                identity_array[i, j] = (similarity_score - local_min) / (local_max - local_min) if normalize else similarity_score
+                # classify the similarity as max if the reference has a gap
+                similarity_score = subs_matrix[char][ref_char] if ref_char != '-' else 1
+                similarity_array[i, j] = (similarity_score - local_min) / (local_max - local_min) if normalize and ref_char != '-' else similarity_score
 
-        return identity_array
+        return similarity_array
 
     def calc_position_matrix(self, matrix_type:str='PWM') -> np.ndarray | ValueError:
         """

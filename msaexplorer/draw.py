@@ -17,6 +17,7 @@ from typing import Callable, Dict
 from copy import deepcopy
 import os
 
+import matplotlib
 from numpy import ndarray
 
 # MSAexplorer
@@ -27,7 +28,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import is_color_like, Normalize, LinearSegmentedColormap
+from matplotlib.colors import is_color_like, Normalize, to_rgba
 from matplotlib.collections import PatchCollection
 
 
@@ -50,8 +51,8 @@ def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left
     General axis formatting.
     """
     ax.set_xlim(
-            (aln.zoom[0], aln.zoom[0] + aln.length) if aln.zoom is not None else (0, aln.length)
-        )
+        (aln.zoom[0] - 0.5, aln.zoom[0] + aln.length + 0.5) if aln.zoom is not None else (-0.5, aln.length + 0.5)
+    )
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     if show_x_label:
@@ -124,7 +125,7 @@ def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y
     Creates the initial patch.
     """
 
-    col.append(patches.Rectangle((zoom[0] - 0.5, y_position), zoom[1] - zoom[0] + 0.5,0.8,
+    col.append(patches.Rectangle((zoom[0] - 0.5, y_position), zoom[1] - zoom[0],0.8,
                                                    facecolor=reference_color if seq_name == aln.reference_id else identity_color
                                                    )
                                  )
@@ -227,13 +228,48 @@ def _add_track_positions(annotation_dic):
     return annotation_dic
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
+def _get_contrast_text_color(rgba_color):
+    """
+    compute the brightness of a color
+    """
+    r, g, b, a = rgba_color
+    brightness = (r * 299 + g * 587 + b * 114) / 1000
+    return 'white' if brightness < 0.4 else 'black'
+
+
+def _plot_sequence_text(aln, seq_name, ref_name, values, ax, zoom, y_position, value_to_skip, ref_color, cmap: None | ScalarMappable = None):
+
+    x_text = 0
+    for character, value in zip(aln.alignment[seq_name], values):
+        if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-':
+
+            # text color
+            if seq_name == ref_name:
+                text_color = _get_contrast_text_color(to_rgba(ref_color))
+            elif cmap is not None:
+                text_color = _get_contrast_text_color(cmap.to_rgba(value))
+            else:
+                text_color = 'black'
+
+            ax.text(
+                x=x_text + zoom[0] if zoom is not None else x_text,
+                y=y_position + 0.4,
+                s=character,
+                va='center',
+                ha='center',
+                c=text_color,
+            )
+        x_text += 1
+
+
+def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_sequence: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param show_title: whether to show title
     :param show_seq_names: whether to show seq names
+    :param show_sequence: whether to show sequence for differences and reference - zoom in to avoid plotting issues
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
     :param show_mask: whether to show N or X chars otherwise it will be shown as match or mismatch
@@ -290,17 +326,21 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
 
     # ini collection for patches
     col = []
-    for sequence, seq_name in zip(identity_aln, aln.alignment.keys()):
+    for values, seq_name in zip(identity_aln, aln.alignment.keys()):
         # ini identity patches
         _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, aln_colors[0]['color'])
         # find and plot stretches that are different
         for identity_value in identity_values:
-            stretches = _find_stretches(sequence, identity_value)
+            stretches = _find_stretches(values, identity_value)
             if not stretches:
                 continue
             # add values for legend
             detected_identity_values.add(identity_value)
             _create_stretch_patch(col, stretches, zoom, y_position, aln_colors[identity_value]['color'], fancy_gaps, identity_value)
+
+        if show_sequence:
+            _plot_sequence_text(aln, seq_name, aln.reference_id, values, ax, zoom, y_position, 0, reference_color)
+
         y_position -= 1
 
     # custom legend
@@ -328,19 +368,20 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
 
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
-    ax.set_ylim(0, len(aln.alignment)+0.2)
+    ax.set_ylim(0, len(aln.alignment))
     if show_title:
         ax.set_title('identity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'PuBu_r', gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_sequence: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'PuBu_r', gap_color: str = 'white', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
-    Generates a similarity alignment overview plot.
+    Generates a similarity alignment overview plot. Importantly the similarity values are normalized!
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param matrix_type: substitution matrix - see config.SUBS_MATRICES, standard: NT - TRANS, AA - BLOSUM65
     :param show_title: whether to show title
+    :param show_sequence: whether to show sequence for differences and reference - zoom in to avoid plotting issues
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
@@ -383,28 +424,46 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         cmap=plt.get_cmap(cmap)
     )
 
+    # create similarity values
+    similarity_values = np.append(
+        [np.nan], np.arange(start=min_value, stop=max_value, step=0.01), 0
+    ) if show_gaps else np.arange(
+        start=min_value, stop=max_value, step=0.01
+    )
+    # round it to be absolutely sure that values match with rounded sim alignment
+    similarity_values = similarity_values.round(2)
+
+
     # create plot
     col = []
     y_position = len(aln.alignment) - 0.8
-    for sequence, seq_name in zip(similarity_aln, aln.alignment.keys()):
+
+    for values, seq_name in zip(similarity_aln, aln.alignment.keys()):
         # create initial patch for each sequence
-        _create_identity_patch(aln, col, zoom, y_position, reference_color, seq_name, cmap.to_rgba(max_value))
-        # get all similarity values present in the current sequence
-        similarity_values = np.append([np.nan], np.arange(start=min_value, stop=max_value, step=0.01), 0) if show_gaps else np.arange(start=min_value, stop=max_value, step=0.01)
+        _create_identity_patch(
+            aln, col, zoom, y_position, reference_color, seq_name,
+            cmap.to_rgba(max_value) if seq_name != aln.reference_id else reference_color
+        )
         # find and plot stretches
         for similarity_value in similarity_values:
-            stretches = _find_stretches(sequence, similarity_value)
-            if not stretches:
+            # skip patch plotting for reference except if it is a gap
+            if seq_name == aln.reference_id and not np.isnan(similarity_value):
                 continue
-            _create_stretch_patch(
-                col,
-                stretches,
-                zoom,
-                y_position,
-                cmap.to_rgba(similarity_value) if not np.isnan(similarity_value) else gap_color,
-                fancy_gaps,
-                similarity_value
-            )
+            stretches = _find_stretches(values, similarity_value)
+            # create stretches
+            if stretches:
+                _create_stretch_patch(
+                    col,
+                    stretches,
+                    zoom,
+                    y_position,
+                    cmap.to_rgba(similarity_value) if not np.isnan(similarity_value) else gap_color,
+                    fancy_gaps,
+                    similarity_value
+                )
+        if show_sequence:
+            _plot_sequence_text(aln, seq_name, aln.reference_id, values, ax, zoom, y_position, 1, reference_color, cmap=cmap)
+
         # new y position for the next sequence
         y_position -= 1
 
@@ -419,7 +478,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
 
     # configure axis
     ax.add_collection(PatchCollection(col, match_original=True, linewidths='none'))
-    ax.set_ylim(0, len(aln.alignment)+0.2)
+    ax.set_ylim(0, len(aln.alignment))
     if show_title:
         ax.set_title('similarity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
@@ -493,9 +552,12 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     # plot the data
     ax.fill_between(
-        plot_idx,
-        data,
+        # this add dummy data left and right for better plotting
+        # otherwise only half of the step is shown
+        np.concatenate(([plot_idx[0] - 0.5], plot_idx, [plot_idx[-1] + 0.5])) if rolling_average == 1 else plot_idx,
+        np.concatenate(([data[0]], data, [data[-1]])) if rolling_average == 1 else data,
         min_value,
+        linewidth = line_width,
         edgecolor=line_color,
         step='mid' if rolling_average == 1 else None,
         facecolor=(line_color, 0.6) if stat_type not in ['ts tv score', 'gc'] else 'none'
@@ -580,8 +642,8 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     for y_char in ref_y_positions:
         ax.hlines(
             ref_y_positions[y_char],
-            xmin=aln.zoom[0] if aln.zoom is not None else 0,
-            xmax=aln.zoom[0] + aln.length if aln.zoom is not None else aln.length,
+            xmin=aln.zoom[0] - 0.5 if aln.zoom is not None else -0.5,
+            xmax=aln.zoom[0] + aln.length + 0.5 if aln.zoom is not None else aln.length + 0.5,
             color='black',
             linestyle='-',
             zorder=0,
