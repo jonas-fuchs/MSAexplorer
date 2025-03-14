@@ -27,7 +27,7 @@ class MSA:
     An alignment class that allows computation of several stats
     """
 
-    def __init__(self, alignment_path: str, reference_id: str = None, zoom_range: tuple = None):
+    def __init__(self, alignment_path: str, reference_id: str = None, zoom_range: tuple | int = None):
         """
         Initialise an Alignment object.
         :param alignment_path: path to alignment file
@@ -39,6 +39,7 @@ class MSA:
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
 
+    # TODO: read in different alignment types
     # Static methods
     @staticmethod
     def _read_alignment(file_path: str) -> dict:
@@ -245,13 +246,11 @@ class MSA:
         """
         Creates a non-gapped consensus sequence.
 
-        threshold: Threshold for consensus sequence. If use_ambig_nt = True the ambig. char that encodes
-        the nucleotides that reach a cumulative frequency >= threshold is used. Otherwise 'N' (for nt alignments)
-        or 'X' (for as alignments) is used if none of the characters reach a cumulative frequency >= threshold.
-
-        use_ambig_nt:test Use ambiguous character nt if none of the possible nt at a alignment position
-        has a frequency above the defined threshold.
-
+        :param threshold: Threshold for consensus sequence. If use_ambig_nt = True the ambig. char that encodes
+            the nucleotides that reach a cumulative frequency >= threshold is used. Otherwise 'N' (for nt alignments)
+            or 'X' (for as alignments) is used if none of the characters reach a cumulative frequency >= threshold.
+        :param use_ambig_nt: Use ambiguous character nt if none of the possible nt at a alignment position
+            has a frequency above the defined threshold.
         :return: consensus sequence
         """
 
@@ -362,7 +361,7 @@ class MSA:
 
     def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> dict:
         """
-        conserved ORF definition:
+        **conserved ORF definition:**
             - conserved starts and stops
             - start, stop must be on the same frame
             - stop - start must be at least min_length
@@ -372,7 +371,7 @@ class MSA:
         Conservation is measured by number of positions with identical characters divided by
         orf slice of the alignment.
 
-        Algorithm overview:
+        **Algorithm overview:**
             - check for conserved start and stop codons
             - iterate over all three frames
             - check each start and next sufficiently far away stop codon
@@ -514,18 +513,20 @@ class MSA:
 
     def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> dict:
         """
-
         First calculates all ORFs and then searches from 5'
         all non-overlapping orfs in the fw strand and from the
         3' all non-overlapping orfs in th rw strand.
 
-        No overlap algorithm:\n
-        frame 1: -[M------*]--- ----[M--*]---------[M-----\n
-        frame 2: -------[M------*]---------[M---*]--------\n
-        frame 3: [M---*]-----[M----------*]----------[M---\n
-        \n
-        results: [M---*][M------*]--[M--*]-[M---*]-[M-----\n
-        frame:    3      2           1      2       1
+        **No overlap algorithm:**
+            **frame 1:** -[M------*]--- ----[M--*]---------[M-----
+
+            **frame 2:** -------[M------*]---------[M---*]--------
+
+            **frame 3:** [M---*]-----[M----------*]----------[M---
+
+            **results:** [M---*][M------*]--[M--*]-[M---*]-[M-----
+
+            frame:    3      2           1      2       1
 
         :return: dictionary with non-overlapping orfs
         """
@@ -562,7 +563,7 @@ class MSA:
     def calc_length_stats(self) -> dict:
         """
         Determine the stats for the length of the ungapped seqs in the alignment.
-        :return:
+        :return: dictionary with length stats
         """
 
         seq_lengths = [len(self.alignment[x].replace('-', '')) for x in self.alignment]
@@ -576,7 +577,11 @@ class MSA:
 
     def calc_entropy(self) -> list:
         """
-        Calculate the entropy for every position in an alignment.
+        Calculate the normalized shannon's entropy for every position in an alignment:
+
+        - 1: high entropy
+        - 0: low entropy
+
         :return: Entropies at each position.
         """
 
@@ -643,6 +648,7 @@ class MSA:
         """
         Determine the GC content for every position in an nt alignment.
         :return: GC content for every position.
+        :raises: TypeError for AA alignments
         """
         if self.aln_type == 'AA':
             raise TypeError("GC computation is not possible for aminoacid alignment")
@@ -673,7 +679,9 @@ class MSA:
     def calc_coverage(self) -> list:
         """
         Determine the coverage of every position in an alignment.
-        This is defined as 1 - cumulative length of '-' characters
+        This is defined as:
+            1 - cumulative length of '-' characters
+
         :return: Coverage at each alignment position.
         """
         coverage, aln = [], self.alignment
@@ -689,7 +697,7 @@ class MSA:
     def calc_reverse_complement_alignment(self) -> dict | TypeError:
         """
         Reverse complement the alignment.
-        :return: Alignment
+        :return: Alignment (rv)
         """
         if self.aln_type == 'AA':
             raise TypeError('Reverse complement only for RNA or DNA.')
@@ -763,11 +771,37 @@ class MSA:
 
         return identity_matrix
 
-    def calc_similarity_alignment(self, matrix_type:str|None=None) -> np.ndarray:
+    def calc_similarity_alignment(self, matrix_type:str|None=None, normalize:bool=True) -> np.ndarray:
         """
-        Calculate the similarity score between the alignment and the reference seq. Gaps are encoded as np.nan
+        Calculate the similarity score between the alignment and the reference sequence, with normalization to highlight
+        differences. The similarity scores are scaled to the range [0, 1] based on the substitution matrix values for the
+        reference residue at each column. Gaps are encoded as np.nan.
+
+        The calculation follows these steps:
+
+        1. **Reference Sequence**: If a reference sequence is provided (via `self.reference_id`), it is used. Otherwise,
+           a consensus sequence is generated to serve as the reference.
+        2. **Substitution Matrix**: The similarity between residues is determined using a substitution matrix, such as
+           BLOSUM65 for amino acids or BLASTN for nucleotides. The matrix is loaded based on the alignment type.
+        3. **Per-Column Normalization (optional)**:
+           - For each column in the alignment:
+             - The residue in the reference sequence is treated as the baseline for that column.
+             - The substitution scores for the reference residue are extracted from the substitution matrix.
+             - The scores are normalized to the range [0, 1] using the minimum and maximum possible scores for the reference
+               residue.
+           - This ensures that identical residues (or those with high similarity to the reference) have high scores,
+             while more dissimilar residues have lower scores.
+        4. **Output**:
+           - The normalized similarity scores are stored in a NumPy array.
+           - Gaps (if any) or residues not present in the substitution matrix are encoded as `np.nan`.
+
         :param: matrix_type: type of similarity score (if not set - AA: BLOSSUM65, RNA/DNA: BLASTN)
-        :return: identity array
+        :param: normalize: whether to normalize the similarity scores to range [0, 1]
+        :return: A 2D NumPy array where each entry corresponds to the normalized similarity score between the aligned residue
+            and the reference residue for that column. Values range from 0 (low similarity) to 1 (high similarity).
+            Gaps and invalid residues are encoded as `np.nan`.
+        :raise: ValueError
+            If the specified substitution matrix is not available for the given alignment type.
         """
 
         aln = self.alignment
@@ -790,15 +824,62 @@ class MSA:
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
         reference = np.array(list(ref))
         valid_chars = list(subs_matrix.keys())
-        identity_array = np.full(sequences.shape, np.nan, dtype=dtype)
+        similarity_array = np.full(sequences.shape, np.nan, dtype=dtype)
 
-        for i, seq in enumerate(sequences):
-            for j, char in enumerate(seq):
-                if char in valid_chars and reference[j] in valid_chars:
-                    identity_array[i, j] = subs_matrix[char][reference[j]]
+        for j, ref_char in enumerate(reference):
+            if ref_char not in valid_chars + ['-']:
+                continue
+            # Get local min and max for the reference residue
+            if normalize and ref_char != '-':
+                local_scores = subs_matrix[ref_char].values()
+                local_min, local_max = min(local_scores), max(local_scores)
 
+            for i, char in enumerate(sequences[:, j]):
+                if char not in valid_chars:
+                    continue
+                # classify the similarity as max if the reference has a gap
+                similarity_score = subs_matrix[char][ref_char] if ref_char != '-' else 1
+                similarity_array[i, j] = (similarity_score - local_min) / (local_max - local_min) if normalize and ref_char != '-' else similarity_score
 
-        return identity_array
+        return similarity_array
+
+    def calc_position_matrix(self, matrix_type:str='PWM') -> np.ndarray | ValueError:
+        """
+        Calculate various position matrices (reference https://en.wikipedia.org/wiki/Position_weight_matrix)
+
+        **Major steps:**
+            1) calculate character counts (PFM)
+            2) calculate character frequencies (PPM)
+            3) add pseudocount (square root of row length) -> scales with aln size --> needed for positions with 0 counts
+            4) transform to PWM with M_k,j=log_2(M_k,j/b_k) with b_k assuming statistical independence (all chars are equally frequent)
+
+        :param matrix_type: matrix to return (PFM, PPM or PWM)
+        :return: pwm as numpy array
+        :raise: ValueError for incorrect matrix type
+        """
+
+        # ini
+        aln = self.alignment
+        if matrix_type not in ['PFM', 'PPM', 'PWM']:
+            raise ValueError('Matrix_type must be PFM, PPM or PWM.')
+        possible_chars = list(config.CHAR_COLORS[self.aln_type].keys())[:-1]
+        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+
+        # calc position frequency matrix
+        pfm = np.array([np.sum(sequences == char, 0) for char in possible_chars]) \
+              + np.sqrt(sequences.shape[0])  # add pseudo-counts
+        if matrix_type == 'PFM':
+            return pfm
+
+        # calc position probability matrix
+        ppm = pfm/np.sum(pfm, 0)
+        if matrix_type == 'PPM':
+            return ppm
+
+        # calc position weight matrix
+        pwm = np.log2(ppm*len(possible_chars))
+        if matrix_type == 'PWM':
+            return pwm
 
     def calc_percent_recovery(self) -> dict:
         """
@@ -806,7 +887,7 @@ class MSA:
         or the reference seq.\n
         Defined as:\n
 
-        (1 - sum(N/X/- characters in ungapped ref regions))*100
+        `(1 - sum(N/X/- characters in ungapped ref regions))*100`
 
         This is highly similar to how nextclade calculates recovery over reference.
 
@@ -902,16 +983,16 @@ class MSA:
         """
         Calculate pairwise identities for an alignment. As there are different definitions of sequence identity, there are different options implemented:
 
-        ghd (global hamming distance): At each alignment position, check if characters match:
+        **1) ghd (global hamming distance)**: At each alignment position, check if characters match:
         \ndistance = matches / alignment_length * 100
 
-        lhd (local hamming distance): Restrict the alignment to the region in both sequences that do not start and end with gaps:
+        **2) lhd (local hamming distance)**: Restrict the alignment to the region in both sequences that do not start and end with gaps:
         \ndistance = matches / min(5'3' ungapped seq1, 5'3' ungapped seq2) * 100
 
-        ged (gap excluded distance): All gaps are excluded from the alignment
+        **3) ged (gap excluded distance)**: All gaps are excluded from the alignment
         \ndistance = matches / (matches + mismatches) * 100
 
-        gcd (gap compressed distance): All consecutive gaps are compressed to one mismatch.
+        **4) gcd (gap compressed distance)**: All consecutive gaps are compressed to one mismatch.
         \ndistance = matches / gap_compressed_alignment_length * 100
 
         :return: array with pairwise distances.
