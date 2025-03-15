@@ -16,7 +16,7 @@ However, you can also deploy it yourself and host it however you like!
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
 pip install -r requirements.txt  # installs all dependencies
-shiny run app.py
+shiny run shinyapp/app.py
 ```
 
 Now just follow the link provided in your terminal.

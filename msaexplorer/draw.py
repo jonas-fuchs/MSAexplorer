@@ -125,7 +125,7 @@ def _create_identity_patch(aln: explore.MSA, col: list, zoom: tuple[int, int], y
     Creates the initial patch.
     """
 
-    col.append(patches.Rectangle((zoom[0] - 0.5, y_position), zoom[1] - zoom[0],0.8,
+    col.append(patches.Rectangle((zoom[0] - 0.5, y_position), zoom[1] - zoom[0], 0.8,
                                                    facecolor=reference_color if seq_name == aln.reference_id else identity_color
                                                    )
                                  )
@@ -237,12 +237,16 @@ def _get_contrast_text_color(rgba_color):
     return 'white' if brightness < 0.4 else 'black'
 
 
-def _plot_sequence_text(aln, seq_name, ref_name, values, ax, zoom, y_position, value_to_skip, ref_color, cmap: None | ScalarMappable = None):
+def _plot_sequence_text(aln, seq_name, ref_name, values, matrix, ax, zoom, y_position, value_to_skip, ref_color, cmap: None | ScalarMappable = None):
 
     x_text = 0
-    for character, value in zip(aln.alignment[seq_name], values):
-        if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-':
+    if seq_name == ref_name:
+        different_cols = np.any((matrix != value_to_skip) & ~np.isnan(matrix), axis=0)
+    else:
+        different_cols = [False]*aln.length
 
+    for idx, (character, value) in enumerate(zip(aln.alignment[seq_name], values)):
+        if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-':
             # text color
             if seq_name == ref_name:
                 text_color = _get_contrast_text_color(to_rgba(ref_color))
@@ -253,14 +257,13 @@ def _plot_sequence_text(aln, seq_name, ref_name, values, ax, zoom, y_position, v
 
             ax.text(
                 x=x_text + zoom[0] if zoom is not None else x_text,
-                y=y_position + 0.4,
+                y=y_position,
                 s=character,
-                va='center',
+                fontweight='bold' if different_cols[idx] else 'normal',
                 ha='center',
                 c=text_color,
             )
         x_text += 1
-
 
 def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_sequence: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
@@ -339,7 +342,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
             _create_stretch_patch(col, stretches, zoom, y_position, aln_colors[identity_value]['color'], fancy_gaps, identity_value)
 
         if show_sequence:
-            _plot_sequence_text(aln, seq_name, aln.reference_id, values, ax, zoom, y_position, 0, reference_color)
+            _plot_sequence_text(aln, seq_name, aln.reference_id, values, identity_aln, ax, zoom, y_position, 0, reference_color)
 
         y_position -= 1
 
@@ -462,7 +465,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
                     similarity_value
                 )
         if show_sequence:
-            _plot_sequence_text(aln, seq_name, aln.reference_id, values, ax, zoom, y_position, 1, reference_color, cmap=cmap)
+            _plot_sequence_text(aln, seq_name, aln.reference_id, values, similarity_aln, ax, zoom, y_position, 1, reference_color, cmap=cmap)
 
         # new y position for the next sequence
         y_position -= 1
@@ -504,8 +507,8 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
             while i < len(arr) + 1:
                 half_window_size = window_size // 2
                 window_left = arr[i - half_window_size : i] if i > half_window_size else arr[0:i]
-                window_right = arr[i : i + half_window_size ] if i < len(arr) - half_window_size else arr[i : len(arr)]
-                moving_averages.append((sum(window_left)+ sum(window_right)) / (len(window_left) + len(window_right)))
+                window_right = arr[i: i + half_window_size] if i < len(arr) - half_window_size else arr[i: len(arr)]
+                moving_averages.append((sum(window_left) + sum(window_right)) / (len(window_left) + len(window_right)))
                 plotting_idx.append(i)
                 i += 1
 

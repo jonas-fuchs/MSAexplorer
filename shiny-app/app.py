@@ -5,7 +5,7 @@ This contains the code to create the MSAexplorer shiny application
 # build-in
 from pathlib import Path
 import tempfile
-from functools import lru_cache
+import sys, os
 
 # libs
 from shiny import App, render, ui, reactive
@@ -14,6 +14,7 @@ from matplotlib import colormaps
 import matplotlib.pyplot as plt
 
 # msaexplorer
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from msaexplorer import explore, draw, config
 
 # file paths for css and js
@@ -23,7 +24,7 @@ js_file = Path(__file__).resolve().parent / 'www' / 'js' / 'window_dimensions.js
 # define the UI
 app_ui = ui.page_fluid(
     ui.img(
-            src='assets/logo.svg', height='100px'
+            src='img/logo.svg', height='100px'
     ),
     # include css
     ui.include_css(css_file),
@@ -466,7 +467,7 @@ def server(input, output, session):
             return tmpfile.name
 
 # run the app
-app = App(app_ui, server, static_assets={'/assets': Path(__file__).parent/"assets"})
+app = App(app_ui, server, static_assets={'/img': Path(__file__).parent/'img'})
 
 
 #TODO: Analysis tab

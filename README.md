@@ -1,4 +1,4 @@
-![Logo](assets/logo.svg)
+![Logo](shiny-app/img/logo.svg)
 
 Introducing MSAexplorer, a simple python package and [shiny application](https://shiny.posit.co/py/) to analyse and plot multiple sequence alignments.
 The main goal of the plotting features are to grasp the whole alignment and generate publication ready pdfs. Moreover, MSAexplorer
@@ -13,11 +13,21 @@ git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
 pip install -r requirements.txt
 ```
-## [Serverless Shiny app](https://jonas-fuchs.github.io/MSAexplorer/shiny)
+## [Shiny app (Click me)](https://jonas-fuchs.github.io/MSAexplorer/shiny)
+Runs in your browser - no need to install anything, just might take a few seconds to load.
+
+Want to install it locally?
+````bash
+git clone https://github.com/jonas-fuchs/MSAexplorer
+cd MSAexplorer
+pip install -r requirements.txt  # installs all dependencies
+shiny run shinyapp/app.py
+````
+
 
 ![gif](assets/Shiny_app.gif)
 
-## [Python package API documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html)
+## [Python package documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html)
 
 ### [Exploration](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer/explore.html) 
 
