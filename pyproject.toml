@@ -18,8 +18,3 @@ where = ["."]
 include = ["msaexplorer"]
 exclude = []
 namespaces = false
-
-[project.scripts]
-msaexplorer = "msaexplorer.command:main"
-
-
