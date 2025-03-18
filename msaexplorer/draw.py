@@ -51,7 +51,7 @@ def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left
     General axis formatting.
     """
     ax.set_xlim(
-        (aln.zoom[0] - 0.5, aln.zoom[0] + aln.length + 0.5) if aln.zoom is not None else (-0.5, aln.length + 0.5)
+        (aln.zoom[0] - 0.5, aln.zoom[0] + aln.length - 0.5) if aln.zoom is not None else (-0.5, aln.length - 0.5)
     )
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -257,11 +257,12 @@ def _plot_sequence_text(aln, seq_name, ref_name, values, matrix, ax, zoom, y_pos
 
             ax.text(
                 x=x_text + zoom[0] if zoom is not None else x_text,
-                y=y_position,
+                y=y_position + 0.4,
                 s=character,
                 fontweight='bold' if different_cols[idx] else 'normal',
                 ha='center',
-                c=text_color,
+                va='center',
+                c='grey' if not different_cols[idx] and seq_name == ref_name else text_color,
             )
         x_text += 1
 

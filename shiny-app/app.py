@@ -19,7 +19,7 @@ from msaexplorer import explore, draw, config
 
 # file paths for css and js
 css_file = Path(__file__).resolve().parent / 'www' /'css' / 'styles.css'
-js_file = Path(__file__).resolve().parent / 'www' / 'js' / 'window_dimensions.js'
+js_file = Path(__file__).resolve().parent / 'www' / 'js' / 'helper_functions.js'
 
 # define the UI
 app_ui = ui.page_fluid(
@@ -30,18 +30,20 @@ app_ui = ui.page_fluid(
     ui.include_css(css_file),
     # get the input dimensions (separate js)
     ui.include_js(js_file),
-    ui.div(
-        ui.a(
-            ui.img(src='https://github.githubassets.com/assets/GitHub-Logo-ee398b662d42.png', height='15px'),
-            href='https://github.com/jonas-fuchs/MSAexplorer',
-            target='_blank',
-            title='Give it a star!'
+    ui.a(
+        ui.img(
+            src='img/github.svg',
+            height='40px',
+            class_='github-logo'
         ),
+        href='https://github.com/jonas-fuchs/MSAexplorer',
+        target='_blank',
+        title='Give it a star!',
         style='position: fixed; top: 10px; right: 10px; z-index: 1000;'
     ),
     ui.navset_tab(
         ui.nav_panel(
-            'Upload Files',
+            ' Upload',
             ui.tooltip(
                 ui.input_file('alignment_file', ui.h6('MSA', class_='section-title'), multiple=False),
                 'Multiple sequence alignment file to display.'
@@ -49,10 +51,11 @@ app_ui = ui.page_fluid(
             ui.tooltip(
                 ui.input_file('annotation_file', ui.h6('Optional .gff3, .bed or .gb', class_='section-title'), multiple=False),
                 'Optional annotation file to display. Sequence id must be present in the alignment for correct mapping.'
-            )
+            ),
+            icon=ui.HTML('<img src="img/upload.svg" alt="Upload Icon" style="height: 1em; vertical-align: middle">')
         ),
         ui.nav_panel(
-        'Advanced Settings',
+        ' Advanced Settings',
             ui.row(
                 ui.h6('First plot', class_='section-title'),
                 ui.column(
@@ -169,12 +172,32 @@ app_ui = ui.page_fluid(
                         'Color of the feature.'
                     )
                 ),
-            )
+            ),
+            icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">')
         ),
         ui.nav_panel(
-            'Visualization',
+            ' Visualization',
             ui.layout_sidebar(
                 ui.sidebar(
+                    ui.h6('General settings'),
+                    ui.tooltip(
+                        ui.input_slider(
+                            'increase_height', 'Plot height', min=0.5, max=5, step=0.5, value=1,
+                        ),
+                        'Height relative to your window height.'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('show_sequence', 'show sequence', value=False),
+                        'Whether to show the sequence if zoomed.'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('seq_names', 'show names', value=False),
+                        'Whether to show sequence names at the left side of the alignment'
+                    ),
+                    ui.tooltip(
+                        ui.download_button('download_pdf', 'PDF'),
+                        'Get the plot as a pdf.'
+                    ),
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
                     ui.tooltip(
                         ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
@@ -189,23 +212,12 @@ app_ui = ui.page_fluid(
                     ui.tooltip(
                         ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
                         'Fraction of the total plot size'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_sequence', 'show sequence', value=False),
-                        'Whether to show the sequence if zoomed.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('seq_names', 'show names', value=False),
-                        'Whether to show sequence names at the left side of the alignment'
-                    ),
-                    ui.tooltip(
-                        ui.download_button('download_pdf', 'PDF'),
-                        'Get the plot as a pdf.'
                     )
                 ),
                 ui.output_plot('msa_plot', height='100vh', width='92vw'),
                 ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
             ),
+        icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         )
     )
 )
@@ -331,7 +343,7 @@ def server(input, output, session):
 
     reactive.alignment = reactive.Value(None)
     reactive.annotation = reactive.Value(None)
-
+    height_value = reactive.Value('100vh')
     # create inputs for plotting and pdf
     def prepare_inputs():
         # Collect inputs from the UI
@@ -366,6 +378,14 @@ def server(input, output, session):
             'show_legend_third_plot': input.show_legend_third_plot(),
         }
 
+    @reactive.Effect
+    async def update_width():
+        new_plot_height = f'{input.increase_height()*100}vh'
+        new_sidebar_height = f'{input.increase_height()*(100+40)}vh'
+        height_value.set(new_plot_height)
+
+        await session.send_custom_message('update-plot-height', {'height': new_plot_height}),
+        await session.send_custom_message('update-sidebar-height', {'height': new_sidebar_height})
 
     @reactive.Effect
     @reactive.event(input.alignment_file)
@@ -455,7 +475,7 @@ def server(input, output, session):
         # access the window dimensions
         dimensions = input.window_dimensions()
         figure_width_inches = dimensions['width'] / 96
-        figure_height_inches = dimensions['height'] / 96
+        figure_height_inches = dimensions['height'] / 96 * input.increase_height()
 
         # plot with a temp name
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmpfile:
