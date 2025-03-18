@@ -14,7 +14,6 @@ from matplotlib import colormaps
 import matplotlib.pyplot as plt
 
 # msaexplorer
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from msaexplorer import explore, draw, config
 
 # file paths for css and js

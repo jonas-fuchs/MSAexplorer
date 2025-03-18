@@ -1,4 +1,4 @@
-![Logo](shiny-app/img/logo.svg)
+![Logo](img/logo.svg)
 
 Introducing MSAexplorer, a simple python package and [shiny application](https://shiny.posit.co/py/) to analyse and plot multiple sequence alignments.
 The main goal of the plotting features are to grasp the whole alignment and generate publication ready pdfs. Moreover, MSAexplorer
