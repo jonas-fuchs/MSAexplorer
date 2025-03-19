@@ -482,7 +482,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
 
     # Create the LineCollection: each segment is drawn in a single call.
     ax.add_collection(PatchCollection(patch_list, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
-    ax.add_collection(PolyCollection(polygons, facecolors=polygon_colors, linewidths=0.5))
+    ax.add_collection(PolyCollection(polygons, facecolors=polygon_colors, linewidths=0.5, edgecolors=polygon_colors))
 
     # legend
     if show_cbar:
