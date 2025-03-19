@@ -77,7 +77,11 @@ app_ui = ui.page_fluid(
                 ui.column(
                     4,ui.tooltip(
                         ui.input_switch('show_gaps', 'Gaps', value=True),
-                        'Whether to show gaps as an actual gap.'
+                        'Whether to show gaps.'
+                    ),
+                    ui.tooltip(
+                        ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
+                        'Whether to show gaps with a black bar.'
                     ),
                     ui.tooltip(
                         ui.input_switch('show_legend', 'Legend', value=True),
@@ -181,7 +185,7 @@ app_ui = ui.page_fluid(
                     ui.h6('General settings'),
                     ui.tooltip(
                         ui.input_slider(
-                            'increase_height', 'Plot height', min=0.5, max=5, step=0.5, value=1,
+                            'increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1,
                         ),
                         'Height relative to your window height.'
                     ),
@@ -269,7 +273,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
             lambda ax: draw.identity_alignment(
                 aln, ax,
                 show_sequence=inputs['show_sequence'] if aln.length/inputs['window_width'] <= 0.085 else False,
-                fancy_gaps=inputs['show_gaps'],
+                fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 show_mask=inputs['show_mask'],
                 show_mismatches=True,
@@ -283,7 +287,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
             'alignment_type'] == 'colored identity' else draw.similarity_alignment(
                 aln, ax,
                 show_sequence=inputs['show_sequence'] if aln.length/inputs['window_width'] <= 0.085 else False,
-                fancy_gaps=inputs['show_gaps'],
+                fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 reference_color=inputs['reference_color'],
                 matrix_type=inputs['matrix'],
@@ -363,6 +367,7 @@ def server(input, output, session):
             'matrix': input.matrix(),
             'matrix_color_mapping': input.matrix_color_mapping(),
             'show_gaps': input.show_gaps(),
+            'fancy_gaps': input.fancy_gaps(),
             'seq_names': input.seq_names(),
             'show_sequence': input.show_sequence(),
             'show_legend': input.show_legend(),
@@ -399,7 +404,7 @@ def server(input, output, session):
 
             # Update zoom slider based on alignment length and user input
             alignment_length = len(next(iter(aln.alignment.values())))-1
-            ui.update_slider('zoom_range', max=alignment_length-1, value=(0, alignment_length-1))
+            ui.update_slider('zoom_range', max=alignment_length-1, value=(0, int(alignment_length/10)))
 
             # Update reference
             ui.update_selectize(

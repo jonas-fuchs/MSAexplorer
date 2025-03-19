@@ -769,9 +769,7 @@ IDENTITY_COLORS = {
         -2: {'type': 'mask',
             'color': 'dimgrey'},
         -3: {'type': 'ambiguity',
-            'color': 'black'},
-        np.nan: {'type': 'deletion',
-                 'color': 'white'},
+            'color': 'black'}
 }
 
 
@@ -781,14 +779,14 @@ CHAR_COLORS = {
                 'T': '#F26D6D',  # Thymine (T) - muted pinkish red
                 'G': '#64A87B',  # Guanine (G) - strong teal-green
                 'C': '#7095D1',  # Cytosine (C) - soft steel blue
-                '-': 'grey'
+                '-': 'silver'
         },
         'RNA': {
                 'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
                 'U': '#F26D6D',  # Uracil (U) - same as Thymine
                 'G': '#64A87B',  # Guanine (G) - strong teal-green
                 'C': '#7095D1',  # Cytosine (C) - soft steel blue
-                '-': 'grey'
+                '-': 'silver'
         },
         'AA': {
             # Nonpolar, hydrophobic
@@ -817,7 +815,7 @@ CHAR_COLORS = {
             'G': '#6FAF99',  # Glycine (G) - teal green
             'P': '#77A86F',  # Proline (P) - muted green
             # Gap
-            '-': 'grey'
+            '-': 'silver'
         }
 }
 
