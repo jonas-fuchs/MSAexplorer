@@ -44,7 +44,7 @@ app_ui = ui.page_fluid(
         ui.nav_panel(
             ' Upload',
             ui.tooltip(
-                ui.input_file('alignment_file', ui.h6('MSA', class_='section-title'), multiple=False),
+                ui.input_file('alignment_file', ui.h6('MSA .fasta', class_='section-title'), multiple=False),
                 'Multiple sequence alignment file to display.'
             ),
             ui.tooltip(
