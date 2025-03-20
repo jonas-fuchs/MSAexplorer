@@ -44,11 +44,11 @@ app_ui = ui.page_fluid(
         ui.nav_panel(
             ' Upload',
             ui.tooltip(
-                ui.input_file('alignment_file', ui.h6('MSA .fasta', class_='section-title'), multiple=False),
+                ui.input_file('alignment_file', ui.h6('Multiple sequence alignment', class_='section-title'), multiple=False, accept=['.fa', '.fasta', '.aln']),
                 'Multiple sequence alignment file to display.'
             ),
             ui.tooltip(
-                ui.input_file('annotation_file', ui.h6('Optional .gff3, .bed or .gb', class_='section-title'), multiple=False),
+                ui.input_file('annotation_file', ui.h6('Optional annotation file', class_='section-title'), multiple=False, accept=['.gff', '.gff3', '.bed', '.gb']),
                 'Optional annotation file to display. Sequence id must be present in the alignment for correct mapping.'
             ),
             icon=ui.HTML('<img src="img/upload.svg" alt="Upload Icon" style="height: 1em; vertical-align: middle">')
