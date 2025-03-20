@@ -378,7 +378,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
             [aln_colors[x]['type'] for x in aln_colors if x in detected_identity_values],
             loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=len(detected_identity_values) / 2 if aln.aln_type == 'AA' and color_mismatching_chars else len(detected_identity_values),
+            ncols=(len(detected_identity_values) + 1) / 2 if aln.aln_type == 'AA' and color_mismatching_chars else len(detected_identity_values),
             frameon=False
         )
 

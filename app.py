@@ -190,7 +190,7 @@ app_ui = ui.page_fluid(
                         'Height relative to your window height.'
                     ),
                     ui.tooltip(
-                        ui.input_switch('show_sequence', 'show sequence', value=False),
+                        ui.input_switch('show_sequence', 'show sequence', value=True),
                         'Whether to show the sequence if zoomed.'
                     ),
                     ui.tooltip(
@@ -249,6 +249,17 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     # Update zoom level from slider -> +1 needed as msaexplorer uses range for zoom
     aln.zoom = (inputs['zoom_range'][0], inputs['zoom_range'][1] + 1)
 
+    # determine height and width where it makes sense to plot the text
+    if inputs['alignment_type'] != 'Off':
+        complete_size = inputs['plot_2_size']
+        if inputs['stat_type'] != 'Off':
+            complete_size += inputs['plot_1_size']
+        if inputs['annotation'] != 'Off':
+            complete_size += inputs['plot_3_size']
+        plot_2_height_ratio = inputs['plot_2_size'] * inputs['input_increase_height']/complete_size
+        relative_msa_height = plot_2_height_ratio * inputs['window_height'] / len(aln.alignment)
+        relative_msa_width = inputs['window_width']/aln.length
+
     # Collect height ratios and corresponding axes
     height_ratios = []
     plot_functions = []
@@ -272,7 +283,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         plot_functions.append(
             lambda ax: draw.identity_alignment(
                 aln, ax,
-                show_sequence=inputs['show_sequence'] if aln.length/inputs['window_width'] <= 0.085 else False,
+                show_sequence=inputs['show_sequence'] if relative_msa_width >= 11 and relative_msa_height >= 20 else False,
                 fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 show_mask=inputs['show_mask'],
@@ -286,7 +297,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         ) if inputs['alignment_type'] == 'identity' or inputs[
             'alignment_type'] == 'colored identity' else draw.similarity_alignment(
                 aln, ax,
-                show_sequence=inputs['show_sequence'] if aln.length/inputs['window_width'] <= 0.085 else False,
+                show_sequence=inputs['show_sequence'] if relative_msa_width >= 11 and relative_msa_height >= 20 else False,
                 fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 reference_color=inputs['reference_color'],
@@ -356,6 +367,7 @@ def server(input, output, session):
             'show_mask': input.show_mask(),
             'show_ambiguities': input.show_ambiguities(),
             'window_width': input.window_dimensions()['width'],
+            'window_height': input.window_dimensions()['height'],
             'zoom_range': input.zoom_range(),
             'plot_1_size': input.plot_1_size(),
             'plot_2_size': input.plot_2_size(),
@@ -380,6 +392,7 @@ def server(input, output, session):
             'stem_size': input.stem_size(),
             'head_size': input.head_size(),
             'show_legend_third_plot': input.show_legend_third_plot(),
+            'input_increase_height': input.increase_height()
         }
 
     @reactive.Effect
