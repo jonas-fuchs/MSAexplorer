@@ -173,7 +173,11 @@ app_ui = ui.page_fluid(
                     ui.tooltip(
                         ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
                         'Color of the feature.'
-                    )
+                    ),
+                    ui.tooltip(
+                        ui.input_numeric('strand_marker_size', 'Strand marker size', value=5, min=1, max=20),
+                        'Marker size (triangle) of the strand.'
+                    ),
                 ),
             ),
             icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">')
@@ -316,6 +320,8 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
             lambda ax: draw.annotation_plot(
                 aln, ann, ax,
                 feature_to_plot=inputs['feature_display'],
+                color=inputs['feature_color'],
+                direction_marker_size=inputs['strand_marker_size'],
                 show_x_label=True
         ) if inputs['annotation'] == 'Annotation' and inputs['annotation_file'] else draw.orf_plot(
                 aln, ax,
@@ -386,6 +392,8 @@ def server(input, output, session):
             'annotation': input.annotation(),
             'annotation_file': input.annotation_file(),
             'feature_display': input.feature_display(),
+            'feature_color': input.feature_color(),
+            'strand_marker_size': input.strand_marker_size(),
             'color_mapping': input.color_mapping(),
             'non_overlapping': input.non_overlapping(),
             'min_orf_length': input.min_orf_length(),
