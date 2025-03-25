@@ -21,7 +21,7 @@ Want to install it locally?
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
 pip install -r requirements.txt  # installs all dependencies
-shiny run shinyapp/app.py
+shiny run app.py
 ````
 
 
