@@ -415,72 +415,87 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.alignment_file)
     def load_alignment():
-        alignment_file = input.alignment_file()
-        if alignment_file:
-            aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
+        try:
+            alignment_file = input.alignment_file()
+            if alignment_file:
+                aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
 
-            # set standard ref
-            aln.reference_id = list(aln.alignment.keys())[0]
-            reactive.alignment.set(aln)
+                # set standard ref
+                aln.reference_id = list(aln.alignment.keys())[0]
+                reactive.alignment.set(aln)
 
-            # Update zoom slider based on alignment length and user input
-            alignment_length = len(next(iter(aln.alignment.values())))-1
-            ui.update_slider('zoom_range', max=alignment_length-1, value=(0, int(alignment_length/10)))
+                # Update zoom slider based on alignment length and user input
+                alignment_length = len(next(iter(aln.alignment.values())))-1
+                ui.update_slider('zoom_range', max=alignment_length-1, value=(0, int(alignment_length/10)))
 
-            # Update reference
-            ui.update_selectize(
-                id='reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
-            )
+                # Update reference
+                ui.update_selectize(
+                    id='reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
+                )
 
-            # Update substitution matrix
-            ui.update_selectize(
-                id='matrix',
-                choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
-                selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
-            )
+                # Update substitution matrix
+                ui.update_selectize(
+                    id='matrix',
+                    choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
+                    selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
+                )
 
-            # update plot size sliders
-            # Adjust the size depending on the number of alignment sequences
-            aln_len, seq_threshold = len(aln.alignment.keys()), 5
-            for ratio in config.STANDARD_HEIGHT_RATIOS.keys():
-                if aln_len >= ratio:
-                    seq_threshold = ratio
+                # update plot size sliders
+                # Adjust the size depending on the number of alignment sequences
+                aln_len, seq_threshold = len(aln.alignment.keys()), 5
+                for ratio in config.STANDARD_HEIGHT_RATIOS.keys():
+                    if aln_len >= ratio:
+                        seq_threshold = ratio
 
-            # update standard settings
-            ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
-            ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
-            ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
-            # Some of the function highly depend on the alignment type
-            if aln.aln_type == 'AA':
-                ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
-                ui.update_selectize('annotation', choices=['Off', 'SNPs'])
-            else:
-                # needed because if an as aln and then a nt aln are loaded it will not change
-                ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
-                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
-
+                # update standard settings
+                ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
+                ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
+                ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
+                # Some of the function highly depend on the alignment type
+                if aln.aln_type == 'AA':
+                    ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
+                    ui.update_selectize('annotation', choices=['Off', 'SNPs'])
+                else:
+                    # needed because if an as aln and then a nt aln are loaded it will not change
+                    ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
+                    ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
+        # show the user if something with parsing went wrong
+        except Exception as e:
+            print(f"Error: {e}")  # print to console
+            ui.notification_show(ui.tags.div(
+                    f'Error: {e}',
+                    style="color: red; font-weight: bold;"
+                ), duration=20)  # print to user
 
     @reactive.Effect
     @reactive.event(input.annotation_file)
     def load_annotation():
         # read annotation file
-        annotation_file = input.annotation_file()
-        if annotation_file:
-            ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
-            reactive.annotation.set(ann)
+        try:
+            annotation_file = input.annotation_file()
+            if annotation_file:
+                ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
+                reactive.annotation.set(ann)
 
-            # update features to display
-            ui.update_selectize(
-                id='feature_display',
-                choices=list(ann.features.keys()),
-                selected=list(ann.features.keys())[0]
-            )
+                # update features to display
+                ui.update_selectize(
+                    id='feature_display',
+                    choices=list(ann.features.keys()),
+                    selected=list(ann.features.keys())[0]
+                )
 
-            # update possible user inputs
-            if reactive.alignment.get().aln_type == 'AA':
-                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'], selected='Annotation')
-            else:
-                ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'], selected='Annotation')
+                # update possible user inputs
+                if reactive.alignment.get().aln_type == 'AA':
+                    ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'], selected='Annotation')
+                else:
+                    ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'], selected='Annotation')
+                    # show the user if something with parsing went wrong
+        except Exception as e:
+            print(f"Error: {e}")  # print to console
+            ui.notification_show(ui.tags.div(
+                f'Error: {e}',
+                style="color: red; font-weight: bold;"
+            ), duration=20)  # print to user
 
     @output
     @render.plot
