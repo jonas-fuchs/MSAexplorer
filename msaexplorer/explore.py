@@ -1192,7 +1192,7 @@ class Annotation:
         if not isinstance(aln, MSA):
             raise ValueError('alignment has to be an MSA class. use explore.MSA() to read in alignment')
         else:
-            return aln.alignment[seq_id]
+            return aln._alignment[seq_id]
 
     @staticmethod
     def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[str, str, str, Dict]:
