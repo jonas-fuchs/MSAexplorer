@@ -14,7 +14,7 @@ from matplotlib import colormaps
 import matplotlib.pyplot as plt
 
 # msaexplorer
-from msaexplorer import explore, draw, config
+from msaexplorer import explore, draw, config, export
 
 # file paths for css and js
 css_file = Path(__file__).resolve().parent / 'www' /'css' / 'styles.css'
@@ -55,135 +55,141 @@ app_ui = ui.page_fluid(
         ),
         ui.nav_panel(
         ' Advanced Settings',
-            ui.row(
-                ui.h6('First plot', class_='section-title'),
-                ui.column(
-                    4,
-                    ui.tooltip(
-                        ui.input_numeric('rolling_avg', 'Average', value=1, min=1),
-                        'Rolling average over character intervals.'
-                    )
-                ),
-                ui.column(
-                    4,
-                    ui.tooltip(
-                        ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
-                        'Any named matplotlib color for the line.'
-                    )
-                )
-            ),
-            ui.row(
-                ui.h6('Second plot', class_='section-title'),
-                ui.column(
-                    4,ui.tooltip(
-                        ui.input_switch('show_gaps', 'Gaps', value=True),
-                        'Whether to show gaps.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
-                        'Whether to show gaps with a black bar.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_legend', 'Legend', value=True),
-                        'Whether to show legend'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_mask', 'Show mask', value=True),
-                        'Show masked charaters "X" or "N" - only relevant for identity alignments.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
-                        'Show masked ambiguities - only relevant for nt identity alignments.'
-                    ),
-                ),
-                ui.column(
-                    4,
-                    ui.tooltip(
-                        ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
-                        'Which reference sequence to calculate identity/similarity.'
-                    ),
-                    ui.tooltip(
-                        ui.input_selectize('reference_color', label='Reference color', choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
-                        'Color for the reference sequence.'
-                    )
-                ),
-                ui.column(
-                    4,
-                    ui.tooltip(
-                        ui.input_selectize('matrix', 'Matrix', ['None']),
-                        'Substitution matrix for similarity mapping.'
-                    ),
+            ui.card(
+                ui.row(
+                    ui.h6('Statistic settings', class_='section-title'),
+                    ui.column(
+                        4,
                         ui.tooltip(
-                            ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
-                                               selected='PuBu_r'),
-                            'colormap for similarity plots - any matplotlib colormap.'
+                            ui.input_numeric('rolling_avg', 'Average', value=1, min=1),
+                            'Rolling average over character intervals.'
+                        )
+                    ),
+                    ui.column(
+                        4,
+                        ui.tooltip(
+                            ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
+                            'Any named matplotlib color for the line.'
+                        )
                     )
                 )
             ),
-            ui.row(
-                ui.h6('Third plot',  class_='section-title'),
-                ui.column(
-                    4,
-                    ui.tooltip(
-                        ui.input_switch('show_legend_third_plot', 'Legend', value=True),
-                        'Whether to show legend for the third plot.'
+            ui.card(
+                ui.row(
+                    ui.h6('Alignment settings', class_='section-title'),
+                    ui.column(
+                        4,ui.tooltip(
+                            ui.input_switch('show_gaps', 'Gaps', value=True),
+                            'Whether to show gaps.'
+                        ),
+                        ui.tooltip(
+                            ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
+                            'Whether to show gaps with a black bar.'
+                        ),
+                        ui.tooltip(
+                            ui.input_switch('show_legend', 'Legend', value=True),
+                            'Whether to show legend'
+                        ),
+                        ui.tooltip(
+                            ui.input_switch('show_mask', 'Show mask', value=True),
+                            'Show masked charaters "X" or "N" - only relevant for identity alignments.'
+                        ),
+                        ui.tooltip(
+                            ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
+                            'Show masked ambiguities - only relevant for nt identity alignments.'
+                        ),
                     ),
+                    ui.column(
+                        4,
+                        ui.tooltip(
+                            ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
+                            'Which reference sequence to calculate identity/similarity.'
+                        ),
+                        ui.tooltip(
+                            ui.input_selectize('reference_color', label='Reference color', choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
+                            'Color for the reference sequence.'
+                        )
+                    ),
+                    ui.column(
+                        4,
+                        ui.tooltip(
+                            ui.input_selectize('matrix', 'Matrix', ['None']),
+                            'Substitution matrix for similarity mapping.'
+                        ),
+                            ui.tooltip(
+                                ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
+                                                   selected='PuBu_r'),
+                                'colormap for similarity plots - any matplotlib colormap.'
+                        )
+                    )
                 )
             ),
-            ui.row(
-                ui.column(
-                    4,
-                    ui.h6('SNP plot'),
-                    ui.tooltip(
-                        ui.input_numeric('head_size', 'Head size', value=3, min=1),
-                        'Size of the head dot.'
-                    ),
-                    ui.tooltip(
-                        ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
-                        'Length of the stem.'
-                    ),
+            ui.card(
+                ui.row(
+                    ui.h6('Annotation settings',  class_='section-title'),
+                    ui.column(
+                        4,
+                        ui.tooltip(
+                            ui.input_switch('show_legend_third_plot', 'Legend', value=True),
+                            'Whether to show legend for the third plot.'
+                        ),
+                    )
                 ),
-                ui.column(
-                    4,
-                    ui.tooltip(
-                        ui.h6('ORF plot'),
-                        'Only relevant for nt alignments.',
-                        placement='left'
-                     ),
-                    ui.tooltip(
-                        ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
-                        'Minimum ORF length to calculate.'
+                ui.row(
+                    ui.column(
+                        4,
+                        ui.h6('SNP plot'),
+                        ui.tooltip(
+                            ui.input_numeric('head_size', 'Head size', value=3, min=1),
+                            'Size of the head dot.'
+                        ),
+                        ui.tooltip(
+                            ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
+                            'Length of the stem.'
+                        ),
                     ),
-                    ui.tooltip(
-                        ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
-                        'Colormap for conservation - any matplotlib colormap.'
+                    ui.column(
+                        4,
+                        ui.tooltip(
+                            ui.h6('ORF plot'),
+                            'Only relevant for nt alignments.',
+                            placement='left'
+                         ),
+                        ui.tooltip(
+                            ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
+                            'Minimum ORF length to calculate.'
+                        ),
+                        ui.tooltip(
+                            ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
+                            'Colormap for conservation - any matplotlib colormap.'
+                        ),
+                        ui.tooltip(
+                            ui.input_switch('non_overlapping', 'non-overlapping', value=False),
+                            'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime.'
+                        ),
                     ),
-                    ui.tooltip(
-                        ui.input_switch('non_overlapping', 'non-overlapping', value=False),
-                        'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime.'
-                    ),
-                ),
-                ui.column(
-                    4,
-                ui.h6('Annotation plot'),
-                    ui.tooltip(
-                        ui.input_selectize('feature_display', 'Feature', ['None']),
-                        'Which feature to display.'
-                    ),
-                    ui.tooltip(
-                        ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
-                        'Color of the feature.'
-                    ),
-                    ui.tooltip(
-                        ui.input_numeric('strand_marker_size', 'Strand marker size', value=5, min=1, max=20),
-                        'Marker size (triangle) of the strand.'
-                    ),
-                ),
+                    ui.column(
+                        4,
+                    ui.h6('Annotation plot'),
+                        ui.tooltip(
+                            ui.input_selectize('feature_display', 'Feature', ['None']),
+                            'Which feature to display.'
+                        ),
+                        ui.tooltip(
+                            ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
+                            'Color of the feature.'
+                        ),
+                        ui.tooltip(
+                            ui.input_numeric('strand_marker_size', 'Strand marker size', value=5, min=1, max=20),
+                            'Marker size (triangle) of the strand.'
+                        )
+                    )
+                )
             ),
             icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">')
         ),
         ui.nav_panel(
-            ' Visualization',
+            ' Visualize',
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.h6('General settings'),
@@ -202,7 +208,11 @@ app_ui = ui.page_fluid(
                         'Whether to show sequence names at the left side of the alignment'
                     ),
                     ui.tooltip(
-                        ui.download_button('download_pdf', 'PDF'),
+                        ui.download_button(
+                            'download_pdf',
+                            'PDF',
+                            icon=ui.HTML('<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+                        ),
                         'Get the plot as a pdf.'
                     ),
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
@@ -225,6 +235,26 @@ app_ui = ui.page_fluid(
                 ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
             ),
         icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
+        ),
+        ui.nav_panel(
+        ' Analyse & Downloads',
+            ui.column(
+                2,
+                ui.card(
+                    ui.card_header('Download'),
+                    ui.input_selectize('download_type', label='Choices:', choices=['SNPs']),
+                    ui.input_selectize('download_type_options', label='Additional options:', choices=['None']),
+                    ui.input_selectize('download_format', label='Format:', choices=[]),
+                    ui.download_button(
+                        'download_stats',
+                        'Download',
+                        icon=ui.HTML(
+                            '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+                    ),
+                ),
+            ),
+
+        icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         )
     )
 )
@@ -535,7 +565,39 @@ def server(input, output, session):
             plt.close(fig)
             return tmpfile.name
 
-# run the app
+    @reactive.Effect
+    @reactive.event(input.download_type)
+    def update_download_options():
+        if input.download_type() == 'SNPs':
+            ui.update_selectize('download_format', choices=['vcf', 'tabular'])
+
+    @render.download()
+    def download_stats():
+        try:
+            # Initialize
+            download_format = input.download_format()
+            aln = reactive.alignment.get()
+            if aln is None:
+                raise FileNotFoundError("No alignment data available. Please upload an alignment.")
+
+            if input.download_type() == 'SNPs':
+                download_data = export.snps(aln.get_snps(), format_type=download_format)
+                prefix = 'SNPs_'
+
+            # Create a temporary file for the download
+            with tempfile.NamedTemporaryFile(prefix=prefix, suffix=f'.{download_format}', delete=False) as tmpfile:
+                tmpfile.write(download_data.encode('utf-8'))
+                tmpfile.flush()  # Ensure data is written to disk
+
+                return tmpfile.name
+        except FileNotFoundError:
+            ui.notification_show(ui.tags.div(
+                'No alignment was uploaded.',
+                style="color: red; font-weight: bold;"
+            ), duration=10)
+
+
+        # run the app
 app = App(app_ui, server, static_assets={'/img': Path(__file__).parent/'img'})
 
 

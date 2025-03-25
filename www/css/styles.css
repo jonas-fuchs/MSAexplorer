@@ -5,13 +5,15 @@ body {
     margin: 0;
     padding: 0;
     color: #333;
+    line-height: 1.6;
 }
 
 h6 {
     font-size: 1rem;
     font-weight: bold;
     color: #1c4775;
-    margin-bottom: 8px; /* Slightly reduced for tighter layout */
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
 }
 
 .section-title {
@@ -19,20 +21,23 @@ h6 {
     font-weight: bold;
     color: #0056b3;
     margin: 15px 0 8px;
+    padding-bottom: 2px;
 }
 
 /* Navigation Tabs */
 .nav-tabs {
     background-color: #ffffff;
     border-bottom: 2px solid #dee2e6;
+    margin-bottom: 20px;
 }
 
 .nav-tabs .nav-link {
     color: #6c757d;
     font-size: 1rem;
-    padding: 10px 15px; /* Balanced padding */
-    transition: color 0.3s, background-color 0.3s;
-    border-radius: 4px 4px 0 0; /* Slight rounding for cleaner look */
+    padding: 10px 15px;
+    transition: color 0.3s ease, background-color 0.3s ease;
+    border-radius: 4px 4px 0 0;
+    margin-right: 4px;
 }
 
 .nav-tabs .nav-link.active {
@@ -40,6 +45,9 @@ h6 {
     color: #ffffff;
     border-color: #0056b3;
     border-bottom: none;
+}
+.btn:hover img {
+    filter: brightness(1) invert(1);
 }
 
 .nav-tabs .nav-link img {
@@ -50,6 +58,7 @@ h6 {
 .nav-tabs .nav-link:hover img {
     filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
 }
+
 .nav-tabs .nav-link.active img {
     filter: brightness(1) invert(1);
 }
@@ -68,12 +77,21 @@ h6 {
 /* Inputs and Controls */
 input, select, button {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
     margin: 5px 0;
     box-sizing: border-box;
     border: 1px solid #ced4da;
     border-radius: 4px;
     font-size: 0.9rem;
+    background-color: #fff;
+    color: #333;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus, select:focus, button:focus {
+    outline: none;
+    border-color: #0056b3;
+    box-shadow: 0 0 5px rgba(0, 86, 179, 0.3);
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -107,11 +125,12 @@ input[type="range"] {
     height: 16px;
     border-radius: 50%;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 .ui-slider-thumb:hover {
     background-color: #004085;
+    transform: scale(1.1);
 }
 
 /* Buttons */
@@ -123,7 +142,7 @@ button {
     border-radius: 4px;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background-color 0.3s, box-shadow 0.3s;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 button:hover {
@@ -136,7 +155,7 @@ button:hover {
     background-color: #ffffff;
     padding: 15px;
     border-right: 1px solid #dee2e6;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
     max-height: 100vh;
     overflow-y: auto;
     transition: width 0.3s ease;
@@ -169,11 +188,11 @@ button:hover {
     padding: 5px;
     position: absolute;
     z-index: 1;
-    bottom: 120%; /* Slightly above the element */
+    bottom: 120%;
     left: 50%;
     transform: translateX(-50%);
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s ease;
 }
 
 .tooltip:hover .tooltip-text {
@@ -186,16 +205,13 @@ button:hover {
     .sidebar {
         padding: 10px;
     }
-
     .ui-slider {
         width: 100%;
     }
-
     .nav-tabs .nav-link {
         font-size: 0.85rem;
         padding: 8px 12px;
     }
-
     button {
         padding: 8px;
         font-size: 0.8rem;
