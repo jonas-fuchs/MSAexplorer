@@ -366,7 +366,7 @@ def server(input, output, session):
     height_value = reactive.Value('100vh')
     # create inputs for plotting and pdf
     def prepare_inputs():
-        # Collect inputs from the UI
+        """Collect inputs from the UI"""
         return {
             'reference': input.reference(),
             'reference_color': input.reference_color(),
@@ -403,6 +403,25 @@ def server(input, output, session):
             'input_increase_height': input.increase_height()
         }
 
+    def read_in_annotation(annotation_file):
+        ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
+        reactive.annotation.set(ann)
+
+        # update features to display
+        ui.update_selectize(
+            id='feature_display',
+            choices=list(ann.features.keys()),
+            selected=list(ann.features.keys())[0]
+        )
+
+        # update possible user inputs
+        if reactive.alignment.get().aln_type == 'AA':
+            ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'], selected='Annotation')
+        else:
+            ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'],
+                                selected='Annotation')
+
+
     @reactive.Effect
     async def update_width():
         new_plot_height = f'{input.increase_height()*100}vh'
@@ -417,6 +436,7 @@ def server(input, output, session):
     def load_alignment():
         try:
             alignment_file = input.alignment_file()
+            annotation_file = input.annotation_file()
             if alignment_file:
                 aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
 
@@ -459,43 +479,32 @@ def server(input, output, session):
                     # needed because if an as aln and then a nt aln are loaded it will not change
                     ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
+                # case if annotation file is uploaded prior to the alignment file
+                if annotation_file:
+                    read_in_annotation(annotation_file)
         # show the user if something with parsing went wrong
         except Exception as e:
             print(f"Error: {e}")  # print to console
             ui.notification_show(ui.tags.div(
                     f'Error: {e}',
                     style="color: red; font-weight: bold;"
-                ), duration=20)  # print to user
+                ), duration=10)  # print to user
 
     @reactive.Effect
     @reactive.event(input.annotation_file)
     def load_annotation():
         # read annotation file
         try:
-            annotation_file = input.annotation_file()
-            if annotation_file:
-                ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
-                reactive.annotation.set(ann)
-
-                # update features to display
-                ui.update_selectize(
-                    id='feature_display',
-                    choices=list(ann.features.keys()),
-                    selected=list(ann.features.keys())[0]
-                )
-
-                # update possible user inputs
-                if reactive.alignment.get().aln_type == 'AA':
-                    ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'], selected='Annotation')
-                else:
-                    ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'], selected='Annotation')
-                    # show the user if something with parsing went wrong
+            annotation_file, alignment_file = input.annotation_file(), input.alignment_file()
+            if annotation_file and alignment_file:
+                read_in_annotation(annotation_file)
+        # show the user if something with parsing went wrong
         except Exception as e:
             print(f"Error: {e}")  # print to console
             ui.notification_show(ui.tags.div(
                 f'Error: {e}',
                 style="color: red; font-weight: bold;"
-            ), duration=20)  # print to user
+            ), duration=10)  # print to user
 
     @output
     @render.plot
