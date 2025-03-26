@@ -54,10 +54,83 @@ app_ui = ui.page_fluid(
             icon=ui.HTML('<img src="img/upload.svg" alt="Upload Icon" style="height: 1em; vertical-align: middle">')
         ),
         ui.nav_panel(
-        ' Advanced Settings',
+            ' Visualize',
+            ui.layout_sidebar(
+                ui.sidebar(
+                    ui.tooltip(
+                        ui.input_slider(
+                            'increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1,
+                        ),
+                        'Height relative to your window height.'
+                    ),
+                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
+                    ui.tooltip(
+                        ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
+                        'Fraction of the total plot size'
+                    ),
+                    ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'colored identity', 'similarity'], selected='identity'),
+                    ui.tooltip(
+                        ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
+                        'Fraction of the total plot size'
+                    ),
+                    ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
+                    ui.tooltip(
+                        ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
+                        'Fraction of the total plot size'
+                    ),
+                    ui.tooltip(
+                        ui.download_button(
+                            'download_pdf',
+                            'PDF',
+                            icon=ui.HTML('<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+                        ),
+                        'Get the plot as a pdf.'
+                    ),
+                    title=ui.h6('Plotting layout'),
+                ),
+                ui.output_plot('msa_plot', height='100vh', width='92vw'),
+                ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
+            ),
+        icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
+        ),
+        ui.nav_panel(
+        ' Analyse & Downloads',
+            ui.layout_columns(
+                ui.card(
+                    ui.card_header(ui.h6('Download settings'),
+                        ui.popover(
+                            ui.span(
+                                ui.HTML('<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
+                            ),
+                            ui.input_selectize('download_type', label='Choices:', choices=['SNPs']),
+                            ui.input_selectize('download_type_options', label='Additional options:', choices=['None']),
+                            ui.input_selectize('download_format', label='Format:', choices=[]),
+                        )
+                    ),
+                    ui.download_button(
+                        'download_stats',
+                        'Download',
+                        icon=ui.HTML(
+                            '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+                    ),
+                ),
+                ui.value_box(
+                    title='test',
+                    value=6
+                ),
+                ui.value_box(
+                    'N° of seqs',
+                    ui.output_ui("number_of_seq"), #showcase=icon
+                ),
+            ),
+
+        icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
+        ),
+        ui.nav_panel(
+            ' Advanced Settings',
             ui.card(
+                ui.card_header(ui.h6('Statistic settings', class_='section-title')),
                 ui.row(
-                    ui.h6('Statistic settings', class_='section-title'),
                     ui.column(
                         4,
                         ui.tooltip(
@@ -75,10 +148,10 @@ app_ui = ui.page_fluid(
                 )
             ),
             ui.card(
+                ui.card_header(ui.h6('Alignment settings', class_='section-title')),
                 ui.row(
-                    ui.h6('Alignment settings', class_='section-title'),
                     ui.column(
-                        4,ui.tooltip(
+                        4, ui.tooltip(
                             ui.input_switch('show_gaps', 'Gaps', value=True),
                             'Whether to show gaps.'
                         ),
@@ -106,9 +179,14 @@ app_ui = ui.page_fluid(
                             'Which reference sequence to calculate identity/similarity.'
                         ),
                         ui.tooltip(
-                            ui.input_selectize('reference_color', label='Reference color', choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
+                            ui.input_selectize('reference_color', label='Reference color',
+                                               choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
                             'Color for the reference sequence.'
-                        )
+                        ),
+                        ui.tooltip(
+                            ui.input_switch('show_sequence', 'show sequence', value=True),
+                            'Whether to show the sequence if zoomed.'
+                        ),
                     ),
                     ui.column(
                         4,
@@ -116,25 +194,20 @@ app_ui = ui.page_fluid(
                             ui.input_selectize('matrix', 'Matrix', ['None']),
                             'Substitution matrix for similarity mapping.'
                         ),
-                            ui.tooltip(
-                                ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
-                                                   selected='PuBu_r'),
-                                'colormap for similarity plots - any matplotlib colormap.'
-                        )
+                        ui.tooltip(
+                            ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
+                                               selected='PuBu_r'),
+                            'colormap for similarity plots - any matplotlib colormap.'
+                        ),
+                        ui.tooltip(
+                            ui.input_switch('seq_names', 'show names', value=False),
+                            'Whether to show sequence names at the left side of the alignment'
+                        ),
                     )
                 )
             ),
             ui.card(
-                ui.row(
-                    ui.h6('Annotation settings',  class_='section-title'),
-                    ui.column(
-                        4,
-                        ui.tooltip(
-                            ui.input_switch('show_legend_third_plot', 'Legend', value=True),
-                            'Whether to show legend for the third plot.'
-                        ),
-                    )
-                ),
+                ui.card_header(ui.h6('Annotation settings', class_='section-title')),
                 ui.row(
                     ui.column(
                         4,
@@ -147,6 +220,10 @@ app_ui = ui.page_fluid(
                             ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
                             'Length of the stem.'
                         ),
+                        ui.tooltip(
+                            ui.input_switch('show_legend_third_plot', 'Legend', value=True),
+                            'Whether to show legend for the third plot.'
+                        ),
                     ),
                     ui.column(
                         4,
@@ -154,7 +231,7 @@ app_ui = ui.page_fluid(
                             ui.h6('ORF plot'),
                             'Only relevant for nt alignments.',
                             placement='left'
-                         ),
+                        ),
                         ui.tooltip(
                             ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
                             'Minimum ORF length to calculate.'
@@ -170,13 +247,14 @@ app_ui = ui.page_fluid(
                     ),
                     ui.column(
                         4,
-                    ui.h6('Annotation plot'),
+                        ui.h6('Annotation plot'),
                         ui.tooltip(
                             ui.input_selectize('feature_display', 'Feature', ['None']),
                             'Which feature to display.'
                         ),
                         ui.tooltip(
-                            ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()), selected='grey'),
+                            ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()),
+                                               selected='grey'),
                             'Color of the feature.'
                         ),
                         ui.tooltip(
@@ -188,74 +266,6 @@ app_ui = ui.page_fluid(
             ),
             icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">')
         ),
-        ui.nav_panel(
-            ' Visualize',
-            ui.layout_sidebar(
-                ui.sidebar(
-                    ui.h6('General settings'),
-                    ui.tooltip(
-                        ui.input_slider(
-                            'increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1,
-                        ),
-                        'Height relative to your window height.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_sequence', 'show sequence', value=True),
-                        'Whether to show the sequence if zoomed.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('seq_names', 'show names', value=False),
-                        'Whether to show sequence names at the left side of the alignment'
-                    ),
-                    ui.tooltip(
-                        ui.download_button(
-                            'download_pdf',
-                            'PDF',
-                            icon=ui.HTML('<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
-                        ),
-                        'Get the plot as a pdf.'
-                    ),
-                    ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
-                    ui.tooltip(
-                        ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
-                        'Fraction of the total plot size'
-                    ),
-                    ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'colored identity', 'similarity'], selected='identity'),
-                    ui.tooltip(
-                        ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
-                        'Fraction of the total plot size'
-                    ),
-                    ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
-                    ui.tooltip(
-                        ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
-                        'Fraction of the total plot size'
-                    )
-                ),
-                ui.output_plot('msa_plot', height='100vh', width='92vw'),
-                ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
-            ),
-        icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
-        ),
-        ui.nav_panel(
-        ' Analyse & Downloads',
-            ui.column(
-                2,
-                ui.card(
-                    ui.card_header('Download'),
-                    ui.input_selectize('download_type', label='Choices:', choices=['SNPs']),
-                    ui.input_selectize('download_type_options', label='Additional options:', choices=['None']),
-                    ui.input_selectize('download_format', label='Format:', choices=[]),
-                    ui.download_button(
-                        'download_stats',
-                        'Download',
-                        icon=ui.HTML(
-                            '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
-                    ),
-                ),
-            ),
-
-        icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
-        )
     )
 )
 
@@ -595,6 +605,13 @@ def server(input, output, session):
                 'No alignment was uploaded.',
                 style="color: red; font-weight: bold;"
             ), duration=10)
+
+    @render.ui
+    def number_of_seq():
+        aln = reactive.alignment.get()
+        if aln is None:
+            return None
+        return len(aln.alignment)
 
 
         # run the app
