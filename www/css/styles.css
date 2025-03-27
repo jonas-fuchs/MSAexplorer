@@ -1,7 +1,16 @@
+/* Define Color Variables for Consistency */
+:root {
+    --primary-color: #004B83;  /* Dark Blue from SVG */
+    --secondary-color: #0086C1; /* Lighter Blue from SVG */
+    --neutral-color: #B3B3B3;   /* Gray from SVG */
+    --light-bg: #ffffff;
+    --light-border: #e9ecef;    /* A very light gray for borders */
+}
+
 /* General Styles */
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f8f9fa;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--light-bg);
     margin: 0;
     padding: 0;
     color: #333;
@@ -10,67 +19,58 @@ body {
 
 h6 {
     font-size: 1rem;
-    font-weight: bold;
-    color: #0056b3;
+    font-weight: 600;
+    color: var(--primary-color);
     margin-bottom: 8px;
-    letter-spacing: 0.5px;
 }
 
 .section-title {
     font-size: 1.1rem;
-    font-weight: bold;
-    color: #0056b3;
-    margin: 15px 0 8px;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin: 20px 0 10px;
     padding-bottom: 2px;
+    border-bottom: 2px solid var(--light-border);
 }
 
 /* Navigation Tabs */
 .nav-tabs {
-    background-color: #ffffff;
-    border-bottom: 2px solid #dee2e6;
+    background-color: var(--light-bg);
+    border: none;
     margin-bottom: 20px;
+    display: flex;
+    justify-content: flex-start;
+    padding-left: 10px;
 }
 
 .nav-tabs .nav-link {
-    color: #6c757d;
+    color: var(--neutral-color);
     font-size: 1rem;
     padding: 10px 15px;
-    transition: color 0.3s ease, background-color 0.3s ease;
-    border-radius: 4px 4px 0 0;
-    margin-right: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    border-radius: 6px;
+    margin-right: 6px;
+    background: transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: var(--light-border);
+    color: var(--secondary-color);
 }
 
 .nav-tabs .nav-link.active {
-    background-color: #0056b3;
-    color: #ffffff;
-    border-color: #0056b3;
-    border-bottom: none;
-}
-.btn:hover img {
-    filter: brightness(1) invert(1);
-}
-
-.nav-tabs .nav-link img {
-    filter: brightness(0) grayscale(0%);
-    transition: filter 0.3s ease;
-}
-
-.nav-tabs .nav-link:hover img {
-    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
-}
-
-.nav-tabs .nav-link.active img {
-    filter: brightness(1) invert(1);
+    background-color: var(--primary-color);
+    color: var(--light-bg);
 }
 
 /* GitHub Logo Hover Effect */
 .github-logo {
-    transition: filter 0.3s ease, transform 0.3s ease;
-    filter: grayscale(50%);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0.8;
 }
 
 .github-logo:hover {
-    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+    opacity: 1;
     transform: scale(1.1);
 }
 
@@ -80,18 +80,18 @@ input, select, button {
     padding: 10px;
     margin: 5px 0;
     box-sizing: border-box;
-    border: 1px solid #ced4da;
+    border: 1px solid var(--light-border);
     border-radius: 4px;
     font-size: 0.9rem;
-    background-color: #fff;
+    background-color: var(--light-bg);
     color: #333;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 input:focus, select:focus, button:focus {
     outline: none;
-    border-color: #0056b3;
-    box-shadow: 0 0 5px rgba(0, 86, 179, 0.3);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px rgba(0,75,131, 0.3);
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -108,19 +108,19 @@ input[type="number"]::-webkit-outer-spin-button {
 
 /* Sliders */
 input[type="range"] {
-    width: 90%;
+    width: 100%;
     margin: 10px 0;
 }
 
 .ui-slider {
     margin: 10px 0;
-    background-color: #dee2e6;
+    background-color: var(--light-border);
     height: 5px;
     border-radius: 3px;
 }
 
 .ui-slider-thumb {
-    background-color: #0056b3;
+    background-color: var(--primary-color);
     width: 16px;
     height: 16px;
     border-radius: 50%;
@@ -129,15 +129,15 @@ input[type="range"] {
 }
 
 .ui-slider-thumb:hover {
-    background-color: #004085;
+    background-color: var(--secondary-color);
     transform: scale(1.1);
 }
 
 /* Buttons */
 button {
     padding: 10px;
-    background-color: #0056b3;
-    color: #ffffff;
+    background-color: var(--primary-color);
+    color: var(--light-bg);
     border: none;
     border-radius: 4px;
     font-size: 0.9rem;
@@ -146,16 +146,16 @@ button {
 }
 
 button:hover {
-    background-color: #004085;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    background-color: var(--secondary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Sidebar Layout */
 .sidebar {
-    background-color: #ffffff;
-    padding: 15px;
-    border-right: 1px solid #dee2e6;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+    background-color: var(--light-bg);
+    padding: 20px;
+    border-right: 1px solid var(--light-border);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.03);
     max-height: 100vh;
     overflow-y: auto;
     transition: width 0.3s ease;
@@ -163,11 +163,11 @@ button:hover {
 
 /* Plots and Visualizations */
 #msa_plot {
-    border: 1px solid #ced4da;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    background-color: #ffffff;
-    padding: 10px;
+    border: 1px solid var(--light-border);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background-color: var(--light-bg);
+    padding: 5px;
     transition: width 0.3s ease;
 }
 
@@ -184,7 +184,7 @@ button:hover {
     background-color: #343a40;
     color: #ffffff;
     text-align: center;
-    border-radius: 5px;
+    border-radius: 6px;
     padding: 5px;
     position: absolute;
     z-index: 1;
@@ -203,17 +203,25 @@ button:hover {
 /* Responsiveness */
 @media (max-width: 768px) {
     .sidebar {
-        padding: 10px;
+        padding: 15px;
     }
+
     .ui-slider {
         width: 100%;
     }
+
     .nav-tabs .nav-link {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         padding: 8px 12px;
     }
-    button {
-        padding: 8px;
-        font-size: 0.8rem;
-    }
+}
+
+.bslib-sidebar-layout {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.sidebar {
+    border: none !important;
+    box-shadow: none !important;
 }

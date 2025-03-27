@@ -5,7 +5,6 @@ This contains the code to create the MSAexplorer shiny application
 # build-in
 from pathlib import Path
 import tempfile
-import sys, os
 
 # libs
 from shiny import App, render, ui, reactive
@@ -90,46 +89,63 @@ app_ui = ui.page_fluid(
                 ),
                 ui.output_plot('msa_plot', height='100vh', width='92vw'),
                 ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
+                class_='visualize-panel-container'
             ),
-        icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
+            icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         ),
         ui.nav_panel(
         ' Analyse & Downloads',
             ui.layout_columns(
-                ui.card(
-                    ui.card_header(ui.h6('Download settings'),
-                        ui.popover(
-                            ui.span(
-                                ui.HTML('<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
-                            ),
-                            ui.input_selectize('download_type', label='Choices:', choices=['SNPs']),
-                            ui.input_selectize('download_type_options', label='Additional options:', choices=['None']),
-                            ui.input_selectize('download_format', label='Format:', choices=[]),
-                        )
-                    ),
-                    ui.download_button(
-                        'download_stats',
-                        'Download',
-                        icon=ui.HTML(
-                            '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
-                    ),
+        ui.value_box(
+                    'Alignment type:',
+                    ui.output_ui('aln_type'),
+                    showcase=ui.HTML('<img src="img/question.svg" style="height:50px; width:50px">')
                 ),
                 ui.value_box(
-                    title='test',
-                    value=6
+                    'Alignment length:',
+                    ui.output_ui('aln_len'),
+                    showcase=ui.HTML('<img src="img/ruler.svg" style="height:50px; width:50px">')
                 ),
                 ui.value_box(
-                    'N° of seqs',
-                    ui.output_ui("number_of_seq"), #showcase=icon
+                    'N° of sequences:',
+                    ui.output_ui("number_of_seq"),
+                    showcase=ui.HTML('<img src="img/number.svg" style="height:50px; width:50px">'),
                 ),
+                ui.value_box(
+                    'Percentage of gaps:',
+                    ui.output_ui("per_gaps"),
+                    showcase=ui.HTML('<img src="img/percent.svg" style="height:40px; width:40px">'),
+                ),
+                ui.value_box(
+                    'N° of positions with SNPs:',
+                    ui.output_ui("snps"),
+                    showcase=ui.HTML('<img src="img/number.svg" style="height:40px; width:40px">'),
+                )
             ),
-
+            ui.card(
+                ui.card_header(ui.h6('Download settings'),
+                    ui.popover(
+                        ui.span(
+                            ui.HTML('<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
+                        ),
+                        ui.input_selectize('download_type', label='Choices:', choices=['SNPs']),
+                        ui.input_selectize('download_type_options', label='Additional options:', choices=['None']),
+                        ui.input_selectize('download_format', label='Format:', choices=[]),
+                    )
+                ),
+                ui.download_button(
+                    'download_stats',
+                    'Download',
+                    icon=ui.HTML(
+                        '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+                )
+            ),
         icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         ),
         ui.nav_panel(
             ' Advanced Settings',
             ui.card(
-                ui.card_header(ui.h6('Statistic settings', class_='section-title')),
+                ui.card_header(ui.h6('Statistic settings')),
                 ui.row(
                     ui.column(
                         4,
@@ -148,7 +164,7 @@ app_ui = ui.page_fluid(
                 )
             ),
             ui.card(
-                ui.card_header(ui.h6('Alignment settings', class_='section-title')),
+                ui.card_header(ui.h6('Alignment settings')),
                 ui.row(
                     ui.column(
                         4, ui.tooltip(
@@ -207,7 +223,7 @@ app_ui = ui.page_fluid(
                 )
             ),
             ui.card(
-                ui.card_header(ui.h6('Annotation settings', class_='section-title')),
+                ui.card_header(ui.h6('Annotation settings')),
                 ui.row(
                     ui.column(
                         4,
@@ -264,7 +280,7 @@ app_ui = ui.page_fluid(
                     )
                 )
             ),
-            icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">')
+            icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">'),
         ),
     )
 )
@@ -606,6 +622,16 @@ def server(input, output, session):
                 style="color: red; font-weight: bold;"
             ), duration=10)
 
+    # showcases:
+    @output
+    @render.ui
+    def aln_type():
+        aln = reactive.alignment.get()
+        if aln is None:
+            return None
+        return aln.aln_type
+
+
     @render.ui
     def number_of_seq():
         aln = reactive.alignment.get()
@@ -613,8 +639,28 @@ def server(input, output, session):
             return None
         return len(aln.alignment)
 
+    @render.ui
+    def aln_len():
+        aln = reactive.alignment.get()
+        if aln is None:
+            return None
+        return aln.length
 
-        # run the app
+    @render.ui
+    def per_gaps():
+        aln = reactive.alignment.get()
+        if aln is None:
+            return None
+        return round(aln.calc_character_frequencies()['total']['-']['% of alignment'], 2)
+
+    @render.ui
+    def snps():
+        aln = reactive.alignment.get()
+        if aln is None:
+            return None
+        return len(aln.get_snps()['POS'])
+
+# run the app
 app = App(app_ui, server, static_assets={'/img': Path(__file__).parent/'img'})
 
 
