@@ -1,77 +1,101 @@
 /* Define Color Variables for Consistency */
 :root {
-    --primary-color: #004B83;  /* Dark Blue from SVG */
-    --secondary-color: #0086C1; /* Lighter Blue from SVG */
-    --neutral-color: #B3B3B3;   /* Gray from SVG */
+    --primary-color: #004B83;      /* Dark Blue from SVG */
+    --secondary-color: #0086C1;    /* Lighter Blue from SVG */
     --light-bg: #ffffff;
-    --light-border: #e9ecef;    /* A very light gray for borders */
+    --light-border: #e9ecef;       /* A very light gray for borders */
+    --dark-color: #333;
+    --alt-color: #B67B28;
 }
 
 /* General Styles */
 body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     background-color: var(--light-bg);
-    margin: 0;
     padding: 0;
-    color: #333;
+    color: var(--dark-color);
     line-height: 1.6;
+    margin-top: 100px; /* Space for fixed navbar */
 }
 
 h6 {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: var(--alt-color);
     margin-bottom: 8px;
 }
 
-.section-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--primary-color);
-    margin: 20px 0 10px;
-    padding-bottom: 2px;
-    border-bottom: 2px solid var(--light-border);
+/* Navbar */
+.navbar {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--light-border);
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
 }
 
-/* Navigation Tabs */
-.nav-tabs {
-    background-color: var(--light-bg);
-    border: none;
-    margin-bottom: 20px;
+.navbar .navbar-title {
     display: flex;
-    justify-content: flex-start;
-    padding-left: 10px;
+    align-items: center;
+    font-size: 1.2rem;
+    color: var(--light-bg); /* Light text on dark navbar */
+    width: 100%;
+    justify-content: space-between;
 }
 
-.nav-tabs .nav-link {
-    color: var(--neutral-color);
+/* Navbar Links and Tabs */
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: auto;
+}
+
+.navbar .nav-link {
     font-size: 1rem;
     padding: 10px 15px;
-    transition: background-color 0.3s ease, color 0.3s ease;
-    border-radius: 6px;
+    transition: color 0.3s ease;
     margin-right: 6px;
     background: transparent;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
 }
 
-.nav-tabs .nav-link:hover {
-    background-color: var(--light-border);
+.navbar .nav-link:hover {
+    border-bottom: 2px solid var(--secondary-color);
     color: var(--secondary-color);
 }
 
-.nav-tabs .nav-link.active {
-    background-color: var(--primary-color);
-    color: var(--light-bg);
+.navbar .nav-link.active {
+    border-bottom: 2px solid var(--secondary-color);
+    color: var(--secondary-color);
 }
 
-/* GitHub Logo Hover Effect */
-.github-logo {
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    opacity: 0.8;
+/* Navbar link image behavior */
+.navbar .nav-link img {
+    transition: filter 0.3s ease;
+    fill: var(--light-bg);
 }
 
-.github-logo:hover {
-    opacity: 1;
-    transform: scale(1.1);
+.navbar .nav-link:hover img {
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+.navbar .nav-link.active img {
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+/* Upload bar */
+.shiny-file-input-progress {
+    height: 1.5rem;
+    border-radius: 5px;
+}
+
+.shiny-file-input-progress .progress-bar {
+    background-color: var(--alt-color);
+    height: 100%;
 }
 
 /* Inputs and Controls */
@@ -90,7 +114,7 @@ input, select, button {
 
 input:focus, select:focus, button:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--alt-color);
     box-shadow: 0 0 5px rgba(0,75,131, 0.3);
 }
 
@@ -150,8 +174,13 @@ button:hover {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Sidebar Layout */
-.sidebar {
+/* Download */
+.shiny-download-link:hover img {
+    filter: brightness(1) invert(1);
+}
+
+/* Sidebar --> PROBLEM TODO */
+.bslib-sidebar-layout {
     background-color: var(--light-bg);
     padding: 20px;
     border-right: 1px solid var(--light-border);
@@ -159,6 +188,20 @@ button:hover {
     max-height: 100vh;
     overflow-y: auto;
     transition: width 0.3s ease;
+    z-index: 500; /* Sidebar stays below the navbar */
+}
+
+/* Sidebar Collapse Button */
+.collapse-toggle {
+    position: fixed;
+    top: 100px;
+    left: 10px;
+    background-color: transparent;
+    border: none;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    z-index: 900;
+    cursor: pointer;
 }
 
 /* Plots and Visualizations */

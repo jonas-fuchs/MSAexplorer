@@ -1,7 +1,7 @@
 """
 This contains the code to create the MSAexplorer shiny application
 """
-
+from optparse import TitledHelpFormatter
 # build-in
 from pathlib import Path
 import tempfile
@@ -21,39 +21,50 @@ js_file = Path(__file__).resolve().parent / 'www' / 'js' / 'helper_functions.js'
 
 # define the UI
 app_ui = ui.page_fluid(
-    ui.img(
-            src='img/logo.svg', height='100px'
-    ),
     # include css
     ui.include_css(css_file),
     # get the input dimensions (separate js)
     ui.include_js(js_file),
-    ui.a(
-        ui.img(
-            src='img/github.svg',
-            height='40px',
-            class_='github-logo'
-        ),
-        href='https://github.com/jonas-fuchs/MSAexplorer',
-        target='_blank',
-        title='Give it a star!',
-        style='position: fixed; top: 10px; right: 10px; z-index: 1000;'
-    ),
-    ui.navset_tab(
+    ui.navset_bar(
         ui.nav_panel(
-            ' Upload',
-            ui.tooltip(
-                ui.input_file('alignment_file', ui.h6('Multiple sequence alignment', class_='section-title'), multiple=False, accept=['.fa', '.fasta', '.aln']),
-                'Multiple sequence alignment file to display.'
+            ' UP/DOWNLOAD',
+            ui.layout_columns(
+                ui.card(
+                    ui.card_header(ui.h6('Upload files:')),
+                    ui.layout_columns(
+                        ui.tooltip(
+                            ui.input_file('alignment_file', 'Multiple sequence alignment:', multiple=False, accept=['.fa', '.fasta', '.aln']),
+                            'Multiple sequence alignment file to display.'
+                        ),
+                        ui.tooltip(
+                            ui.input_file('annotation_file', 'Optional annotation file:', multiple=False, accept=['.gff', '.gff3', '.bed', '.gb']),
+                            'Optional annotation file to display. Sequence id must be present in the alignment for correct mapping.'
+                        )
+                    )
+                ),
+                ui.card(
+                    ui.card_header(ui.h6('Download files:'),
+                        ui.popover(
+                            ui.span(
+                                ui.HTML('<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
+                            ),
+                            ui.input_selectize('download_type_options', label='Additional options:', choices=['None']),
+                            ui.input_selectize('download_format', label='Format:', choices=[]),
+                        )
+                    ),
+                    ui.input_selectize('download_type', label='Choose:', choices=['SNPs']),
+                    ui.download_button(
+                        'download_stats',
+                        'Download',
+                        icon=ui.HTML(
+                            '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+                    )
+                )
             ),
-            ui.tooltip(
-                ui.input_file('annotation_file', ui.h6('Optional annotation file', class_='section-title'), multiple=False, accept=['.gff', '.gff3', '.bed', '.gb']),
-                'Optional annotation file to display. Sequence id must be present in the alignment for correct mapping.'
-            ),
-            icon=ui.HTML('<img src="img/upload.svg" alt="Upload Icon" style="height: 1em; vertical-align: middle">')
+            icon=ui.HTML('<img src="img/upload.svg" alt="Upload Icon" style="height: 1em; vertical-align: middle">'),
         ),
         ui.nav_panel(
-            ' Visualize',
+            ' PLOT',
             ui.layout_sidebar(
                 ui.sidebar(
                     ui.tooltip(
@@ -94,63 +105,46 @@ app_ui = ui.page_fluid(
             icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         ),
         ui.nav_panel(
-        ' Analyse & Downloads',
+        ' ANALYSIS',
             ui.layout_columns(
         ui.value_box(
                     'Alignment type:',
                     ui.output_ui('aln_type'),
-                    showcase=ui.HTML('<img src="img/question.svg" style="height:50px; width:50px">')
+                    showcase=ui.HTML('<img src="img/question.svg" style="height:2.5rem; width:2.5rem">')
                 ),
                 ui.value_box(
                     'Alignment length:',
                     ui.output_ui('aln_len'),
-                    showcase=ui.HTML('<img src="img/ruler.svg" style="height:50px; width:50px">')
+                    showcase=ui.HTML('<img src="img/ruler.svg" style="height:3rem; width:3rem">')
                 ),
                 ui.value_box(
                     'N° of sequences:',
                     ui.output_ui("number_of_seq"),
-                    showcase=ui.HTML('<img src="img/number.svg" style="height:50px; width:50px">'),
+                    showcase=ui.HTML('<img src="img/number.svg" style="height:2.5rem; width:2.5rem">'),
                 ),
                 ui.value_box(
                     'Percentage of gaps:',
                     ui.output_ui("per_gaps"),
-                    showcase=ui.HTML('<img src="img/percent.svg" style="height:40px; width:40px">'),
+                    showcase=ui.HTML('<img src="img/percent.svg" style="height:height:2rem; width:2rem">'),
                 ),
                 ui.value_box(
                     'N° of positions with SNPs:',
                     ui.output_ui("snps"),
-                    showcase=ui.HTML('<img src="img/number.svg" style="height:40px; width:40px">'),
-                )
-            ),
-            ui.card(
-                ui.card_header(ui.h6('Download settings'),
-                    ui.popover(
-                        ui.span(
-                            ui.HTML('<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
-                        ),
-                        ui.input_selectize('download_type', label='Choices:', choices=['SNPs']),
-                        ui.input_selectize('download_type_options', label='Additional options:', choices=['None']),
-                        ui.input_selectize('download_format', label='Format:', choices=[]),
-                    )
-                ),
-                ui.download_button(
-                    'download_stats',
-                    'Download',
-                    icon=ui.HTML(
-                        '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+                    showcase=ui.HTML('<img src="img/number.svg" style="height:height:2.5rem; width:2.5rem">'),
                 )
             ),
         icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         ),
+        ui.nav_spacer(),
         ui.nav_panel(
-            ' Advanced Settings',
+            ' SETTINGS',
             ui.card(
-                ui.card_header(ui.h6('Statistic settings')),
+                ui.card_header(ui.h6('Statistic settings (entropy, similarity etc)')),
                 ui.row(
                     ui.column(
                         4,
                         ui.tooltip(
-                            ui.input_numeric('rolling_avg', 'Average', value=1, min=1),
+                            ui.input_numeric('rolling_avg', 'Rolling average', value=1, min=1),
                             'Rolling average over character intervals.'
                         )
                     ),
@@ -282,6 +276,10 @@ app_ui = ui.page_fluid(
             ),
             icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">'),
         ),
+        title=ui.a(
+            ui.img(src='img/logo.svg', height='60px'),
+            href='https://github.com/jonas-fuchs/MSAexplorer'
+        )
     )
 )
 
@@ -502,7 +500,7 @@ def server(input, output, session):
 
                 # Update zoom slider based on alignment length and user input
                 alignment_length = len(next(iter(aln.alignment.values())))-1
-                ui.update_slider('zoom_range', max=alignment_length-1, value=(0, int(alignment_length/10)))
+                ui.update_slider('zoom_range', max=alignment_length-1, value=(0, alignment_length -1))
 
                 # Update reference
                 ui.update_selectize(
