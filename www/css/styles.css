@@ -34,6 +34,7 @@ h6 {
     top: 0;
     left: 0;
     z-index: 1000;
+    transition: transform 0.4s ease-in-out;
 }
 
 .navbar .navbar-title {
@@ -181,17 +182,26 @@ button:hover {
 
 /* Sidebar */
 .bslib-sidebar-layout {
+    border: none !important;
+    box-shadow: none !important;
     z-index: 500; /* ensure that the whole layout is below the bar */
 }
+
 
 .sidebar {
     background-color: var(--light-bg);
     padding: 15px;
     gap: 1px;
-    border-right: 1px solid var(--light-border);
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.03);
+    border: none !important;
+    box-shadow: none !important;
     overflow-y: auto;
     transition: width 0.3s ease;
+}
+
+/* Value Boxes */
+.value-box-grid {
+    font-size: 0.95rem;
+    text-align: center;
 }
 
 /* Plots and Visualizations */
@@ -247,14 +257,4 @@ button:hover {
         font-size: 0.9rem;
         padding: 8px 12px;
     }
-}
-
-.bslib-sidebar-layout {
-    border: none !important;
-    box-shadow: none !important;
-}
-
-.sidebar {
-    border: none !important;
-    box-shadow: none !important;
 }

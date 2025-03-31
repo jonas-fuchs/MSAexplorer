@@ -25,7 +25,7 @@ shiny run app.py
 ````
 
 
-![gif](assets/Shiny_app.gif)
+![png](assets/shiny-app.png)
 
 ## [Python package documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html)
 
