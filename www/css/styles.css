@@ -11,18 +11,18 @@
 /* General Styles */
 body {
     font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.9rem;
     background-color: var(--light-bg);
-    padding: 0;
     color: var(--dark-color);
-    line-height: 1.6;
-    margin-top: 100px; /* Space for fixed navbar */
+    line-height: 1.4;
+    margin-top: 100px;
 }
 
 h6 {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--alt-color);
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 /* Navbar */
@@ -179,29 +179,19 @@ button:hover {
     filter: brightness(1) invert(1);
 }
 
-/* Sidebar --> PROBLEM TODO */
+/* Sidebar */
 .bslib-sidebar-layout {
-    background-color: var(--light-bg);
-    padding: 20px;
-    border-right: 1px solid var(--light-border);
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.03);
-    max-height: 100vh;
-    overflow-y: auto;
-    transition: width 0.3s ease;
-    z-index: 500; /* Sidebar stays below the navbar */
+    z-index: 500; /* ensure that the whole layout is below the bar */
 }
 
-/* Sidebar Collapse Button */
-.collapse-toggle {
-    position: fixed;
-    top: 100px;
-    left: 10px;
-    background-color: transparent;
-    border: none;
-    color: var(--primary-color);
-    font-size: 1.5rem;
-    z-index: 900;
-    cursor: pointer;
+.sidebar {
+    background-color: var(--light-bg);
+    padding: 15px;
+    gap: 1px;
+    border-right: 1px solid var(--light-border);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.03);
+    overflow-y: auto;
+    transition: width 0.3s ease;
 }
 
 /* Plots and Visualizations */

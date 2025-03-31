@@ -26,13 +26,3 @@ Shiny.addCustomMessageHandler("update-plot-height", function(message) {
         plotContainer.style.setProperty("height", message.height, "important");
     }
 });
-
-// Listen for the custom message from the server
-Shiny.addCustomMessageHandler('update-sidebar-height', function(message) {
-    // Find the plot container by its ID
-    var sidebar = document.querySelector(".sidebar"); // Select the sidebar element
-    if (sidebar) {
-        // Dynamically adjust the sidebar's max-height to match the plot height
-        sidebar.style.setProperty("max-height", message.height, "important");
-    }
-});

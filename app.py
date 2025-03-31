@@ -19,7 +19,6 @@ from msaexplorer import explore, draw, config, export
 css_file = Path(__file__).resolve().parent / 'www' /'css' / 'styles.css'
 js_file = Path(__file__).resolve().parent / 'www' / 'js' / 'helper_functions.js'
 
-# define the UI
 app_ui = ui.page_fluid(
     # include css
     ui.include_css(css_file),
@@ -27,7 +26,7 @@ app_ui = ui.page_fluid(
     ui.include_js(js_file),
     ui.navset_bar(
         ui.nav_panel(
-            ' UP/DOWNLOAD',
+            ' UPLOAD/DOWNLOAD',
             ui.layout_columns(
                 ui.card(
                     ui.card_header(ui.h6('Upload files:')),
@@ -98,9 +97,9 @@ app_ui = ui.page_fluid(
                     ),
                     title=ui.h6('Plotting layout'),
                 ),
+            ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
                 ui.output_plot('msa_plot', height='100vh', width='92vw'),
-                ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw', ticks=True),
-                class_='visualize-panel-container'
+                fillable=False
             ),
             icon=ui.HTML('<img src="img/chart.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         ),
@@ -284,6 +283,21 @@ app_ui = ui.page_fluid(
 )
 
 
+def set_aln(aln, inputs):
+    # set the reference sequence
+    if inputs['reference'] == 'first':
+        aln.reference_id = list(aln.alignment.keys())[0]
+    elif inputs['reference'] == 'consensus':
+        aln.reference_id = None
+    else:
+        aln.reference_id = inputs['reference']
+
+    # Update zoom level from slider -> +1 needed as msaexplorer uses range for zoom
+    aln.zoom = (inputs['zoom_range'][0], inputs['zoom_range'][1] + 1)
+
+    return aln
+
+
 # Define the plotting function
 def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     """
@@ -296,16 +310,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     if not aln:
         return None
 
-    # set the reference sequence
-    if inputs['reference'] == 'first':
-        aln.reference_id = list(aln.alignment.keys())[0]
-    elif inputs['reference'] == 'consensus':
-        aln.reference_id = None
-    else:
-        aln.reference_id = inputs['reference']
-
-    # Update zoom level from slider -> +1 needed as msaexplorer uses range for zoom
-    aln.zoom = (inputs['zoom_range'][0], inputs['zoom_range'][1] + 1)
+    aln = set_aln(aln, inputs)
 
     # determine height and width where it makes sense to plot the text
     if inputs['alignment_type'] != 'Off':
@@ -479,11 +484,9 @@ def server(input, output, session):
     @reactive.Effect
     async def update_width():
         new_plot_height = f'{input.increase_height()*100}vh'
-        new_sidebar_height = f'{input.increase_height()*(100+40)}vh'
         height_value.set(new_plot_height)
 
         await session.send_custom_message('update-plot-height', {'height': new_plot_height}),
-        await session.send_custom_message('update-sidebar-height', {'height': new_sidebar_height})
 
     @reactive.Effect
     @reactive.event(input.alignment_file)
@@ -621,7 +624,6 @@ def server(input, output, session):
             ), duration=10)
 
     # showcases:
-    @output
     @render.ui
     def aln_type():
         aln = reactive.alignment.get()
@@ -635,6 +637,7 @@ def server(input, output, session):
         aln = reactive.alignment.get()
         if aln is None:
             return None
+
         return len(aln.alignment)
 
     @render.ui
@@ -642,6 +645,9 @@ def server(input, output, session):
         aln = reactive.alignment.get()
         if aln is None:
             return None
+
+        aln = set_aln(aln, prepare_inputs())
+
         return aln.length
 
     @render.ui
@@ -649,6 +655,10 @@ def server(input, output, session):
         aln = reactive.alignment.get()
         if aln is None:
             return None
+
+        aln = set_aln(aln, prepare_inputs())
+
+
         return round(aln.calc_character_frequencies()['total']['-']['% of alignment'], 2)
 
     @render.ui
@@ -656,10 +666,10 @@ def server(input, output, session):
         aln = reactive.alignment.get()
         if aln is None:
             return None
+
+        aln = set_aln(aln, prepare_inputs())
+
         return len(aln.get_snps()['POS'])
 
 # run the app
 app = App(app_ui, server, static_assets={'/img': Path(__file__).parent/'img'})
-
-
-#TODO: Analysis tab
