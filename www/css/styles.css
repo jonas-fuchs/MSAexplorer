@@ -25,6 +25,17 @@ h6 {
     margin-bottom: 4px;
 }
 
+.about-card {
+    margin-top: 20px;
+    width: 100%;
+    text-align: center;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 /* Navbar */
 .navbar {
     padding: 15px 20px;
@@ -87,6 +98,13 @@ h6 {
 .navbar .nav-link.active img {
     filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
 }
+
+/* Navbar collapsing */
+.navbar-collapse {
+    max-height: 300px; /* Prevents it from becoming too large */
+    overflow-y: auto;  /* Enables scrolling if needed */
+}
+
 
 /* Upload bar */
 .shiny-file-input-progress {
@@ -198,6 +216,38 @@ button:hover {
     transition: width 0.3s ease;
 }
 
+#overlay-sidebar {
+    position: fixed;
+    top: 0;
+    right: -50%; /* Start hidden */
+    width: 50%;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0px 10px rgba(0, 0, 0, 0.3);
+    transition: right 0.3s ease-in-out;
+    padding: 20px;
+    z-index: 2000;
+    overflow-y: auto;
+}
+#overlay-sidebar.show {
+    right: 0;
+}
+#overlay-bg {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.action-button:hover img {
+    filter: brightness(1) invert(1);
+}
+
+
 /* Value Boxes */
 .value-box-grid {
     font-size: 0.95rem;
@@ -244,7 +294,10 @@ button:hover {
 }
 
 /* Responsiveness */
-@media (max-width: 768px) {
+@media screen and (max-width: 900px) {
+    body {
+        padding-top: 60px; /* Adjust based on navbar height */
+    }
     .sidebar {
         padding: 15px;
     }
@@ -257,4 +310,27 @@ button:hover {
         font-size: 0.9rem;
         padding: 8px 12px;
     }
+    #overlay-sidebar {
+        width: 90%; /* Full screen on small devices */
+        right: -90%; /* Initially hidden */
+    }
+
+    #overlay-sidebar.show {
+        right: 0;
+    }
+    .navbar {
+        position: fixed;
+        width: 100%;
+        z-index: 1050; /* Keep above other elements */
+    }
+
+    body {
+        padding-top: 70px; /* Prevent content from being hidden under the navbar */
+    }
+    .about-card {
+        position: relative !important;
+        bottom: auto !important;
+        margin-bottom: 20px;
+    }
 }
+

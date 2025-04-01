@@ -31,28 +31,46 @@ document.addEventListener("DOMContentLoaded", function () {
     let lastScrollY = window.scrollY;
     const navbar = document.querySelector(".navbar");
     let hideTimeout;
-    // Flag to check if the navbar is already hidden
     let isNavbarHidden = false;
 
     window.addEventListener("scroll", function () {
         clearTimeout(hideTimeout);
-        // If scrolling down passed the threshold (50px)
+
         if (window.scrollY > lastScrollY && window.scrollY > 50) {
-            // Start the timeout to hide navbar
             if (!isNavbarHidden) {
                 hideTimeout = setTimeout(() => {
-                    navbar.style.transform = "translateY(-100%)"; // Hide the navbar
-                    isNavbarHidden = true; // Update the flag to mark it as hidden
+                    navbar.style.transform = "translateY(-100%)";
+                    isNavbarHidden = true;
                 }, 1000);
             }
-        }
-        // If scrolling up, show the navbar immediately
-        else if (window.scrollY < lastScrollY) {
-            navbar.style.transform = "translateY(0)"; // Show the navbar immediately
-            isNavbarHidden = false; // Update the flag to mark it as visible
+        } else if (window.scrollY < lastScrollY && window.scrollY < 100) {
+            navbar.style.transform = "translateY(0)";
+            isNavbarHidden = false;
         }
 
-        // Update lastScrollY to the current scroll position
         lastScrollY = window.scrollY;
     });
+});
+
+// custom sidebar behaviour
+function toggleSidebar() {
+    var sidebar = document.getElementById("overlay-sidebar");
+    var bg = document.getElementById("overlay-bg");
+    if (sidebar.classList.contains("show")) {
+        sidebar.classList.remove("show");
+        bg.style.display = "none";
+    } else {
+        sidebar.classList.add("show");
+        bg.style.display = "block";
+    }
+}
+
+// collapse navbar on mobile devices
+document.addEventListener("click", function(event) {
+    var navbar = document.querySelector(".navbar-collapse");
+    var toggle = document.querySelector(".navbar-toggler");
+
+    if (!navbar.contains(event.target) && !toggle.contains(event.target)) {
+        navbar.classList.remove("show");  // Bootstrap collapse class
+    }
 });
