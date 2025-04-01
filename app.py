@@ -1,7 +1,6 @@
 """
 This contains the code to create the MSAexplorer shiny application
 """
-from optparse import TitledHelpFormatter
 # build-in
 from pathlib import Path
 import tempfile
@@ -30,131 +29,67 @@ app_ui = ui.page_fluid(
         ui.card(
             ui.card_header(ui.h6('Statistic settings (entropy, similarity etc)')),
             ui.layout_columns(
-                ui.tooltip(
-                    ui.input_numeric('rolling_avg', 'Rolling average', value=1, min=1),
-                    'Rolling average over character intervals.'
-                ),
-                ui.tooltip(
-                    ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()),
-                                       selected='grey'),
-                    'Any named matplotlib color for the line.'
-                )
+                ui.input_numeric('rolling_avg', 'Rolling average', value=1, min=1),
+                ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()),
+                                   selected='grey'),
             )
         ),
         ui.card(
             ui.card_header(ui.h6('Alignment settings')),
             ui.row(
                 ui.column(
-                    4, ui.tooltip(
-                        ui.input_switch('show_gaps', 'Gaps', value=True),
-                        'Whether to show gaps.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
-                        'Whether to show gaps with a black bar.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_legend', 'Legend', value=True),
-                        'Whether to show legend'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_mask', 'Show mask', value=True),
-                        'Show masked charaters "X" or "N" - only relevant for identity alignments.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
-                        'Show masked ambiguities - only relevant for nt identity alignments.'
-                    ),
+                    4,
+                    ui.input_switch('show_gaps', 'Gaps', value=True),
+                    ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
+                    ui.input_switch('show_legend', 'Legend', value=True),
+                    ui.input_switch('show_mask', 'Show mask', value=True),
+                    ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
+
                 ),
                 ui.column(
                     4,
-                    ui.tooltip(
-                        ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
-                        'Which reference sequence to calculate identity/similarity.'
-                    ),
-                    ui.tooltip(
-                        ui.input_selectize('reference_color', label='Reference color',
-                                           choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
-                        'Color for the reference sequence.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_sequence', 'show sequence', value=True),
-                        'Whether to show the sequence if zoomed.'
-                    ),
+                    ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
+                    ui.input_selectize('reference_color', label='Reference color',
+                                       choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
+                    ui.input_switch('show_sequence', 'show sequence', value=True),
                 ),
                 ui.column(
-                    4,
-                    ui.tooltip(
-                        ui.input_selectize('matrix', 'Matrix', ['None']),
-                        'Substitution matrix for similarity mapping.'
-                    ),
-                    ui.tooltip(
-                        ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
-                                           selected='PuBu_r'),
-                        'colormap for similarity plots - any matplotlib colormap.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('seq_names', 'show names', value=False),
-                        'Whether to show sequence names at the left side of the alignment'
-                    ),
-                )
+                4,
+
+                    ui.input_selectize('matrix', 'Matrix', ['None']),
+
+                    ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
+                                       selected='PuBu_r'),
+
+
+                    ui.input_switch('seq_names', 'show names', value=False),
+                ),
             )
         ),
         ui.card(
             ui.card_header(ui.h6('Annotation settings')),
             ui.row(
                 ui.column(
-                    4,
-                    ui.h6('SNP plot'),
-                    ui.tooltip(
-                        ui.input_numeric('head_size', 'Head size', value=3, min=1),
-                        'Size of the head dot.'
-                    ),
-                    ui.tooltip(
-                        ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
-                        'Length of the stem.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('show_legend_third_plot', 'Legend', value=True),
-                        'Whether to show legend for the third plot.'
-                    ),
+                4,
+                ui.h6('SNP plot'),
+                    ui.input_numeric('head_size', 'Head size', value=3, min=1),
+                    ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
+                    ui.input_switch('show_legend_third_plot', 'Legend', value=True),
                 ),
                 ui.column(
                     4,
-                    ui.tooltip(
-                        ui.h6('ORF plot'),
-                        'Only relevant for nt alignments.',
-                        placement='left'
-                    ),
-                    ui.tooltip(
-                        ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
-                        'Minimum ORF length to calculate.'
-                    ),
-                    ui.tooltip(
-                        ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
-                        'Colormap for conservation - any matplotlib colormap.'
-                    ),
-                    ui.tooltip(
-                        ui.input_switch('non_overlapping', 'non-overlapping', value=False),
-                        'Whether to show non-overlapping ORFs - greedy: works from 5 to 3 prime.'
-                    ),
+                    ui.h6('ORF plot'),
+                    ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
+                    ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
+                    ui.input_switch('non_overlapping', 'non-overlapping', value=False),
                 ),
                 ui.column(
-                    4,
-                    ui.h6('Annotation plot'),
-                    ui.tooltip(
-                        ui.input_selectize('feature_display', 'Feature', ['None']),
-                        'Which feature to display.'
-                    ),
-                    ui.tooltip(
-                        ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()),
-                                           selected='grey'),
-                        'Color of the feature.'
-                    ),
-                    ui.tooltip(
-                        ui.input_numeric('strand_marker_size', 'Strand marker size', value=5, min=1, max=20),
-                        'Marker size (triangle) of the strand.'
-                    )
+                4,
+                ui.h6('Annotation plot'),
+                    ui.input_selectize('feature_display', 'Feature', ['None']),
+                    ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()),
+                                       selected='grey'),
+                    ui.input_numeric('strand_marker_size', 'Strand marker size', value=5, min=1, max=20)
                 )
             )
         ),
