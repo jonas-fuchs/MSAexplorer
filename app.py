@@ -5,6 +5,7 @@ This contains the code to create the MSAexplorer shiny application
 from pathlib import Path
 import tempfile
 
+import numpy as np
 # libs
 from shiny import App, render, ui, reactive
 import matplotlib
@@ -93,7 +94,7 @@ app_ui = ui.page_fluid(
                 )
             )
         ),
-        id="overlay-sidebar"
+        id='overlay-sidebar',
     ),
     # Main side
     ui.navset_bar(
@@ -104,14 +105,8 @@ app_ui = ui.page_fluid(
                     ui.card(
                         ui.card_header(ui.h6('Upload files:')),
                         ui.layout_columns(
-                            ui.tooltip(
-                                ui.input_file('alignment_file', 'Multiple sequence alignment:', multiple=False, accept=['.fa', '.fasta', '.aln']),
-                                'Multiple sequence alignment file to display.'
-                            ),
-                            ui.tooltip(
-                                ui.input_file('annotation_file', 'Optional annotation file:', multiple=False, accept=['.gff', '.gff3', '.bed', '.gb']),
-                                'Optional annotation file to display. Sequence id must be present in the alignment for correct mapping.'
-                            )
+                            ui.input_file('alignment_file', 'Multiple sequence alignment:', multiple=False, accept=['.fa', '.fasta', '.aln']),
+                            ui.input_file('annotation_file', 'Optional annotation file:', multiple=False, accept=['.gff', '.gff3', '.bed', '.gb']),
                         )
                     ),
                     ui.card(
@@ -149,34 +144,17 @@ app_ui = ui.page_fluid(
             ' PLOT',
             ui.layout_sidebar(
                 ui.sidebar(
-                    ui.tooltip(
-                        ui.input_slider(
-                            'increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1,
-                        ),
-                        'Height relative to your window height.'
-                    ),
+                    ui.input_slider('increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1),
                     ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
-                    ui.tooltip(
-                        ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
-                        'Fraction of the total plot size'
-                    ),
+                    ui.input_numeric('plot_1_size', 'Plot fraction',1, min=1, max=200),
                     ui.input_selectize( 'alignment_type', ui.h6('Second plot'), ['Off', 'identity', 'colored identity', 'similarity'], selected='identity'),
-                    ui.tooltip(
-                        ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
-                        'Fraction of the total plot size'
-                    ),
+                    ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
                     ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
-                    ui.tooltip(
-                        ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
-                        'Fraction of the total plot size'
-                    ),
-                    ui.tooltip(
-                        ui.download_button(
-                            'download_pdf',
-                            'PDF',
-                            icon=ui.HTML('<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
-                        ),
-                        'Get the plot as a pdf.'
+                    ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
+                    ui.download_button(
+                        'download_pdf',
+                        'PDF',
+                        icon=ui.HTML('<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
                     ),
                     title=ui.h6('Plotting layout'),
                 ),
@@ -263,6 +241,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     """
     if not aln:
         return None
+
     aln = set_aln(aln, inputs)
 
     # determine height and width where it makes sense to plot the text
@@ -522,8 +501,10 @@ def server(input, output, session):
     @output
     @render.plot
     def msa_plot():
-        aln = reactive.alignment.get()
-        ann = reactive.annotation.get()
+        with reactive.isolate():
+            aln = reactive.alignment.get()
+            ann = reactive.annotation.get()
+        print(f'plot_{np.random.random()}')
 
         return create_msa_plot(aln, ann, prepare_inputs())
 
@@ -535,7 +516,7 @@ def server(input, output, session):
         ann = reactive.annotation.get()
 
         # access the window dimensions
-        dimensions = input.window_dimensions()
+        dimensions = input.window_dimensions_plot()
         figure_width_inches = dimensions['width'] / 96
         figure_height_inches = dimensions['height'] / 96 * input.increase_height()
 

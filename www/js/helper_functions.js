@@ -4,15 +4,22 @@ $(document).on('shiny:connected', function(e) {
         width: $(window).width(),
         height: $(window).height()
     };
-    Shiny.setInputValue("window_dimensions", dimensions);
+    Shiny.setInputValue("window_dimensions_plot", dimensions);
 });
 
-$(window).on('resize', function(e) {
-    var dimensions = {
-        width: $(window).width(),
-        height: $(window).height()
-    };
-    Shiny.setInputValue("window_dimensions", dimensions);
+// get the correct window size for layout
+let resizeTimeout;
+
+$(window).on('resize', function() {
+    clearTimeout(resizeTimeout);
+
+    resizeTimeout = setTimeout(function() {
+        let dimensions = {
+            width: $(window).width(),
+            height: $(window).height()
+        };
+        Shiny.setInputValue("window_dimensions", dimensions);
+    }, 500);
 });
 
 
