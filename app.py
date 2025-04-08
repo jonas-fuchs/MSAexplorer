@@ -27,72 +27,72 @@ app_ui = ui.page_fluid(
     # Custom sidebar
     ui.div(id="overlay-bg", onclick="toggleSidebar()"),
     ui.div(
-        ui.card(
-            ui.card_header(ui.h6('Statistic settings (entropy, similarity etc)')),
-            ui.layout_columns(
-                ui.input_numeric('rolling_avg', 'Rolling average', value=1, min=1),
-                ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()),
+ui.h6(
+    ui.img(src='img/settings.svg', height='20px'),
+    ' SETTINGS', style="margin-top: 15px;"),
+        ui.hr(),
+        ui.h6('Statistic settings (entropy, similarity etc)'),
+        ui.layout_columns(
+            ui.input_numeric('rolling_avg', 'Rolling average', value=1, min=1),
+            ui.input_selectize('stat_color', 'Color', list(matplotlib.colors.cnames.keys()),
+                               selected='grey'),
+        ),
+        ui.hr(),
+        ui.h6('Alignment settings'),
+        ui.row(
+            ui.column(
+                4,
+                ui.input_switch('show_gaps', 'Gaps', value=True),
+                ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
+                ui.input_switch('show_legend', 'Legend', value=True),
+                ui.input_switch('show_mask', 'Show mask', value=True),
+                ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
+
+            ),
+            ui.column(
+                4,
+                ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
+                ui.input_selectize('reference_color', label='Reference color',
+                                   choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
+                ui.input_switch('show_sequence', 'show sequence', value=True),
+            ),
+            ui.column(
+            4,
+
+                ui.input_selectize('matrix', 'Matrix', ['None']),
+
+                ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
+                                   selected='PuBu_r'),
+
+
+                ui.input_switch('seq_names', 'show names', value=False),
+            )
+        ),
+        ui.hr(),
+        ui.h6('Annotation settings'),
+        ui.row(
+            ui.column(
+            4,
+            ui.h6('SNP plot'),
+                ui.input_numeric('head_size', 'Head size', value=3, min=1),
+                ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
+                ui.input_switch('show_legend_third_plot', 'Legend', value=True),
+            ),
+            ui.column(
+                4,
+                ui.h6('ORF plot'),
+                ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
+                ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
+                ui.input_switch('non_overlapping', 'non-overlapping', value=False),
+            ),
+            ui.column(
+            4,
+            ui.h6('Annotation plot'),
+                ui.input_selectize('feature_display', 'Feature', ['None']),
+                ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()),
                                    selected='grey'),
-            )
-        ),
-        ui.card(
-            ui.card_header(ui.h6('Alignment settings')),
-            ui.row(
-                ui.column(
-                    4,
-                    ui.input_switch('show_gaps', 'Gaps', value=True),
-                    ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
-                    ui.input_switch('show_legend', 'Legend', value=True),
-                    ui.input_switch('show_mask', 'Show mask', value=True),
-                    ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
-
-                ),
-                ui.column(
-                    4,
-                    ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
-                    ui.input_selectize('reference_color', label='Reference color',
-                                       choices=list(matplotlib.colors.cnames.keys()), selected='lightsteelblue'),
-                    ui.input_switch('show_sequence', 'show sequence', value=True),
-                ),
-                ui.column(
-                4,
-
-                    ui.input_selectize('matrix', 'Matrix', ['None']),
-
-                    ui.input_selectize('matrix_color_mapping', 'Colormap', choices=list(colormaps.keys()),
-                                       selected='PuBu_r'),
-
-
-                    ui.input_switch('seq_names', 'show names', value=False),
-                ),
-            )
-        ),
-        ui.card(
-            ui.card_header(ui.h6('Annotation settings')),
-            ui.row(
-                ui.column(
-                4,
-                ui.h6('SNP plot'),
-                    ui.input_numeric('head_size', 'Head size', value=3, min=1),
-                    ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
-                    ui.input_switch('show_legend_third_plot', 'Legend', value=True),
-                ),
-                ui.column(
-                    4,
-                    ui.h6('ORF plot'),
-                    ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
-                    ui.input_selectize('color_mapping', 'Colormap', choices=list(colormaps.keys()), selected='jet'),
-                    ui.input_switch('non_overlapping', 'non-overlapping', value=False),
-                ),
-                ui.column(
-                4,
-                ui.h6('Annotation plot'),
-                    ui.input_selectize('feature_display', 'Feature', ['None']),
-                    ui.input_selectize('feature_color', 'Color', list(matplotlib.colors.cnames.keys()),
-                                       selected='grey'),
-                    ui.input_numeric('strand_marker_size', 'Strand marker size', value=5, min=1, max=20)
-                )
-            )
+                ui.input_numeric('strand_marker_size', 'Strand marker size', value=5, min=1, max=20)
+            ),
         ),
         id='overlay-sidebar',
     ),
@@ -318,6 +318,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 aln, ax,
                 cmap=inputs['color_mapping'],
                 non_overlapping_orfs=inputs['non_overlapping'],
+                direction_marker_size=inputs['strand_marker_size'],
                 show_x_label=True,
                 show_cbar=inputs['show_legend_third_plot'],
                 cbar_fraction=0.2,
@@ -358,42 +359,63 @@ def server(input, output, session):
 
     # create inputs for plotting and pdf
     def prepare_inputs():
-        """Collect inputs from the UI"""
-        return {
-            'reference': input.reference(),
-            'reference_color': input.reference_color(),
-            'show_mask': input.show_mask(),
-            'show_ambiguities': input.show_ambiguities(),
-            'window_width': input.window_dimensions()['width'],
-            'window_height': input.window_dimensions()['height'],
-            'zoom_range': input.zoom_range(),
-            'plot_1_size': input.plot_1_size(),
-            'plot_2_size': input.plot_2_size(),
-            'plot_3_size': input.plot_3_size(),
-            'stat_type': input.stat_type(),
-            'rolling_average': input.rolling_avg(),
-            'stat_color': input.stat_color(),
-            'alignment_type': input.alignment_type(),
-            'matrix': input.matrix(),
-            'matrix_color_mapping': input.matrix_color_mapping(),
-            'show_gaps': input.show_gaps(),
-            'fancy_gaps': input.fancy_gaps(),
-            'seq_names': input.seq_names(),
-            'show_sequence': input.show_sequence(),
-            'show_legend': input.show_legend(),
-            'annotation': input.annotation(),
-            'annotation_file': input.annotation_file(),
-            'feature_display': input.feature_display(),
-            'feature_color': input.feature_color(),
-            'strand_marker_size': input.strand_marker_size(),
-            'color_mapping': input.color_mapping(),
-            'non_overlapping': input.non_overlapping(),
-            'min_orf_length': input.min_orf_length(),
-            'stem_size': input.stem_size(),
-            'head_size': input.head_size(),
-            'show_legend_third_plot': input.show_legend_third_plot(),
-            'input_increase_height': input.increase_height()
-        }
+        """
+        Collect inputs from the UI, only adding the ones needed for enabled features.
+        This ensures unnecessary plotting if the plot is not shown.
+        """
+        inputs = {}
+        # Always needed inputs
+        dims = input.window_dimensions()
+        inputs['window_width'] = dims['width']
+        inputs['window_height'] = dims['height']
+        inputs['zoom_range'] = input.zoom_range()
+        inputs['reference'] = input.reference()
+        # STATISTICS (first plot)
+        stat_type_val = input.stat_type()
+        inputs['stat_type'] = stat_type_val
+        if stat_type_val != 'Off':
+            inputs['plot_1_size'] = input.plot_1_size()
+            inputs['rolling_average'] = input.rolling_avg()
+            inputs['stat_color'] = input.stat_color()
+        # ALIGNMENT (second plot)
+        align_type_val = input.alignment_type()
+        inputs['alignment_type'] = align_type_val
+        if align_type_val != 'Off':
+            inputs['reference_color'] = input.reference_color()
+            inputs['plot_2_size'] = input.plot_2_size()
+            inputs['input_increase_height'] = input.increase_height()
+            inputs['show_sequence'] = input.show_sequence()
+            inputs['fancy_gaps'] = input.fancy_gaps()
+            inputs['show_mask'] = input.show_mask()
+            inputs['show_gaps'] = input.show_gaps()
+            inputs['seq_names'] = input.seq_names()
+            inputs['show_legend'] = input.show_legend()
+            inputs['show_ambiguities'] = input.show_ambiguities()
+            if align_type_val not in ['identity', 'colored identity']:
+                inputs['matrix'] = input.matrix()
+                inputs['matrix_color_mapping'] = input.matrix_color_mapping()
+        # ANNOTATION (third plot)
+        annotation_val = input.annotation()
+        inputs['annotation'] = annotation_val
+        if annotation_val != 'Off':
+            inputs['plot_3_size'] = input.plot_3_size()
+            if annotation_val == 'Annotation':
+                inputs['annotation_file'] = input.annotation_file()
+                inputs['feature_display'] = input.feature_display()
+                inputs['feature_color'] = input.feature_color()
+                inputs['strand_marker_size'] = input.strand_marker_size()
+            elif annotation_val == 'Conserved ORFs':
+                inputs['color_mapping'] = input.color_mapping()
+                inputs['non_overlapping'] = input.non_overlapping()
+                inputs['min_orf_length'] = input.min_orf_length()
+                inputs['strand_marker_size'] = input.strand_marker_size()
+                inputs['show_legend_third_plot'] = input.show_legend_third_plot()
+            else:
+                inputs['stem_size'] = input.stem_size()
+                inputs['head_size'] = input.head_size()
+                inputs['show_legend_third_plot'] = input.show_legend_third_plot()
+
+        return inputs
 
     def read_in_annotation(annotation_file):
         ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])

@@ -229,6 +229,7 @@ button:hover {
     z-index: 2000;
     overflow-y: auto;
 }
+
 #overlay-sidebar.show {
     right: 0;
 }
@@ -295,9 +296,7 @@ button:hover {
 
 /* Responsiveness */
 @media screen and (max-width: 900px) {
-    body {
-        padding-top: 60px; /* Adjust based on navbar height */
-    }
+
     .sidebar {
         padding: 15px;
     }

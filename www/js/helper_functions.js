@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 hideTimeout = setTimeout(() => {
                     navbar.style.transform = "translateY(-100%)";
                     isNavbarHidden = true;
-                }, 1000);
+                }, 500);
             }
         } else if (window.scrollY < lastScrollY && window.scrollY < 100) {
             navbar.style.transform = "translateY(0)";
