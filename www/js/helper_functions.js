@@ -1,3 +1,8 @@
+// This contains some helper functions (written with ChatGPT because JS is a pain)
+// to ensure custom behaviour for MSAexplorer
+// If anyone can do this better, please consider doing a PR
+
+
 // get the correct window size for pdf plotting
 $(document).on('shiny:connected', function(e) {
     var dimensions = {
@@ -51,13 +56,13 @@ $(window).on('resize', function() {
 });
 
 
-// Listen for the custom message from the server
-Shiny.addCustomMessageHandler("update-plot-height", function(message) {
+// Listen for the custom message from the server to update the plot container height
+Shiny.addCustomMessageHandler("update-plot-container-height", function(message) {
     // Find the plot container by its ID
     var plotContainer = document.getElementById("msa_plot");
     if (plotContainer) {
         // Update the CSS height property for the plot container
-        plotContainer.style.setProperty("height", message.height, "important");
+        plotContainer.style.setProperty("height", message.height);
     }
 });
 

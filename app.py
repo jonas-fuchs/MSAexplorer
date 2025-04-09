@@ -251,8 +251,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
             complete_size += inputs['plot_1_size']
         if inputs['annotation'] != 'Off':
             complete_size += inputs['plot_3_size']
-        plot_2_height_ratio = inputs['plot_2_size'] * inputs['input_increase_height']/complete_size
-        relative_msa_height = plot_2_height_ratio * inputs['window_height'] / len(aln.alignment)
+        relative_msa_height = inputs['plot_2_size'] * inputs['input_increase_height']/complete_size * inputs['window_height'] / len(aln.alignment)
         relative_msa_width = inputs['window_width']/aln.length
 
     # Collect height ratios and corresponding axes
@@ -355,7 +354,6 @@ def server(input, output, session):
 
     reactive.alignment = reactive.Value(None)
     reactive.annotation = reactive.Value(None)
-    height_value = reactive.Value('100vh')
 
     # create inputs for plotting and pdf
     def prepare_inputs():
@@ -365,17 +363,19 @@ def server(input, output, session):
         """
         inputs = {}
 
-        # inhibit the window dimensions to trigger a re-rendering
+        # inhibit the window dimensions and height to trigger a re-rendering
         # as this is only need for the calc whether to show the
         # sequence but itself does not change the plots appearance
         with reactive.isolate():
             dims = input.window_dimensions()
+            inputs['window_width'] = dims['width']
+            inputs['window_height'] = dims['height']
+            inputs['input_increase_height'] = input.increase_height()
 
         # Always needed inputs
-        inputs['window_width'] = dims['width']
-        inputs['window_height'] = dims['height']
         inputs['zoom_range'] = input.zoom_range()
         inputs['reference'] = input.reference()
+
         # STATISTICS (first plot)
         stat_type_val = input.stat_type()
         inputs['stat_type'] = stat_type_val
@@ -383,13 +383,13 @@ def server(input, output, session):
             inputs['plot_1_size'] = input.plot_1_size()
             inputs['rolling_average'] = input.rolling_avg()
             inputs['stat_color'] = input.stat_color()
+
         # ALIGNMENT (second plot)
         align_type_val = input.alignment_type()
         inputs['alignment_type'] = align_type_val
         if align_type_val != 'Off':
             inputs['reference_color'] = input.reference_color()
             inputs['plot_2_size'] = input.plot_2_size()
-            inputs['input_increase_height'] = input.increase_height()
             inputs['show_sequence'] = input.show_sequence()
             inputs['fancy_gaps'] = input.fancy_gaps()
             inputs['show_mask'] = input.show_mask()
@@ -400,6 +400,7 @@ def server(input, output, session):
             if align_type_val not in ['identity', 'colored identity']:
                 inputs['matrix'] = input.matrix()
                 inputs['matrix_color_mapping'] = input.matrix_color_mapping()
+
         # ANNOTATION (third plot)
         annotation_val = input.annotation()
         inputs['annotation'] = annotation_val
@@ -441,13 +442,12 @@ def server(input, output, session):
             ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'],
                                 selected='Annotation')
 
-    # Height of the plot
+    # Updates the plot container
     @reactive.Effect
     async def update_width():
-        new_plot_height = f'{input.increase_height()*100}vh'
-        height_value.set(new_plot_height)
+        new_plot_height = f'{input.increase_height() * 100}vh'
 
-        await session.send_custom_message('update-plot-height', {'height': new_plot_height}),
+        await session.send_custom_message("update-plot-container-height", {'height': new_plot_height})
 
     # Inputs
     @reactive.Effect
