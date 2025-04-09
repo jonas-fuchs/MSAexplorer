@@ -7,6 +7,34 @@ $(document).on('shiny:connected', function(e) {
     Shiny.setInputValue("window_dimensions_plot", dimensions);
 });
 
+// double click for fullscreen plot
+document.addEventListener('DOMContentLoaded', function () {
+            const plot = document.getElementById('msa_plot');
+
+            // Toggle fullscreen mode on double-click
+            plot.ondblclick = function () {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                    // Enter fullscreen
+                    if (plot.requestFullscreen) {
+                        plot.requestFullscreen();
+                    } else if (plot.webkitRequestFullscreen) {
+                        plot.webkitRequestFullscreen();
+                    } else if (plot.msRequestFullscreen) {
+                        plot.msRequestFullscreen();
+                    }
+                } else {
+                    // Exit fullscreen
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                }
+            };
+        });
+
 // get the correct window size for layout
 let resizeTimeout;
 
