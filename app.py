@@ -364,8 +364,14 @@ def server(input, output, session):
         This ensures unnecessary plotting if the plot is not shown.
         """
         inputs = {}
+
+        # inhibit the window dimensions to trigger a re-rendering
+        # as this is only need for the calc whether to show the
+        # sequence but itself does not change the plots appearance
+        with reactive.isolate():
+            dims = input.window_dimensions()
+
         # Always needed inputs
-        dims = input.window_dimensions()
         inputs['window_width'] = dims['width']
         inputs['window_height'] = dims['height']
         inputs['zoom_range'] = input.zoom_range()
@@ -523,9 +529,8 @@ def server(input, output, session):
     @output
     @render.plot
     def msa_plot():
-        with reactive.isolate():
-            aln = reactive.alignment.get()
-            ann = reactive.annotation.get()
+        aln = reactive.alignment.get()
+        ann = reactive.annotation.get()
         print(f'plot_{np.random.random()}')
 
         return create_msa_plot(aln, ann, prepare_inputs())
