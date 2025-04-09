@@ -244,16 +244,6 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
 
     aln = set_aln(aln, inputs)
 
-    # determine height and width where it makes sense to plot the text
-    if inputs['alignment_type'] != 'Off':
-        complete_size = inputs['plot_2_size']
-        if inputs['stat_type'] != 'Off':
-            complete_size += inputs['plot_1_size']
-        if inputs['annotation'] != 'Off':
-            complete_size += inputs['plot_3_size']
-        relative_msa_height = inputs['plot_2_size'] * inputs['input_increase_height']/complete_size * inputs['window_height'] / len(aln.alignment)
-        relative_msa_width = inputs['window_width']/aln.length
-
     # Collect height ratios and corresponding axes
     height_ratios = []
     plot_functions = []
@@ -277,7 +267,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         plot_functions.append(
             lambda ax: draw.identity_alignment(
                 aln, ax,
-                show_sequence=inputs['show_sequence'] if relative_msa_width >= 11 and relative_msa_height >= 20 else False,
+                show_sequence=inputs['show_sequence'],
                 fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 show_mask=inputs['show_mask'],
@@ -291,7 +281,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         ) if inputs['alignment_type'] == 'identity' or inputs[
             'alignment_type'] == 'colored identity' else draw.similarity_alignment(
                 aln, ax,
-                show_sequence=inputs['show_sequence'] if relative_msa_width >= 11 and relative_msa_height >= 20 else False,
+                show_sequence=inputs['show_sequence'],
                 fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 reference_color=inputs['reference_color'],
@@ -359,59 +349,75 @@ def server(input, output, session):
     def prepare_inputs():
         """
         Collect inputs from the UI, only adding the ones needed for enabled features.
-        This ensures unnecessary plotting if the plot is not shown.
+        This ensures unnecessary reactivity.
         """
         inputs = {}
-
+        aln = reactive.alignment.get()
         # inhibit the window dimensions and height to trigger a re-rendering
         # as this is only need for the calc whether to show the
         # sequence but itself does not change the plots appearance
+        # --> other reactive values will change anyway
         with reactive.isolate():
             dims = input.window_dimensions()
-            inputs['window_width'] = dims['width']
-            inputs['window_height'] = dims['height']
-            inputs['input_increase_height'] = input.increase_height()
+            window_width = dims['width']
+            window_height = dims['height']
+            increase_height = input.increase_height()
 
         # Always needed inputs
         inputs['zoom_range'] = input.zoom_range()
         inputs['reference'] = input.reference()
+        inputs['alignment_type'] = input.alignment_type()
+        inputs['annotation'] = input.annotation()
+        inputs['stat_type'] = input.stat_type()
 
         # STATISTICS (first plot)
-        stat_type_val = input.stat_type()
-        inputs['stat_type'] = stat_type_val
-        if stat_type_val != 'Off':
+        if inputs['stat_type'] != 'Off':
             inputs['plot_1_size'] = input.plot_1_size()
             inputs['rolling_average'] = input.rolling_avg()
             inputs['stat_color'] = input.stat_color()
 
         # ALIGNMENT (second plot)
-        align_type_val = input.alignment_type()
-        inputs['alignment_type'] = align_type_val
-        if align_type_val != 'Off':
+        if inputs['alignment_type'] != 'Off':
             inputs['reference_color'] = input.reference_color()
             inputs['plot_2_size'] = input.plot_2_size()
-            inputs['show_sequence'] = input.show_sequence()
             inputs['fancy_gaps'] = input.fancy_gaps()
             inputs['show_mask'] = input.show_mask()
             inputs['show_gaps'] = input.show_gaps()
-            inputs['seq_names'] = input.seq_names()
             inputs['show_legend'] = input.show_legend()
             inputs['show_ambiguities'] = input.show_ambiguities()
-            if align_type_val not in ['identity', 'colored identity']:
+            if inputs['alignment_type'] not in ['identity', 'colored identity']:
                 inputs['matrix'] = input.matrix()
                 inputs['matrix_color_mapping'] = input.matrix_color_mapping()
 
+            # determine if it makes sense to show the sequence or sequence names
+            # therefore figure out if there are enough chars/size that sequence fits in there
+            complete_size = input.plot_2_size()
+            if inputs['stat_type'] != 'Off':
+                complete_size += input.plot_1_size()
+            if inputs['annotation'] != 'Off':
+                complete_size += input.plot_3_size()
+            relative_msa_height = input.plot_2_size() * increase_height / complete_size * window_height / len(aln.alignment)
+            relative_msa_width = window_width / (inputs['zoom_range'][1]-inputs['zoom_range'][0])
+            # and then decide how to set the show sequence input
+            if relative_msa_width >= 11 and relative_msa_height >= 18:
+                inputs['show_sequence'] = input.show_sequence()
+            else:
+                inputs['show_sequence'] = False
+            # and the seq_names input - check if there is enough y space for the text
+            if relative_msa_height >= 15:
+                inputs['seq_names'] = input.seq_names()
+            else:
+                inputs['seq_names'] = False
+
         # ANNOTATION (third plot)
-        annotation_val = input.annotation()
-        inputs['annotation'] = annotation_val
-        if annotation_val != 'Off':
+        if inputs['annotation'] != 'Off':
             inputs['plot_3_size'] = input.plot_3_size()
-            if annotation_val == 'Annotation':
+            if inputs['annotation'] == 'Annotation':
                 inputs['annotation_file'] = input.annotation_file()
                 inputs['feature_display'] = input.feature_display()
                 inputs['feature_color'] = input.feature_color()
                 inputs['strand_marker_size'] = input.strand_marker_size()
-            elif annotation_val == 'Conserved ORFs':
+            elif inputs['annotation'] == 'Conserved ORFs':
                 inputs['color_mapping'] = input.color_mapping()
                 inputs['non_overlapping'] = input.non_overlapping()
                 inputs['min_orf_length'] = input.min_orf_length()
@@ -531,7 +537,6 @@ def server(input, output, session):
     def msa_plot():
         aln = reactive.alignment.get()
         ann = reactive.annotation.get()
-        print(f'plot_{np.random.random()}')
 
         return create_msa_plot(aln, ann, prepare_inputs())
 
@@ -581,6 +586,7 @@ def server(input, output, session):
                 tmpfile.flush()  # Ensure data is written to disk
 
                 return tmpfile.name
+        # also send a notification to the user
         except FileNotFoundError:
             ui.notification_show(ui.tags.div(
                 'No alignment was uploaded.',
