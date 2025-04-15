@@ -5,9 +5,10 @@ This contains the code to create the MSAexplorer shiny application
 from pathlib import Path
 import tempfile
 
-import numpy as np
 # libs
 from shiny import App, render, ui, reactive
+from shinywidgets import output_widget, render_widget
+import plotly.graph_objects as go
 import matplotlib
 from matplotlib import colormaps
 import matplotlib.pyplot as plt
@@ -198,6 +199,17 @@ ui.h6(
                     showcase=ui.HTML('<img src="img/number.svg" style="height:height:3rem; width:3rem">'),
                 )
             ),
+        ui.row(
+            ui.column(
+                2,
+                ui.input_selectize('analysis_plot_type', ui.h6('Plot type'), ['Off', 'Pairwise identity'], selected='Off'),
+                    ui.input_selectize('additional_analysis_options', ui.h6('Options'), ['None'], selected='None'),
+            ),
+            ui.column(
+                10,
+                output_widget('analysis_plot', fillable=True, fill=True),
+            ),
+        ),
         icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
         ),
         ui.nav_spacer(),
@@ -214,18 +226,20 @@ ui.h6(
     )
 )
 
-
+# set the alignment with minimal user inputs
 def set_aln(aln, inputs):
     # set the reference sequence
-    if inputs['reference'] == 'first':
-        aln.reference_id = list(aln.alignment.keys())[0]
-    elif inputs['reference'] == 'consensus':
-        aln.reference_id = None
-    else:
-        aln.reference_id = inputs['reference']
+    if 'reference' in inputs:
+        if inputs['reference'] == 'first':
+            aln.reference_id = list(aln.alignment.keys())[0]
+        elif inputs['reference'] == 'consensus':
+            aln.reference_id = None
+        else:
+            aln.reference_id = inputs['reference']
 
     # Update zoom level from slider -> +1 needed as msaexplorer uses range for zoom
-    aln.zoom = (inputs['zoom_range'][0], inputs['zoom_range'][1] + 1)
+    if 'zoom_range' in inputs:
+        aln.zoom = (inputs['zoom_range'][0], inputs['zoom_range'][1] + 1)
 
     return aln
 
@@ -339,6 +353,46 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     return fig
 
 
+# Define the analysis plotting function (interactive)
+def create_analysis_plot(aln, inputs):
+    """
+    :param aln: MSA object
+    :param inputs: user inputs
+    :return: figure
+    """
+    if aln is None:
+        return None
+
+    if inputs['analysis_plot_type'] == 'Pairwise identity' and inputs['additional_analysis_options'] != 'None':
+        aln = set_aln(aln, inputs)
+        matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options'])
+        labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
+
+        hover_text = [
+            [
+                f"{labels[i]} & {labels[j]}: {matrix[i][j]:.2f}%"
+                for j in range(len(matrix[i]))
+            ]
+            for i in range(len(matrix))
+        ]
+
+       # Create the heatmap
+        fig = go.Figure(
+            go.Heatmap(
+                z=matrix,
+                x=labels,
+                y=labels,
+                text=hover_text,
+                hoverinfo="text",
+                colorscale="Viridis",
+            )
+        )
+
+        fig.update_layout(height=1000, width=1000)
+
+        return fig
+
+
 # Define the server logic
 def server(input, output, session):
 
@@ -353,6 +407,10 @@ def server(input, output, session):
         """
         inputs = {}
         aln = reactive.alignment.get()
+
+        if aln is None:
+            return None
+
         # inhibit the window dimensions and height to trigger a re-rendering
         # as this is only need for the calc whether to show the
         # sequence but itself does not change the plots appearance
@@ -429,6 +487,26 @@ def server(input, output, session):
                 inputs['show_legend_third_plot'] = input.show_legend_third_plot()
 
         return inputs
+
+    # separate function for analysis tab as not all inputs are needed
+    def prepare_analysis_inputs(zoom:bool=True, ref:bool=False, plot:bool=False):
+        inputs = {}
+        aln = reactive.alignment.get()
+
+        if aln is None:
+            return None
+
+        if zoom:
+            inputs['zoom_range'] = input.zoom_range()
+        if ref:
+            inputs['reference'] = input.reference()
+        if plot:
+            inputs['analysis_plot_type'] = input.analysis_plot_type()
+            if inputs['analysis_plot_type'] != 'Off':
+                inputs['additional_analysis_options'] = input.additional_analysis_options()
+
+        return inputs
+
 
     def read_in_annotation(annotation_file):
         ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
@@ -540,6 +618,21 @@ def server(input, output, session):
 
         return create_msa_plot(aln, ann, prepare_inputs())
 
+
+    @reactive.Effect
+    @reactive.event(input.analysis_plot_type)
+    def update_additional_options():
+        if input.analysis_plot_type() == 'Pairwise identity':
+            ui.update_selectize('additional_analysis_options', choices=['ghd', 'lhd', 'ged', 'gcd'], selected='ghd')
+
+
+    @render_widget
+    def analysis_plot():
+        aln = reactive.alignment.get()
+
+        return create_analysis_plot(aln, prepare_analysis_inputs(ref=False, plot=True))
+
+
     @output
     @render.download
     def download_pdf():
@@ -607,7 +700,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_inputs())
+        aln = set_aln(aln, prepare_analysis_inputs())
 
         return f'{aln.zoom[0]} - {aln.zoom[1]}'
 
@@ -625,7 +718,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_inputs())
+        aln = set_aln(aln, prepare_analysis_inputs())
 
         return aln.length
 
@@ -635,8 +728,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_inputs())
-
+        aln = set_aln(aln, prepare_analysis_inputs())
 
         return round(aln.calc_character_frequencies()['total']['-']['% of alignment'], 2)
 
@@ -646,7 +738,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_inputs())
+        aln = set_aln(aln, prepare_analysis_inputs(ref=True))
 
         return len(aln.get_snps()['POS'])
 

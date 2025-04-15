@@ -79,7 +79,7 @@ def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', forma
         """
         output_lines = []
         # Create a header for the tabular output
-        output_lines.append("CHROM\tPOS\tREF\tALT\tAF\tSEQ_ID")
+        output_lines.append('CHROM\tPOS\tREF\tALT\tAF\tSEQ_ID')
 
         # Process each SNP position and each alternative allele
         for pos in sorted(snp_dict['POS'].keys()):
@@ -106,7 +106,7 @@ def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', forma
     if path is not None:
         out_path = os.path.abspath(os.path.join(path, f"{file_name}.{format_type}"))
         with open(out_path, 'w') as out_file:
-            out_file.write("\n".join(lines))
+            out_file.write('\n'.join(lines))
     else:
         return "\n".join(lines)
 
