@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.addEventListener("scroll", function () {
         clearTimeout(hideTimeout);
 
-        if (window.scrollY > lastScrollY && window.scrollY > 50) {
+        if (window.scrollY > lastScrollY && window.scrollY > 30) {
             if (!isNavbarHidden) {
                 hideTimeout = setTimeout(() => {
                     navbar.style.transform = "translateY(-100%)";

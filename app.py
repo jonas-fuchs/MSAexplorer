@@ -5,6 +5,7 @@ This contains the code to create the MSAexplorer shiny application
 from pathlib import Path
 import tempfile
 
+import numpy as np
 # libs
 from shiny import App, render, ui, reactive
 from shinywidgets import output_widget, render_widget
@@ -177,20 +178,18 @@ ui.h6(
                 ui.value_box(
                     'Position range:',
                     ui.output_ui('zoom_range_analysis'),
-                    showcase=ui.HTML('<img src="img/arrow_range.svg" style="height:2.5rem; width:2.5rem">'),
-                    theme=ui.value_box_theme(bg='#f1f1f1')
+                    showcase=ui.HTML('<img src="img/arrow_range.svg" style="height:3rem; width:3rem">'),
                 ),
                 ui.value_box(
                     'Alignment length:',
                     ui.output_ui('aln_len'),
-                    showcase=ui.HTML('<img src="img/ruler.svg" style="height:3rem; width:3rem">'),
+                    showcase=ui.HTML('<img src="img/ruler.svg" style="height:3.5rem; width:3.5rem">'),
                     theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
                 ui.value_box(
                     'N° of sequences:',
                     ui.output_ui("number_of_seq"),
                     showcase=ui.HTML('<img src="img/number.svg" style="height:2.5rem; width:2.5rem">'),
-                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
                 ui.value_box(
                     'Percentage of gaps:',
@@ -202,19 +201,22 @@ ui.h6(
                     'N° of positions with SNPs:',
                     ui.output_ui("snps"),
                     showcase=ui.HTML('<img src="img/number.svg" style="height:height:2.5rem; width:2.5rem">'),
-                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
             ),
         ui.row(
             ui.column(
                 2,
-                ui.input_selectize('analysis_plot_type', ui.h6('Plot type'), ['Off', 'Pairwise identity'], selected='Off'),
+                ui.input_selectize('analysis_plot_type', ui.h6('Left plot'), ['Off', 'Pairwise identity'], selected='Off'),
                 ui.input_selectize('additional_analysis_options', ui.h6('Options'), ['None'], selected='None'),
                 ui.output_text_verbatim('analysis_info', placeholder=False)
             ),
             ui.column(
                 5,
-                output_widget('analysis_plot'),
+                output_widget('analysis_custom_heatmap'),
+            ),
+            ui.column(
+                5,
+                output_widget('analysis_char_freq_heatmap', fillable=True, fill=True),
             ),
         ),
         icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
@@ -361,11 +363,9 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
 
 
 # Define the analysis plotting function (interactive)
-def create_analysis_plot(aln, inputs):
+def create_analysis_custom_heatmap(aln, inputs):
     """
-    :param aln: MSA object
-    :param inputs: user inputs
-    :return: figure
+    Create a heatmap that depends on the user (multiple options)
     """
     if aln is None:
         return None
@@ -377,7 +377,6 @@ def create_analysis_plot(aln, inputs):
         figure_size = int(inputs['dimensions']['width'] * 0.7)
 
     if inputs['analysis_plot_type'] == 'Pairwise identity' and inputs['additional_analysis_options'] != 'None':
-        aln = set_aln(aln, inputs)
         matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options'])
         labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
 
@@ -398,26 +397,81 @@ def create_analysis_plot(aln, inputs):
                 y=labels,
                 text=hover_text,
                 hoverinfo='text',
-                colorscale='Viridis',
-                colorbar=dict(thickness=20, ticklen=4)
+                colorscale='deep',
+                colorbar=dict(thickness=20, ticklen=4, len=0.9, title='%')
             )
         )
 
-        # ensure square cells
-        num_rows, num_cols = matrix.shape
-        margin, colorbar_width = 50, 50
-        fig_height = (figure_size - margin - colorbar_width) * num_rows / num_cols + margin
-
         fig.update_layout(
+            title='Pairwise identities',
             width=figure_size,
-            height=fig_height,
-            margin=dict(t=margin, b=margin, l=margin, r=margin + colorbar_width),
-            xaxis=dict(scaleanchor="y", constrain="domain"),
-            yaxis=dict(scaleanchor="x", constrain="domain")
+            height=figure_size - 50,
+            margin=dict(t=50, b=50, l=50, r=50),
+            xaxis=dict(scaleanchor='y', constrain='domain'),
+            yaxis=dict(scaleanchor='x', constrain='domain')
         )
 
         return fig
 
+
+def create_freq_heatmap(aln, inputs):
+    """
+    Create a frequency heatmap (right heatmap)
+    """
+    if aln is None:
+        return None
+
+    # analog to the other heatmap
+    if inputs['dimensions']['width'] > inputs['dimensions']['height']:
+        figure_height = int(inputs['dimensions']['height'] * 0.7)
+    else:
+        figure_height = int(inputs['dimensions']['width'] * 0.7)
+
+    # get char freqs
+    freqs = aln.calc_character_frequencies()
+    characters = sorted(set(char for seq_id in freqs if seq_id != 'total' for char in freqs[seq_id] if char not in ['-', 'N', 'X']))
+    sequence_ids = [seq_id for seq_id in freqs if seq_id != 'total']
+
+    # create the matrix
+    matrix, seq_ids = [], []
+    for seq_id in sequence_ids:
+        row = []
+        seq_ids.append(seq_id.split(' ')[0])
+        for char in characters:
+            row.append(freqs[seq_id].get(char, {'% of non-gapped': 0})['% of non-gapped'])
+        matrix.append(row)
+
+    matrix = np.array(matrix)
+
+    # generate hover text
+    hover_text = [
+        [
+            f'{seq_ids[i]}: {matrix[i][j]:.2f}% {characters[j]}'
+            for j in range(len(matrix[i]))
+        ]
+        for i in range(len(matrix))
+    ]
+
+    # plot
+    fig = go.Figure(
+            go.Heatmap(
+                z=matrix,
+                x=characters,
+                y=seq_ids,
+                text=hover_text,
+                hoverinfo='text',
+                colorscale='Cividis',
+                colorbar=dict(thickness=20, ticklen=4, title='%')
+            )
+        )
+
+    fig.update_layout(
+        title='Character frequencies (% ungapped)',
+        height=figure_height - 50,
+        margin=dict(t=50, b=50, l=50, r=50),
+    )
+
+    return fig
 
 # Define the server logic
 def server(input, output, session):
@@ -515,7 +569,7 @@ def server(input, output, session):
         return inputs
 
     # separate function if not all inputs are needed
-    def prepare_minimal_inputs(zoom: bool = True, ref: bool = False, plot: bool = False):
+    def prepare_minimal_inputs(zoom: bool = True, window_size: bool = False, ref: bool = False, plot: bool = False):
         """
         minimal inputs with options depending on which are needed
         """
@@ -531,12 +585,12 @@ def server(input, output, session):
             inputs['reference'] = input.reference()
         if plot:
             inputs['analysis_plot_type'] = input.analysis_plot_type()
-            inputs['dimensions'] = input.window_dimensions()
             if inputs['analysis_plot_type'] != 'Off':
                 inputs['additional_analysis_options'] = input.additional_analysis_options()
+        if window_size:
+            inputs['dimensions'] = input.window_dimensions()
 
         return inputs
-
 
     def read_in_annotation(annotation_file):
         """
@@ -815,15 +869,22 @@ def server(input, output, session):
             return None
 
 
-
     @render_widget
-    def analysis_plot():
+    def analysis_custom_heatmap():
         """
         Create the heatmap
         """
         aln = reactive.alignment.get()
 
-        return create_analysis_plot(aln, prepare_minimal_inputs(ref=False, plot=True))
+        return create_analysis_custom_heatmap(aln, prepare_minimal_inputs( plot=True, window_size=True))
+
+
+    @render_widget
+    def analysis_char_freq_heatmap():
+        aln = reactive.alignment.get()
+
+        return create_freq_heatmap(aln,  prepare_minimal_inputs(window_size=True))
+
 
 # run the app
 app = App(app_ui, server, static_assets={'/img': Path(__file__).parent/'img'})
