@@ -849,7 +849,16 @@ def server(input, output, session):
         if input.analysis_plot_type() == 'Off':
             ui.update_selectize('additional_analysis_options', choices=['None'], selected='None')
         if input.analysis_plot_type() == 'Pairwise identity':
-            ui.update_selectize('additional_analysis_options', choices=['ghd', 'lhd', 'ged', 'gcd'], selected='ghd')
+            ui.update_selectize(
+                'additional_analysis_options',
+                choices={
+                    'ghd': 'global hamming distance',
+                    'lhd': 'local hamming distance',
+                    'ged': 'gap excluded distance',
+                    'gcd': 'gap compressed distance'
+                },
+                selected='ghd'
+            )
 
     @render.text
     def analysis_info():
