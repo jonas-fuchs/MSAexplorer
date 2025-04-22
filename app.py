@@ -171,42 +171,49 @@ ui.h6(
         ui.value_box(
                     'Alignment type:',
                     ui.output_ui('aln_type'),
-                    showcase=ui.HTML('<img src="img/question.svg" style="height:3rem; width:3rem">')
+                    showcase=ui.HTML('<img src="img/question.svg" style="height:2.5rem; width:2.5rem">'),
+                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
                 ui.value_box(
                     'Position range:',
                     ui.output_ui('zoom_range_analysis'),
-                    showcase=ui.HTML('<img src="img/arrow_range.svg" style="height:3rem; width:3rem">')
+                    showcase=ui.HTML('<img src="img/arrow_range.svg" style="height:2.5rem; width:2.5rem">'),
+                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
                 ui.value_box(
                     'Alignment length:',
                     ui.output_ui('aln_len'),
-                    showcase=ui.HTML('<img src="img/ruler.svg" style="height:3.5rem; width:3.5rem">')
+                    showcase=ui.HTML('<img src="img/ruler.svg" style="height:3rem; width:3rem">'),
+                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
                 ui.value_box(
                     'N° of sequences:',
                     ui.output_ui("number_of_seq"),
-                    showcase=ui.HTML('<img src="img/number.svg" style="height:3rem; width:3rem">'),
+                    showcase=ui.HTML('<img src="img/number.svg" style="height:2.5rem; width:2.5rem">'),
+                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
                 ui.value_box(
                     'Percentage of gaps:',
                     ui.output_ui("per_gaps"),
-                    showcase=ui.HTML('<img src="img/percent.svg" style="height:height:2.5rem; width:2.5rem">'),
+                    showcase=ui.HTML('<img src="img/percent.svg" style="height:height:2rem; width:2rem">'),
+                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
                 ui.value_box(
                     'N° of positions with SNPs:',
                     ui.output_ui("snps"),
-                    showcase=ui.HTML('<img src="img/number.svg" style="height:height:3rem; width:3rem">'),
+                    showcase=ui.HTML('<img src="img/number.svg" style="height:height:2.5rem; width:2.5rem">'),
+                    theme=ui.value_box_theme(bg='#f1f1f1')
                 ),
             ),
         ui.row(
             ui.column(
                 2,
                 ui.input_selectize('analysis_plot_type', ui.h6('Plot type'), ['Off', 'Pairwise identity'], selected='Off'),
-                    ui.input_selectize('additional_analysis_options', ui.h6('Options'), ['None'], selected='None'),
+                ui.input_selectize('additional_analysis_options', ui.h6('Options'), ['None'], selected='None'),
+                ui.output_text_verbatim('analysis_info', placeholder=False)
             ),
             ui.column(
-                10,
+                5,
                 output_widget('analysis_plot'),
             ),
         ),
@@ -789,6 +796,24 @@ def server(input, output, session):
             ui.update_selectize('additional_analysis_options', choices=['None'], selected='None')
         if input.analysis_plot_type() == 'Pairwise identity':
             ui.update_selectize('additional_analysis_options', choices=['ghd', 'lhd', 'ged', 'gcd'], selected='ghd')
+
+    @render.text
+    def analysis_info():
+        """
+        show custom text for additional options
+        """
+        selected_option = input.additional_analysis_options()
+        if selected_option == "ghd":
+            return 'INFO ghd (global hamming distance):\n\nAt each alignment position, check if\ncharacters match:\n\ndistance = matches / alignment_length * 100'
+        elif selected_option == "lhd":
+            return 'INFO lhd (local hamming distance):\n\nRestrict the alignment to the region\nin both sequences that do not start\nand end with gaps:\n\ndistance = matches / min(end-ungapped seq1, end-ungapped seq2) * 100'
+        elif selected_option == 'ged':
+            return 'INFO ged (gap excluded distance):\n\nAll gaps are excluded from the \nalignment\n\ndistance = matches / (matches + mismatches) * 100'
+        elif selected_option == 'gcd':
+            return 'INFO gcd (gap compressed distance):\n\nAll consecutive gaps arecompressed to\none mismatch.\n\ndistance = matches / gap_compressed_alignment_length * 100'
+        else:
+            return None
+
 
 
     @render_widget
