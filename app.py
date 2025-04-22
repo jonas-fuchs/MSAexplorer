@@ -197,7 +197,7 @@ ui.h6(
                     'N° of positions with SNPs:',
                     ui.output_ui("snps"),
                     showcase=ui.HTML('<img src="img/number.svg" style="height:height:3rem; width:3rem">'),
-                )
+                ),
             ),
         ui.row(
             ui.column(
@@ -207,7 +207,7 @@ ui.h6(
             ),
             ui.column(
                 10,
-                output_widget('analysis_plot', fillable=True, fill=True),
+                output_widget('analysis_plot'),
             ),
         ),
         icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
@@ -363,14 +363,21 @@ def create_analysis_plot(aln, inputs):
     if aln is None:
         return None
 
+    # scale the plot for 70 % of the window
+    if inputs['dimensions']['width'] > inputs['dimensions']['height']:
+        figure_size = int(inputs['dimensions']['height'] * 0.7)
+    else:
+        figure_size = int(inputs['dimensions']['width'] * 0.7)
+
     if inputs['analysis_plot_type'] == 'Pairwise identity' and inputs['additional_analysis_options'] != 'None':
         aln = set_aln(aln, inputs)
         matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options'])
         labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
 
+        # generate hover text
         hover_text = [
             [
-                f"{labels[i]} & {labels[j]}: {matrix[i][j]:.2f}%"
+                f'{labels[i]} & {labels[j]}: {matrix[i][j]:.2f}%'
                 for j in range(len(matrix[i]))
             ]
             for i in range(len(matrix))
@@ -383,12 +390,24 @@ def create_analysis_plot(aln, inputs):
                 x=labels,
                 y=labels,
                 text=hover_text,
-                hoverinfo="text",
-                colorscale="Viridis",
+                hoverinfo='text',
+                colorscale='Viridis',
+                colorbar=dict(thickness=20, ticklen=4)
             )
         )
 
-        fig.update_layout(height=1000, width=1000)
+        # ensure square cells
+        num_rows, num_cols = matrix.shape
+        margin, colorbar_width = 50, 50
+        fig_height = (figure_size - margin - colorbar_width) * num_rows / num_cols + margin
+
+        fig.update_layout(
+            width=figure_size,
+            height=fig_height,
+            margin=dict(t=margin, b=margin, l=margin, r=margin + colorbar_width),
+            xaxis=dict(scaleanchor="y", constrain="domain"),
+            yaxis=dict(scaleanchor="x", constrain="domain")
+        )
 
         return fig
 
@@ -402,7 +421,7 @@ def server(input, output, session):
     # create inputs for plotting and pdf
     def prepare_inputs():
         """
-        Collect inputs from the UI, only adding the ones needed for enabled features.
+        Collect inputs from the UI for the plot tab, only adding the ones needed for enabled features.
         This ensures unnecessary reactivity.
         """
         inputs = {}
@@ -488,8 +507,11 @@ def server(input, output, session):
 
         return inputs
 
-    # separate function for analysis tab as not all inputs are needed
-    def prepare_analysis_inputs(zoom:bool=True, ref:bool=False, plot:bool=False):
+    # separate function if not all inputs are needed
+    def prepare_minimal_inputs(zoom: bool = True, ref: bool = False, plot: bool = False):
+        """
+        minimal inputs with options depending on which are needed
+        """
         inputs = {}
         aln = reactive.alignment.get()
 
@@ -502,6 +524,7 @@ def server(input, output, session):
             inputs['reference'] = input.reference()
         if plot:
             inputs['analysis_plot_type'] = input.analysis_plot_type()
+            inputs['dimensions'] = input.window_dimensions()
             if inputs['analysis_plot_type'] != 'Off':
                 inputs['additional_analysis_options'] = input.additional_analysis_options()
 
@@ -509,6 +532,9 @@ def server(input, output, session):
 
 
     def read_in_annotation(annotation_file):
+        """
+        Read in an annotation and update the ui accordingly
+        """
         ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
         reactive.annotation.set(ann)
 
@@ -528,7 +554,11 @@ def server(input, output, session):
 
     # Updates the plot container
     @reactive.Effect
-    async def update_width():
+    async def update_height():
+        """
+        update the plot container height -> Sends a message that is picked up by the js and updates the CSS height
+        property for the plot container
+        """
         new_plot_height = f'{input.increase_height() * 100}vh'
 
         await session.send_custom_message("update-plot-container-height", {'height': new_plot_height})
@@ -537,6 +567,9 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.alignment_file)
     def load_alignment():
+        """
+        Load an alignment and update different now accessible ui elements
+        """
         try:
             alignment_file = input.alignment_file()
             annotation_file = input.annotation_file()
@@ -596,6 +629,9 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.annotation_file)
     def load_annotation():
+        """
+        load the annotation - catches errors if its the wrong format and displays it (otherwise app would crash)
+        """
         # read annotation file
         try:
             annotation_file, alignment_file = input.annotation_file(), input.alignment_file()
@@ -609,59 +645,21 @@ def server(input, output, session):
                 style="color: red; font-weight: bold;"
             ), duration=10)  # print to user
 
-    # Outputs
-    @output
-    @render.plot
-    def msa_plot():
-        aln = reactive.alignment.get()
-        ann = reactive.annotation.get()
-
-        return create_msa_plot(aln, ann, prepare_inputs())
-
-
-    @reactive.Effect
-    @reactive.event(input.analysis_plot_type)
-    def update_additional_options():
-        if input.analysis_plot_type() == 'Pairwise identity':
-            ui.update_selectize('additional_analysis_options', choices=['ghd', 'lhd', 'ged', 'gcd'], selected='ghd')
-
-
-    @render_widget
-    def analysis_plot():
-        aln = reactive.alignment.get()
-
-        return create_analysis_plot(aln, prepare_analysis_inputs(ref=False, plot=True))
-
-
-    @output
-    @render.download
-    def download_pdf():
-        # get annotation and alignment
-        aln = reactive.alignment.get()
-        ann = reactive.annotation.get()
-
-        # access the window dimensions
-        dimensions = input.window_dimensions_plot()
-        figure_width_inches = dimensions['width'] / 96
-        figure_height_inches = dimensions['height'] / 96 * input.increase_height()
-
-        # plot with a temp name
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmpfile:
-            fig = create_msa_plot(aln, ann, prepare_inputs(), fig_size=(figure_width_inches, figure_height_inches))
-            # tight layout needed here to plot everything correctly
-            fig.tight_layout()
-            fig.savefig(tmpfile.name, format="pdf")
-            plt.close(fig)
-            return tmpfile.name
 
     @reactive.Effect
     @reactive.event(input.download_type)
     def update_download_options():
+        """
+        Update the UI - which download options are displayed
+        """
         if input.download_type() == 'SNPs':
             ui.update_selectize('download_format', choices=['vcf', 'tabular'])
 
     @render.download()
     def download_stats():
+        """
+        Download various files in standard format
+        """
         try:
             # Initialize
             download_format = input.download_format()
@@ -686,6 +684,44 @@ def server(input, output, session):
                 style="color: red; font-weight: bold;"
             ), duration=10)
 
+
+    # Outputs
+    @output
+    @render.plot
+    def msa_plot():
+        """
+        plot the alignment
+        """
+        aln = reactive.alignment.get()
+        ann = reactive.annotation.get()
+
+        return create_msa_plot(aln, ann, prepare_inputs())
+
+    @output
+    @render.download
+    def download_pdf():
+        """
+        allows the export of the msa plot as pdf - importantly it will be same size as the
+        window ensuring that the plot is exactly the same as the rendered displayed plot
+        """
+        # get annotation and alignment
+        aln = reactive.alignment.get()
+        ann = reactive.annotation.get()
+
+        # access the window dimensions
+        dimensions = input.window_dimensions_plot()
+        figure_width_inches = dimensions['width'] / 96
+        figure_height_inches = dimensions['height'] / 96 * input.increase_height()
+
+        # plot with a temp name
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmpfile:
+            fig = create_msa_plot(aln, ann, prepare_inputs(), fig_size=(figure_width_inches, figure_height_inches))
+            # tight layout needed here to plot everything correctly
+            fig.tight_layout()
+            fig.savefig(tmpfile.name, format="pdf")
+            plt.close(fig)
+            return tmpfile.name
+
     # showcases:
     @render.ui
     def aln_type():
@@ -700,7 +736,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_analysis_inputs())
+        aln = set_aln(aln, prepare_minimal_inputs())
 
         return f'{aln.zoom[0]} - {aln.zoom[1]}'
 
@@ -718,7 +754,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_analysis_inputs())
+        aln = set_aln(aln, prepare_minimal_inputs())
 
         return aln.length
 
@@ -728,7 +764,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_analysis_inputs())
+        aln = set_aln(aln, prepare_minimal_inputs())
 
         return round(aln.calc_character_frequencies()['total']['-']['% of alignment'], 2)
 
@@ -738,9 +774,31 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        aln = set_aln(aln, prepare_analysis_inputs(ref=True))
+        aln = set_aln(aln, prepare_minimal_inputs(ref=True))
 
         return len(aln.get_snps()['POS'])
+
+    @reactive.Effect
+    @reactive.event(input.analysis_plot_type)
+    def update_additional_options():
+        """
+        Update UI for the analysis tab
+        """
+        # ensure that it is switched back
+        if input.analysis_plot_type() == 'Off':
+            ui.update_selectize('additional_analysis_options', choices=['None'], selected='None')
+        if input.analysis_plot_type() == 'Pairwise identity':
+            ui.update_selectize('additional_analysis_options', choices=['ghd', 'lhd', 'ged', 'gcd'], selected='ghd')
+
+
+    @render_widget
+    def analysis_plot():
+        """
+        Create the heatmap
+        """
+        aln = reactive.alignment.get()
+
+        return create_analysis_plot(aln, prepare_minimal_inputs(ref=False, plot=True))
 
 # run the app
 app = App(app_ui, server, static_assets={'/img': Path(__file__).parent/'img'})
