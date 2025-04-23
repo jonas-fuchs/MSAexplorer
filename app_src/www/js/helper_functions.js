@@ -1,7 +1,6 @@
-// This contains some helper functions (written with ChatGPT because JS is a pain)
-// to ensure custom behaviour for MSAexplorer
-// If anyone can do this better, please consider doing a PR
-
+// This contains some helper functions to ensure custom behaviour for MSAexplorer
+// If anyone can do this better, please consider doing a PR!
+// (written with AI because I have no experience writing JS)
 
 // get the correct window size for pdf plotting
 $(document).on('shiny:connected', function(e) {

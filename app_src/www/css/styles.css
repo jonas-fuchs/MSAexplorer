@@ -1,9 +1,11 @@
-/* Define Color Variables for Consistency */
+/* Contains CSS custom definitions for the msaexplorer shiny app */
+
+/* Define Color Variables */
 :root {
-    --primary-color: #004B83;      /* Dark Blue from SVG */
-    --secondary-color: #0086C1;    /* Lighter Blue from SVG */
+    --primary-color: #004B83;
+    --secondary-color: #0086C1;
     --light-bg: #ffffff;
-    --light-border: #e9ecef;       /* A very light gray for borders */
+    --light-border: #e9ecef;
     --dark-color: #333;
     --alt-color: #B67B28;
 }
@@ -52,12 +54,11 @@ h6 {
     display: flex;
     align-items: center;
     font-size: 1.2rem;
-    color: var(--light-bg); /* Light text on dark navbar */
+    color: var(--light-bg);
     width: 100%;
     justify-content: space-between;
 }
 
-/* Navbar Links and Tabs */
 .navbar-nav {
     display: flex;
     align-items: center;
@@ -85,7 +86,6 @@ h6 {
     color: var(--secondary-color);
 }
 
-/* Navbar link image behavior */
 .navbar .nav-link img {
     transition: filter 0.3s ease;
     fill: var(--light-bg);
@@ -101,8 +101,8 @@ h6 {
 
 /* Navbar collapsing */
 .navbar-collapse {
-    max-height: 300px; /* Prevents it from becoming too large */
-    overflow-y: auto;  /* Enables scrolling if needed */
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 
@@ -205,7 +205,6 @@ button:hover {
     z-index: 500; /* ensure that the whole layout is below the bar */
 }
 
-
 .sidebar {
     background-color: var(--light-bg);
     padding: 15px;
@@ -265,39 +264,6 @@ button:hover {
     transition: width 0.3s ease;
 }
 
-.plotly {
-    align-items: center;
-}
-
-/* Tooltips */
-.tooltip {
-    position: relative;
-    display: inline-block;
-    cursor: pointer;
-}
-
-.tooltip .tooltip-text {
-    visibility: hidden;
-    width: 140px;
-    background-color: #343a40;
-    color: #ffffff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 5px;
-    position: absolute;
-    z-index: 1;
-    bottom: 120%;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.tooltip:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-
 /* Responsiveness */
 @media screen and (max-width: 900px) {
 
@@ -314,7 +280,7 @@ button:hover {
         padding: 8px 12px;
     }
     #overlay-sidebar {
-        width: 90%; /* Full screen on small devices */
+        width: 90%;
         right: -90%; /* Initially hidden */
     }
 
@@ -324,11 +290,11 @@ button:hover {
     .navbar {
         position: fixed;
         width: 100%;
-        z-index: 1050; /* Keep above other elements */
+        z-index: 1050;
     }
 
     body {
-        padding-top: 70px; /* Prevent content from being hidden under the navbar */
+        padding-top: 70px;
     }
     .about-card {
         position: relative !important;
