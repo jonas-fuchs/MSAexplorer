@@ -114,3 +114,35 @@ document.addEventListener("click", function(event) {
         navbar.classList.remove("show");  // Bootstrap collapse class
     }
 });
+
+// Function to update Shiny input when a color changes
+function updateColor(inputId, color) {
+    if (window.Shiny) {
+        Shiny.setInputValue(inputId, color);
+    }
+}
+
+// Send initial colors to Shiny when the document is ready
+document.addEventListener("DOMContentLoaded", function () {
+    // Find all color pickers on the page
+    const colorPickers = document.querySelectorAll('input[type="color"]');
+
+    // Iterate over each color picker
+    colorPickers.forEach(function (picker) {
+        const inputId = picker.id; // Use the element's ID as the Shiny input ID
+        const initialColor = picker.value;
+
+        // Update Shiny with the initial value
+        const checkShinyReady = setInterval(function () {
+            if (window.Shiny && typeof Shiny.setInputValue === 'function') {
+                clearInterval(checkShinyReady);
+                updateColor(inputId, initialColor);
+            }
+        }, 100);
+
+        // Add event listener for changes
+        picker.addEventListener('change', function () {
+            updateColor(inputId, picker.value);
+        });
+    });
+});

@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.13'
 
-      # Install dependencies (your package, pdoc, and shiny live)
+      # Install dependencies (msaexplorer, pdoc, and shiny live)
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
