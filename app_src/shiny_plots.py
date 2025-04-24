@@ -146,8 +146,8 @@ def create_analysis_custom_heatmap(aln, inputs):
     else:
         figure_size = int(inputs['dimensions']['width'] * 0.7)
 
-    if inputs['analysis_plot_type'] == 'Pairwise identity' and inputs['additional_analysis_options'] != 'None':
-        matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options'])
+    if inputs['analysis_plot_type_left'] == 'Pairwise identity' and inputs['additional_analysis_options_left'] != 'None':
+        matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options_left'])
         labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
 
         # generate hover text
@@ -183,6 +183,8 @@ def create_analysis_custom_heatmap(aln, inputs):
 
         return fig
 
+    return None
+
 
 def create_freq_heatmap(aln, inputs):
     """
@@ -198,48 +200,50 @@ def create_freq_heatmap(aln, inputs):
         figure_height = int(inputs['dimensions']['width'] * 0.7)
 
     # get char freqs
-    freqs = aln.calc_character_frequencies()
-    characters = sorted(set(char for seq_id in freqs if seq_id != 'total' for char in freqs[seq_id] if char not in ['-', 'N', 'X']))
-    sequence_ids = [seq_id for seq_id in freqs if seq_id != 'total']
+    if inputs['analysis_plot_type_right'] == 'Character frequencies':
+        freqs = aln.calc_character_frequencies()
+        characters = sorted(set(char for seq_id in freqs if seq_id != 'total' for char in freqs[seq_id] if char not in ['-', 'N', 'X']))
+        sequence_ids = [seq_id for seq_id in freqs if seq_id != 'total']
 
-    # create the matrix
-    matrix, seq_ids = [], []
-    for seq_id in sequence_ids:
-        row = []
-        seq_ids.append(seq_id.split(' ')[0])
-        for char in characters:
-            row.append(freqs[seq_id].get(char, {'% of non-gapped': 0})['% of non-gapped'])
-        matrix.append(row)
+        # create the matrix
+        matrix, seq_ids = [], []
+        for seq_id in sequence_ids:
+            row = []
+            seq_ids.append(seq_id.split(' ')[0])
+            for char in characters:
+                row.append(freqs[seq_id].get(char, {'% of non-gapped': 0})['% of non-gapped'])
+            matrix.append(row)
 
-    matrix = np.array(matrix)
+        matrix = np.array(matrix)
 
-    # generate hover text
-    hover_text = [
-        [
-            f'{seq_ids[i]}: {matrix[i][j]:.2f}% {characters[j]}'
-            for j in range(len(matrix[i]))
+        # generate hover text
+        hover_text = [
+            [
+                f'{seq_ids[i]}: {matrix[i][j]:.2f}% {characters[j]}'
+                for j in range(len(matrix[i]))
+            ]
+            for i in range(len(matrix))
         ]
-        for i in range(len(matrix))
-    ]
 
-    # plot
-    fig = go.Figure(
-            go.Heatmap(
-                z=matrix,
-                x=characters,
-                y=seq_ids,
-                text=hover_text,
-                hoverinfo='text',
-                colorscale='Cividis',
-                colorbar=dict(thickness=20, ticklen=4, title='%')
+        # plot
+        fig = go.Figure(
+                go.Heatmap(
+                    z=matrix,
+                    x=characters,
+                    y=seq_ids,
+                    text=hover_text,
+                    hoverinfo='text',
+                    colorscale='Cividis',
+                    colorbar=dict(thickness=20, ticklen=4, title='%')
+                )
             )
+
+        fig.update_layout(
+            title='Character frequencies (% ungapped)',
+            height=figure_height - 50,
+            margin=dict(t=50, b=50, l=50, r=50),
         )
 
-    fig.update_layout(
-        title='Character frequencies (% ungapped)',
-        height=figure_height - 50,
-        margin=dict(t=50, b=50, l=50, r=50),
-    )
-
-    return fig
-
+        return fig
+    else:
+        return None

@@ -127,7 +127,7 @@ def _custom_sidebar():
                         ui.HTML(
                             """
                             <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                                <label for="feature_color" style="font-size: 14px; margin-bottom: 5px;">Reference color:</label>
+                                <label for="feature_color" style="font-size: 14px; margin-bottom: 5px;">Feature color:</label>
                                 <input type="color" id="feature_color" value="#808080" onchange="updateColor(this.value)" 
                                        style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
                             </div>
@@ -269,10 +269,12 @@ def _analysis_tab():
         ui.row(
             ui.column(
                 2,
-                ui.input_selectize('analysis_plot_type', ui.h6('Left plot'), ['Off', 'Pairwise identity'],
-                                   selected='Off'),
-                ui.input_selectize('additional_analysis_options', ui.h6('Options'), ['None'], selected='None'),
-                ui.output_text_verbatim('analysis_info', placeholder=False)
+                ui.input_selectize('analysis_plot_type_left', ui.h6('Left plot'), ['Off', 'Pairwise identity'], selected='Off'),
+                ui.input_selectize('additional_analysis_options_left', ui.h6('Options'), ['None'], selected='None'),
+                ui.output_text_verbatim('analysis_info_left', placeholder=False),
+                ui.input_selectize('analysis_plot_type_right', ui.h6('Right plot'), ['Off', 'Character frequencies'], selected='Off'),
+                ui.input_selectize('additional_analysis_options_right', ui.h6('Options'), ['None'], selected='None'),
+                ui.output_text_verbatim('analysis_info_right', placeholder=False)
             ),
             ui.column(
                 5,

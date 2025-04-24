@@ -115,7 +115,7 @@ def server(input, output, session):
         return inputs
 
     # separate function if not all inputs are needed
-    def prepare_minimal_inputs(zoom: bool = True, window_size: bool = False, ref: bool = False, plot: bool = False):
+    def prepare_minimal_inputs(zoom: bool = True, window_size: bool = False, ref: bool = False, left_plot: bool = False, right_plot: bool = False):
         """
         minimal inputs with options depending on which are needed
         """
@@ -129,10 +129,16 @@ def server(input, output, session):
             inputs['zoom_range'] = input.zoom_range()
         if ref:
             inputs['reference'] = input.reference()
-        if plot:
-            inputs['analysis_plot_type'] = input.analysis_plot_type()
-            if inputs['analysis_plot_type'] != 'Off':
-                inputs['additional_analysis_options'] = input.additional_analysis_options()
+        # left analysis plot
+        if left_plot:
+            inputs['analysis_plot_type_left'] = input.analysis_plot_type_left()
+            if inputs['analysis_plot_type_left'] != 'Off':
+                inputs['additional_analysis_options_left'] = input.additional_analysis_options_left()
+        # right analysis plot
+        if right_plot:
+            inputs['analysis_plot_type_right'] = input.analysis_plot_type_right()
+            if inputs['analysis_plot_type_right'] != 'Off':
+                inputs['additional_analysis_options_right'] = input.additional_analysis_options_right()
         if window_size:
             inputs['dimensions'] = input.window_dimensions()
 
@@ -291,6 +297,8 @@ def server(input, output, session):
                 style="color: red; font-weight: bold;"
             ), duration=10)
 
+            return None
+
     @output
     @render.plot
     def msa_plot():
@@ -384,17 +392,17 @@ def server(input, output, session):
         return len(aln.get_snps()['POS'])
 
     @reactive.Effect
-    @reactive.event(input.analysis_plot_type)
-    def update_additional_options():
+    @reactive.event(input.analysis_plot_type_left)
+    def update_additional_options_left():
         """
-        Update UI for the analysis tab
+        Update UI for the left plot in the analysis tab
         """
         # ensure that it is switched back
-        if input.analysis_plot_type() == 'Off':
-            ui.update_selectize('additional_analysis_options', choices=['None'], selected='None')
-        if input.analysis_plot_type() == 'Pairwise identity':
+        if input.analysis_plot_type_left() == 'Off':
+            ui.update_selectize('additional_analysis_options_left', choices=['None'], selected='None')
+        if input.analysis_plot_type_left() == 'Pairwise identity':
             ui.update_selectize(
-                'additional_analysis_options',
+                'additional_analysis_options_left',
                 choices={
                     'ghd': 'global hamming distance',
                     'lhd': 'local hamming distance',
@@ -404,12 +412,22 @@ def server(input, output, session):
                 selected='ghd'
             )
 
+    @reactive.Effect
+    @reactive.event(input.analysis_plot_type_right)
+    def update_additional_options_right():
+        """
+        Update UI for the left plot in the analysis tab
+        """
+        # ensure that it is switched back
+        if input.analysis_plot_type_right() == 'Off':
+            ui.update_selectize('additional_analysis_options_right', choices=['None'], selected='None')
+
     @render.text
-    def analysis_info():
+    def analysis_info_left():
         """
         show custom text for additional options
         """
-        selected_option = input.additional_analysis_options()
+        selected_option = input.additional_analysis_options_left()
         if selected_option == "ghd":
             return 'INFO ghd (global hamming distance):\n\nAt each alignment position, check if\ncharacters match:\n\ndistance = matches / alignment_length * 100'
         elif selected_option == "lhd":
@@ -421,6 +439,13 @@ def server(input, output, session):
         else:
             return None
 
+    @render.text
+    def analysis_info_right():
+        """
+        show custom text for additional options
+        """
+        return None
+
 
     @render_widget
     def analysis_custom_heatmap():
@@ -429,12 +454,12 @@ def server(input, output, session):
         """
         aln = reactive.alignment.get()
 
-        return create_analysis_custom_heatmap(aln, prepare_minimal_inputs( plot=True, window_size=True))
+        return create_analysis_custom_heatmap(aln, prepare_minimal_inputs(left_plot=True, window_size=True))
 
 
     @render_widget
     def analysis_char_freq_heatmap():
         aln = reactive.alignment.get()
 
-        return create_freq_heatmap(aln,  prepare_minimal_inputs(window_size=True))
+        return create_freq_heatmap(aln,  prepare_minimal_inputs(right_plot=True, window_size=True))
 
