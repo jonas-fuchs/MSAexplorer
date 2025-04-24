@@ -1,17 +1,22 @@
 [build-system]
-requires = ["setuptools >= 65","wheel >= 0.38"]
+requires = ["setuptools >= 65", "wheel >= 0.38"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "msaexplorer"
 version = "0.2"
+description = "A tool for exploring multiple sequence alignments."
+keywords = ["msa, multiple sequence alignments, plotting, shiny app, alignment analysis"]
 dependencies = ["numpy>=2.0", "matplotlib>=3.8"]
-requires-python = ">= 3.10"
+requires-python = ">=3.10"
 authors = [{name = "Jonas Fuchs", email = "jonas.fuchs@uniklinik-freiburg.de"}]
 maintainers = [{name = "Jonas Fuchs", email = "jonas.fuchs@uniklinik-freiburg.de"}]
 readme = "README.md"
 license = {file = "LICENSE"}
-keywords = ["msa"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
