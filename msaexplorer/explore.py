@@ -1253,7 +1253,7 @@ class Annotation:
                     strand = '-'
                 # sanitize operators
                 for operator in ['complement(', 'join(', 'order(']:
-                    string = string.strip(operator)
+                    string = string.replace(operator, '')
                 # sanitize possible chars for splitting start stop -
                 # however in the future might not simply do this
                 # as some useful information is retained
