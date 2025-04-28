@@ -1305,6 +1305,7 @@ class Annotation:
                         if not line.strip():
                             continue
                         if line[5] != ' ':
+                            location_line = True  # remember that we are in a location for multi-line locations
                             feature_type, qualifier = parts[0], parts[1]
                             if feature_type not in record['features']:
                                 record['features'][feature_type] = {}
@@ -1316,14 +1317,21 @@ class Annotation:
                             }
                             counter_dict[feature_type] += 1
                         else:
-                            try:
-                                qualifier_type, qualifier = parts[0].split('=')
-                            except ValueError:  # we are in the coding sequence
-                                qualifier = qualifier + parts[0]
+                            # edge case for multi-line locations
+                            if location_line and line.strip().startswith('/'):
+                                locations, strand = sanitize_gb_location(parts[0])
+                                for loc in locations:
+                                    record['features'][feature_type][counter_dict[feature_type]]['location'].append(loc)
+                            else:
+                                location_line = False
+                                try:
+                                    qualifier_type, qualifier = parts[0].split('=')
+                                except ValueError:  # we are in the coding sequence
+                                    qualifier = qualifier + parts[0]
 
-                            qualifier_type, qualifier = qualifier_type.lstrip('/'), qualifier.strip('"')
-                            last_index = counter_dict[feature_type] - 1
-                            record['features'][feature_type][last_index][qualifier_type] = qualifier
+                                qualifier_type, qualifier = qualifier_type.lstrip('/'), qualifier.strip('"')
+                                last_index = counter_dict[feature_type] - 1
+                                record['features'][feature_type][last_index][qualifier_type] = qualifier
 
             records[record['locus']] = record
 
