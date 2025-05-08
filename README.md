@@ -6,6 +6,10 @@ simplifies reading and analyses of multiple sequence alignments with minimal pyt
 
 The serverless shiny app is automatically deployed to gihub pages via [shinylive](https://shiny.posit.co/py/docs/shinylive.html) and includes the current version of the master branch. All computation runs in your browser. MSAexplorer can handle any alignment size. However, the computation time increases with larger alignments. If your alignment is similar to my [examples](example_alignments/DNA.fasta), plotting will be near to instant on any modern cpu.
 
+### Requirements
+
+`python >= python 3.11`
+
 ## Quick Installation (python package)
 
 ```bash
