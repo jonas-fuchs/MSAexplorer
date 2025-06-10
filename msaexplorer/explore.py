@@ -1318,7 +1318,7 @@ class Annotation:
                             counter_dict[feature_type] += 1
                         else:
                             # edge case for multi-line locations
-                            if location_line and line.strip().startswith('/'):
+                            if location_line and not line.strip().startswith('/'):
                                 locations, strand = sanitize_gb_location(parts[0])
                                 for loc in locations:
                                     record['features'][feature_type][counter_dict[feature_type]]['location'].append(loc)
