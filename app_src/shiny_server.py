@@ -8,6 +8,7 @@ import tempfile
 # libs
 from shiny import render, ui, reactive
 import matplotlib.pyplot as plt
+from matplotlib import colormaps
 
 # load in app resources
 from app_src.shiny_plots import set_aln, create_msa_plot, create_analysis_custom_heatmap, create_freq_heatmap
@@ -160,10 +161,10 @@ def server(input, output, session):
 
         # update possible user inputs
         if reactive.alignment.get().aln_type == 'AA':
-            ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'], selected='Annotation')
+            ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Annotation'], selected='Off')
         else:
             ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'],
-                                selected='Annotation')
+                                selected='Off')
 
     # Updates the plot container
     @reactive.Effect
@@ -196,6 +197,25 @@ def server(input, output, session):
                 # Update zoom slider based on alignment length and user input
                 alignment_length = len(next(iter(aln.alignment.values())))-1
                 ui.update_slider('zoom_range', max=alignment_length-1, value=(0, alignment_length -1))
+
+                # add specific settings to settings tab
+                # on each upload first remove potential ui elements
+                ui.remove_ui(selector="#orf_column")
+                # then add the ui element
+                if aln.aln_type != 'AA':
+                    ui.insert_ui(
+                        ui.column(
+                            4,
+                            ui.h6('ORF plot'),
+                            ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
+                            ui.input_selectize('color_mapping', 'Colormap ORF identity', choices=list(colormaps.keys()),
+                                               selected='jet'),
+                            ui.input_switch('non_overlapping', 'non-overlapping', value=False),
+                            id='orf_column'
+                        ),
+                        selector='#snp_column',
+                        where='afterEnd'
+                    )
 
                 # Update reference
                 ui.update_selectize(
@@ -265,8 +285,32 @@ def server(input, output, session):
         """
         Update the UI - which download options are displayed
         """
+
+        # remove prior ui elements and insert specific once prior the download format div
         if input.download_type() == 'SNPs':
+            ui.remove_ui(selector="div:has(> #download_type_options_1-label)")
+            ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
             ui.update_selectize('download_format', choices=['vcf', 'tabular'])
+            ui.insert_ui(
+                ui.input_selectize('download_type_options_1', label='include ambiguous snps', choices=['Yes', 'No'], selected='No'),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
+        elif input.download_type() == 'consensus':
+            ui.remove_ui(selector="div:has(> #download_type_options_1-label)")
+            ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
+            ui.update_selectize('download_format', choices=['fasta'])
+            ui.insert_ui(
+                ui.input_selectize('download_type_options_1', label='Use ambiguous characters (only nt)', choices=['Yes', 'No'], selected='No'),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
+            ui.insert_ui(
+                ui.input_numeric('download_type_options_2', label='Frequency threshold', value=0, min=0, max=1),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
+
 
     @render.download()
     def download_stats():
@@ -281,8 +325,31 @@ def server(input, output, session):
                 raise FileNotFoundError("No alignment data available. Please upload an alignment.")
 
             if input.download_type() == 'SNPs':
-                download_data = export.snps(aln.get_snps(), format_type=download_format)
+                download_data = export.snps(aln.get_snps(include_ambig=True if input.download_type_options_1 == 'Yes' else False), format_type=download_format)
                 prefix = 'SNPs_'
+            elif input.download_type() == 'consensus':
+                if input.download_type_options_1() == 'Yes' and aln.aln_type != 'AA':
+                    try:
+                        download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2(), use_ambig_nt=True))
+                    except ValueError:
+                        ui.notification_show(ui.tags.div(
+                            'Threshold frequency value has to be between 0 and 1.',
+                            style="color: red; font-weight: bold;"
+                        ), duration=10)
+
+                        return None
+                else:
+                    try:
+                        download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2()))
+                    except ValueError:
+                        ui.notification_show(ui.tags.div(
+                            'Threshold frequency value has to be between 0 and 1.',
+                            style="color: red; font-weight: bold;"
+                        ), duration=10)
+
+                        return None
+
+                prefix = 'consensus_'
 
             # Create a temporary file for the download
             with tempfile.NamedTemporaryFile(prefix=prefix, suffix=f'.{download_format}', delete=False) as tmpfile:
@@ -290,6 +357,7 @@ def server(input, output, session):
                 tmpfile.flush()  # Ensure data is written to disk
 
                 return tmpfile.name
+
         # also send a notification to the user
         except FileNotFoundError:
             ui.notification_show(ui.tags.div(

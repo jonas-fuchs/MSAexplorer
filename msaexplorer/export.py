@@ -7,6 +7,7 @@ This module lets you export data produced with MSA explorer.
 """
 
 import os
+from msaexplorer import config
 
 
 def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', format_type: str = 'vcf') -> str | None | ValueError:
@@ -110,3 +111,23 @@ def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', forma
     else:
         return "\n".join(lines)
 
+
+def fasta(sequence: str, path: str | None = None,  header: str = 'consensus') -> str | None:
+    """
+    Export a fasta file to either a string or save directly to file.
+    :param sequence: sequence to export
+    :param path: path to save the file
+    :param header: optional header file
+    :return: fasta formatted string
+    """
+    def _validate_sequence(sequence: str):
+        if not set(sequence).issubset(set(config.POSSIBLE_CHARS)):
+            raise ValueError(f'Sequence contains invalid characters{set(sequence)}')
+
+    _validate_sequence(sequence)
+    fasta_formated_sequence = f'>{header}\n{sequence}'
+    if path is not None:
+        with open(path, 'w') as out_file:
+            out_file.write(fasta_formated_sequence)
+    else:
+        return fasta_formated_sequence

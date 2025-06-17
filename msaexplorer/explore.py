@@ -316,7 +316,9 @@ class MSA:
             """
             for ambiguous, permutations in config.AMBIG_CHARS[self.aln_type].items():
                 if set(permutations) == set(nucleotides):
-                    return ambiguous
+                    break
+
+            return ambiguous
 
         # check if params have been set correctly
         if threshold is not None:

@@ -111,13 +111,7 @@ def _custom_sidebar():
                     ui.input_numeric('head_size', 'Head size', value=3, min=1),
                     ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
                     ui.input_switch('show_legend_third_plot', 'Legend', value=True),
-                ),
-                ui.column(
-                    4,
-                    ui.h6('ORF plot'),
-                    ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
-                    ui.input_selectize('color_mapping', 'Colormap ORF identity', choices=list(colormaps.keys()), selected='jet'),
-                    ui.input_switch('non_overlapping', 'non-overlapping', value=False),
+                    id='snp_column'
                 ),
                 ui.column(
                 4,
@@ -165,12 +159,10 @@ def _upload_tab():
                                            ui.HTML(
                                                '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
                                        ),
-                                       ui.input_selectize('download_type_options', label='Additional options:',
-                                                          choices=['None']),
                                        ui.input_selectize('download_format', label='Format:', choices=[]),
                                    )
-                                   ),
-                    ui.input_selectize('download_type', label='Choose:', choices=['SNPs']),
+                                ),
+                    ui.input_selectize('download_type', label='Choose:', choices=['SNPs', 'consensus']),
                     ui.download_button(
                         'download_stats',
                         'Download',
