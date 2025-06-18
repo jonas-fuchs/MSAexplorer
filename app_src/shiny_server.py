@@ -306,7 +306,7 @@ def server(input, output, session):
                 where='beforeBegin'
             )
             ui.insert_ui(
-                ui.input_numeric('download_type_options_2', label='Frequency threshold', value=0, min=0, max=1),
+                ui.input_numeric('download_type_options_2', label='Frequency threshold', value=0, min=0, max=1, step=0.1),
                 selector='#download_format-label',
                 where='beforeBegin'
             )
@@ -329,26 +329,9 @@ def server(input, output, session):
                 prefix = 'SNPs_'
             elif input.download_type() == 'consensus':
                 if input.download_type_options_1() == 'Yes' and aln.aln_type != 'AA':
-                    try:
-                        download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2(), use_ambig_nt=True))
-                    except ValueError:
-                        ui.notification_show(ui.tags.div(
-                            'Threshold frequency value has to be between 0 and 1.',
-                            style="color: red; font-weight: bold;"
-                        ), duration=10)
-
-                        return None
+                    download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2(), use_ambig_nt=True))
                 else:
-                    try:
-                        download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2()))
-                    except ValueError:
-                        ui.notification_show(ui.tags.div(
-                            'Threshold frequency value has to be between 0 and 1.',
-                            style="color: red; font-weight: bold;"
-                        ), duration=10)
-
-                        return None
-
+                    download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2()))
                 prefix = 'consensus_'
 
             # Create a temporary file for the download
@@ -358,10 +341,18 @@ def server(input, output, session):
 
                 return tmpfile.name
 
-        # also send a notification to the user
+        # send a notification to the user if no alignment was uploaded
         except FileNotFoundError:
             ui.notification_show(ui.tags.div(
                 'No alignment was uploaded.',
+                style="color: red; font-weight: bold;"
+            ), duration=10)
+
+            return None
+        # or if the Threshold was not set correctly
+        except ValueError:
+            ui.notification_show(ui.tags.div(
+                'Threshold frequency value has to be between 0 and 1.',
                 style="color: red; font-weight: bold;"
             ), duration=10)
 
