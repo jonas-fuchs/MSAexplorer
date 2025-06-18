@@ -218,9 +218,10 @@ def server(input, output, session):
                     )
 
                 # Update reference
-                ui.update_selectize(
-                    id='reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
-                )
+                for id in ['reference', 'reference_2']:
+                    ui.update_selectize(
+                        id=id, choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
+                    )
 
                 # Update substitution matrix
                 ui.update_selectize(
@@ -287,18 +288,22 @@ def server(input, output, session):
         """
 
         # remove prior ui elements and insert specific once prior the download format div
+        ui.remove_ui(selector="div:has(> #download_type_options_1-label)")
+        ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
+        ui.remove_ui(selector="div:has(> #reference_2-label)")
         if input.download_type() == 'SNPs':
-            ui.remove_ui(selector="div:has(> #download_type_options_1-label)")
-            ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
             ui.update_selectize('download_format', choices=['vcf', 'tabular'])
             ui.insert_ui(
                 ui.input_selectize('download_type_options_1', label='include ambiguous snps', choices=['Yes', 'No'], selected='No'),
                 selector='#download_format-label',
                 where='beforeBegin'
             )
+            ui.insert_ui(
+                ui.input_selectize('reference_2', 'Reference', ['first', 'consensus'], selected='first'),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
         elif input.download_type() == 'consensus':
-            ui.remove_ui(selector="div:has(> #download_type_options_1-label)")
-            ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
             ui.update_selectize('download_format', choices=['fasta'])
             ui.insert_ui(
                 ui.input_selectize('download_type_options_1', label='Use ambiguous characters (only nt)', choices=['Yes', 'No'], selected='No'),
@@ -311,7 +316,6 @@ def server(input, output, session):
                 where='beforeBegin'
             )
 
-
     @render.download()
     def download_stats():
         """
@@ -323,8 +327,13 @@ def server(input, output, session):
             aln = reactive.alignment.get()
             if aln is None:
                 raise FileNotFoundError("No alignment data available. Please upload an alignment.")
-
             if input.download_type() == 'SNPs':
+                if input.reference_2() == 'first':
+                    aln.reference_id = list(aln.alignment.keys())[0]
+                elif input.reference_2()  == 'consensus':
+                    aln.reference_id = None
+                else:
+                    aln.reference_id = input.reference_2()
                 download_data = export.snps(aln.get_snps(include_ambig=True if input.download_type_options_1 == 'Yes' else False), format_type=download_format)
                 prefix = 'SNPs_'
             elif input.download_type() == 'consensus':
