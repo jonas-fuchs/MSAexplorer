@@ -24,7 +24,7 @@ def set_aln(aln, inputs):
 
     return aln
 
-
+#TODO: Give additional coloring options
 def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     """
     :param aln: MSA object
@@ -247,3 +247,6 @@ def create_freq_heatmap(aln, inputs):
         return fig
     else:
         return None
+
+
+#TODO: Add additional plots for analysis tab?

@@ -177,6 +177,8 @@ def server(input, output, session):
 
         await session.send_custom_message("update-plot-container-height", {'height': new_plot_height})
 
+    #TODO: Also try to conditionally exclude the Annotation column
+
     # Inputs
     @reactive.Effect
     @reactive.event(input.alignment_file)
@@ -316,6 +318,16 @@ def server(input, output, session):
                 where='beforeBegin'
             )
 
+    # TODO: Download distance matrices
+    # TODO: Download ORFs as bed
+    # TODO: Download entropy
+    # TODO: Download gc
+    # TODO: Download ts/tv
+    # TODO: Download coverage
+    # TODO: Download similarity
+    # TODO: Download identity
+    # TODO: Download char frequencies
+    # TODO: Download reverse complement
     @render.download()
     def download_stats():
         """
@@ -459,6 +471,8 @@ def server(input, output, session):
 
         return len(aln.get_snps()['POS'])
 
+    #TODO: Conditionally exclude options
+
     @reactive.Effect
     @reactive.event(input.analysis_plot_type_left)
     def update_additional_options_left():
@@ -527,6 +541,9 @@ def server(input, output, session):
 
     @render_widget
     def analysis_char_freq_heatmap():
+        """
+        Create character frequency heatmap
+        """
         aln = reactive.alignment.get()
 
         return create_freq_heatmap(aln,  prepare_minimal_inputs(right_plot=True, window_size=True))
