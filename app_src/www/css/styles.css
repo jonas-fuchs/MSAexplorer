@@ -105,6 +105,25 @@ h6 {
     overflow-y: auto;
 }
 
+/* Allow overflow of download options */
+#download_type {
+    position: relative; /* Ensure relative positioning for the dropdown trigger */
+}
+
+#download_type ~ .selectize-control .selectize-dropdown {
+    z-index: 1050 !important;
+    position: absolute !important;
+    overflow: visible !important;
+    margin-top: 0px; /* Prevent dropdown overlapping with the trigger */
+}
+
+.bslib-card {
+    overflow: visible !important; /* Ensure the parent card doesn't clip */
+}
+
+.bslib-gap-spacing {
+    overflow: visible !important; /* Ensure nested containers don't clip */
+}
 
 /* Upload bar */
 .shiny-file-input-progress {

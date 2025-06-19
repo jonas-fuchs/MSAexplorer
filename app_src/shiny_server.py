@@ -341,6 +341,7 @@ def server(input, output, session):
         Download various files in standard format
         """
 
+        # helper functions
         def _snp_option():
             if input.reference_2() == 'first':
                 aln.reference_id = list(aln.alignment.keys())[0]
@@ -354,8 +355,6 @@ def server(input, output, session):
             prefix = 'SNPs_'
 
             return download_data, prefix
-
-
 
         def _consensus_option():
             if input.download_type_options_1() == 'Yes' and aln.aln_type != 'AA':

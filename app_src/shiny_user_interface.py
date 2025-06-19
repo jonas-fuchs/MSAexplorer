@@ -160,8 +160,8 @@ def _upload_tab():
                                                '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
                                        ),
                                        ui.input_selectize('download_format', label='Format:', choices=[]),
-                                   )
-                                ),
+                                )
+                            ),
                     ui.input_selectize('download_type', label='Choose:', choices=['SNPs', 'consensus']),
                     ui.download_button(
                         'download_stats',
