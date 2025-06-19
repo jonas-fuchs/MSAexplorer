@@ -7,6 +7,9 @@ This module lets you export data produced with MSA explorer.
 """
 
 import os
+
+from numpy import ndarray
+
 from msaexplorer import config
 
 
@@ -75,6 +78,7 @@ def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', forma
     def _tabular_format(snp_dict: dict) -> list:
         """
         Produce  tabular formatted SNP data.
+
         :param snp_dict: dictionary containing SNP positions and variant information.
         :return: list of lines to write
         """
@@ -109,7 +113,7 @@ def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', forma
         with open(out_path, 'w') as out_file:
             out_file.write('\n'.join(lines))
     else:
-        return "\n".join(lines)
+        return '\n'.join(lines)
 
 
 def fasta(sequence: str, path: str | None = None,  header: str = 'consensus') -> str | None:
@@ -131,3 +135,25 @@ def fasta(sequence: str, path: str | None = None,  header: str = 'consensus') ->
             out_file.write(fasta_formated_sequence)
     else:
         return fasta_formated_sequence
+
+
+def stats(stat_data: list | ndarray, seperator: str, path: str | None = None) -> str | None:
+    """
+    Export a list of stats per nucleotide to tabular or csv format.
+
+    :param stat_data: list of stat values
+    :param seperator: seperator for values and index
+    :param path: path to save the file
+    :return: tabular/csv formatted string
+    """
+    # ini with header
+    lines = [f'position{seperator}value']
+
+    for idx, stat_val in enumerate(stat_data):
+        lines.append(f'{idx}{seperator}{stat_val}')
+
+    if path is not None:
+        with open(path, 'w') as out_file:
+            out_file.write('\n'.join(lines))
+    else:
+        return '\n'.join(lines)

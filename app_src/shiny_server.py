@@ -4,8 +4,11 @@ This module creates the Server logic
 
 # built-in
 import tempfile
+from typing import Callable, Dict
 
 # libs
+import numpy as np
+from numpy import ndarray
 from shiny import render, ui, reactive
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
@@ -15,7 +18,7 @@ from app_src.shiny_plots import set_aln, create_msa_plot, create_analysis_custom
 from shinywidgets import render_widget
 
 # msaexplorer
-from msaexplorer import explore, config, export
+from msaexplorer import explore, config, export, draw
 
 
 def server(input, output, session):
@@ -246,10 +249,12 @@ def server(input, output, session):
                 # Some of the function highly depend on the alignment type
                 if aln.aln_type == 'AA':
                     ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
+                    ui.update_selectize('download_type', choices=['SNPs','consensus', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs'])
                 else:
                     # needed because if an as aln and then a nt aln are loaded it will not change
                     ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
+                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
                 # case if annotation file is uploaded prior to the alignment file
                 if annotation_file:
@@ -317,15 +322,17 @@ def server(input, output, session):
                 selector='#download_format-label',
                 where='beforeBegin'
             )
+        elif input.download_type() in ['entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score', 'gc']:
+            ui.update_selectize('download_format', choices=['csv', 'tabular'])
+            ui.insert_ui(
+                ui.input_numeric('download_type_options_1', label='Rolling average', value=1, min=1,
+                                 step=1),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
 
     # TODO: Download distance matrices
     # TODO: Download ORFs as bed
-    # TODO: Download entropy
-    # TODO: Download gc
-    # TODO: Download ts/tv
-    # TODO: Download coverage
-    # TODO: Download similarity
-    # TODO: Download identity
     # TODO: Download char frequencies
     # TODO: Download reverse complement
     @render.download()
@@ -333,31 +340,88 @@ def server(input, output, session):
         """
         Download various files in standard format
         """
+
+        def _snp_option():
+            if input.reference_2() == 'first':
+                aln.reference_id = list(aln.alignment.keys())[0]
+            elif input.reference_2() == 'consensus':
+                aln.reference_id = None
+            else:
+                aln.reference_id = input.reference_2()
+            download_data = export.snps(
+                aln.get_snps(include_ambig=True if input.download_type_options_1 == 'Yes' else False),
+                format_type=download_format)
+            prefix = 'SNPs_'
+
+            return download_data, prefix
+
+
+
+        def _consensus_option():
+            if input.download_type_options_1() == 'Yes' and aln.aln_type != 'AA':
+                download_data = export.fasta(
+                    aln.get_consensus(threshold=input.download_type_options_2(), use_ambig_nt=True))
+            else:
+                download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2()))
+            prefix = 'consensus_'
+
+            return download_data, prefix
+
+        def _stat_option():
+            # create function mapping
+            stat_functions: Dict[str, Callable[[], list | ndarray]] = {
+                'gc': aln.calc_gc,
+                'entropy': aln.calc_entropy,
+                'coverage': aln.calc_coverage,
+                'mean identity': aln.calc_identity_alignment,
+                'mean similarity': aln.calc_similarity_alignment,
+                'ts tv score': aln.calc_transition_transversion_score
+            }
+            # raise error for rolling average
+            if input.download_type_options_1() < 1 or input.download_type_options_1() > aln.length:
+                raise ValueError('Rolling_average must be between 1 and length of alignment.')
+            # define seperator
+            seperator = '\t' if input.download_format() == 'tabular' else ','
+            # define which stat type to exprt
+            for stat_type in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
+                if stat_type == input.download_type():
+                    break
+            # use correct function
+            data = stat_functions[stat_type]()
+            # calculate the mean (identical to draw module of msaexplorer)
+            if stat_type in ['mean identity', 'mena similarity']:
+                # for the mean nan values get handled as the lowest possible number in the matrix
+                data = np.nan_to_num(data, True, -1 if stat_type == 'identity' else 0)
+                data = np.mean(data, axis=0)
+            # apply rolling average
+            data = draw._moving_average(data, input.download_type_options_1(), None, aln.length)[0]
+            # create download data
+            download_data = export.stats(data, seperator)
+            prefix = f'{stat_type}_'.replace(' ', '_')  # sanitize prefix
+
+            return download_data, prefix
+
         try:
             # Initialize
             download_format = input.download_format()
             aln = reactive.alignment.get()
             if aln is None:
                 raise FileNotFoundError("No alignment data available. Please upload an alignment.")
+            # Create download data for SNPs
             if input.download_type() == 'SNPs':
-                if input.reference_2() == 'first':
-                    aln.reference_id = list(aln.alignment.keys())[0]
-                elif input.reference_2()  == 'consensus':
-                    aln.reference_id = None
-                else:
-                    aln.reference_id = input.reference_2()
-                download_data = export.snps(aln.get_snps(include_ambig=True if input.download_type_options_1 == 'Yes' else False), format_type=download_format)
-                prefix = 'SNPs_'
+                export_data = _snp_option()
+            # Create download data for consensus
             elif input.download_type() == 'consensus':
-                if input.download_type_options_1() == 'Yes' and aln.aln_type != 'AA':
-                    download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2(), use_ambig_nt=True))
-                else:
-                    download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2()))
-                prefix = 'consensus_'
+                export_data = _consensus_option()
+            # Create download data for stats
+            elif input.download_type() in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
+                export_data = _stat_option()
+            else:
+                export_data = (None, None)
 
             # Create a temporary file for the download
-            with tempfile.NamedTemporaryFile(prefix=prefix, suffix=f'.{download_format}', delete=False) as tmpfile:
-                tmpfile.write(download_data.encode('utf-8'))
+            with tempfile.NamedTemporaryFile(prefix=export_data[1], suffix=f'.{download_format}', delete=False) as tmpfile:
+                tmpfile.write(export_data[0].encode('utf-8'))
                 tmpfile.flush()  # Ensure data is written to disk
 
                 return tmpfile.name
@@ -372,10 +436,21 @@ def server(input, output, session):
             return None
         # or if the Threshold was not set correctly
         except ValueError:
-            ui.notification_show(ui.tags.div(
-                'Threshold frequency value has to be between 0 and 1.',
-                style="color: red; font-weight: bold;"
-            ), duration=10)
+            if input.download_type() == 'consensus':
+                ui.notification_show(ui.tags.div(
+                    'Threshold frequency value has to be between 0 and 1.',
+                    style="color: red; font-weight: bold;"
+                ), duration=10)
+            elif input.download_type() in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
+                ui.notification_show(ui.tags.div(
+                    'Rolling_average must be between 1 and length of alignment.',
+                    style="color: red; font-weight: bold;"
+                ), duration=10)
+            else:
+                ui.notification_show(ui.tags.div(
+                    'Unknown error occurred...',
+                    style="color: red; font-weight: bold;"
+                ), duration=10)
 
             return None
 

@@ -500,6 +500,31 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
+def _moving_average(arr: ndarray, window_size: int, zoom: tuple | None, aln_length: int) -> tuple[ndarray, ndarray]:
+    """
+    Calculate the moving average of an array.
+    :param arr: array with values
+    :param window_size: size of the moving average
+    :param zoom: zoom of the alignment
+    :param aln_length: length of the alignment
+    :return: new array with moving average
+    """
+    if window_size > 1:
+        i = 0
+        moving_averages, plotting_idx = [], []
+        while i < len(arr) + 1:
+            half_window_size = window_size // 2
+            window_left = arr[i - half_window_size : i] if i > half_window_size else arr[0:i]
+            window_right = arr[i: i + half_window_size] if i < len(arr) - half_window_size else arr[i: len(arr)]
+            moving_averages.append((sum(window_left) + sum(window_right)) / (len(window_left) + len(window_right)))
+            plotting_idx.append(i)
+            i += 1
+
+        return np.array(moving_averages), np.array(plotting_idx) if zoom is None else np.array(plotting_idx) + zoom[0]
+    else:
+        return arr, np.arange(zoom[0], zoom[1]) if zoom is not None else np.arange(aln_length)
+
+
 def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
     """
     Generate a plot for the various alignment stats.
@@ -512,22 +537,6 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     :param show_x_label: whether to show the x-axis label
     :param show_title: whether to show the title
     """
-
-    def moving_average(arr, window_size):
-        if window_size > 1:
-            i = 0
-            moving_averages, plotting_idx = [], []
-            while i < len(arr) + 1:
-                half_window_size = window_size // 2
-                window_left = arr[i - half_window_size : i] if i > half_window_size else arr[0:i]
-                window_right = arr[i: i + half_window_size] if i < len(arr) - half_window_size else arr[i: len(arr)]
-                moving_averages.append((sum(window_left) + sum(window_right)) / (len(window_left) + len(window_right)))
-                plotting_idx.append(i)
-                i += 1
-
-            return np.array(moving_averages), np.array(plotting_idx) if aln.zoom is None else np.array(plotting_idx) + aln.zoom[0]
-        else:
-            return arr, np.arange(aln.zoom[0], aln.zoom[1]) if aln.zoom is not None else np.arange(aln.length)
 
     # define possible functions to calc here
     stat_functions: Dict[str, Callable[[], list | ndarray]] = {
@@ -564,7 +573,7 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
         # for the mean nan values get handled as the lowest possible number in the matrix
         array = np.nan_to_num(array, True, min_value)
         array = np.mean(array, axis=0)
-    data, plot_idx = moving_average(array, rolling_average)
+    data, plot_idx = _moving_average(array, rolling_average, aln.zoom, aln.length)
 
     # plot the data
     ax.fill_between(
