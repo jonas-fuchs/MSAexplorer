@@ -460,8 +460,8 @@ class MSA:
             if identity_cutoff > 100 or identity_cutoff < 0:
                 raise ValueError('conservation cutoff must be between 0 and 100')
 
-        if min_length <= 0 or min_length > self.length:
-            raise ValueError(f'min_length must be between 0 and {self.length}')
+        if min_length <= 6 or min_length > self.length:
+            raise ValueError(f'min_length must be between 6 and {self.length}')
 
         # ini
         identities = self.calc_identity_alignment()
@@ -509,7 +509,8 @@ class MSA:
                                                               }
                             orf_counter += 1
                         else:
-                            orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
+                            if orf_dict:
+                                orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
 
         return orf_dict
 

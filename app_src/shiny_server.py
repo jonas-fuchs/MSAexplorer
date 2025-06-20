@@ -254,7 +254,7 @@ def server(input, output, session):
                 else:
                     # needed because if an as aln and then a nt aln are loaded it will not change
                     ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
+                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
                 # case if annotation file is uploaded prior to the alignment file
                 if annotation_file:
@@ -297,6 +297,7 @@ def server(input, output, session):
         # remove prior ui elements and insert specific once prior the download format div
         ui.remove_ui(selector="div:has(> #download_type_options_1-label)")
         ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
+        ui.remove_ui(selector="div:has(> #download_type_options_3-label)")
         ui.remove_ui(selector="div:has(> #reference_2-label)")
         if input.download_type() == 'SNPs':
             ui.update_selectize('download_format', choices=['vcf', 'tabular'])
@@ -325,8 +326,24 @@ def server(input, output, session):
         elif input.download_type() in ['entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score', 'gc']:
             ui.update_selectize('download_format', choices=['csv', 'tabular'])
             ui.insert_ui(
-                ui.input_numeric('download_type_options_1', label='Rolling average', value=1, min=1,
-                                 step=1),
+                ui.input_numeric('download_type_options_1', label='Rolling average', value=1, min=1, step=1),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
+        elif input.download_type() == 'conserved orfs':
+            ui.update_selectize('download_format', choices=['bed'])
+            ui.insert_ui(
+                ui.input_numeric('download_type_options_1', label='min length', value=100, min=6, step=1),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
+            ui.insert_ui(
+                ui.input_numeric('download_type_options_2', label='identity cutoff', value=95, min=0, max=100, step=1),
+                selector='#download_format-label',
+                where='beforeBegin'
+            )
+            ui.insert_ui(
+                ui.input_selectize('download_type_options_3', label='Allow overlapping orfs?', choices=['Yes', 'No'], selected='Yes'),
                 selector='#download_format-label',
                 where='beforeBegin'
             )
@@ -400,6 +417,14 @@ def server(input, output, session):
 
             return download_data, prefix
 
+        def _orf_option():
+            if input.download_type_options_3() == 'Yes':
+                data = aln.get_conserved_orfs(min_length=input.download_type_options_1(), identity_cutoff=input.download_type_options_2())
+            else:
+                data = aln.get_non_overlapping_conserved_orfs(min_length=input.download_type_options_1(),identity_cutoff=input.download_type_options_2())
+
+            return export.orf(data, aln.reference_id.split(' ')[0]), 'orfs_' if input.download_type_options_3() == 'Yes' else 'non_overlapping_conserved_orfs_'
+
         try:
             # Initialize
             download_format = input.download_format()
@@ -415,6 +440,8 @@ def server(input, output, session):
             # Create download data for stats
             elif input.download_type() in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
                 export_data = _stat_option()
+            elif input.download_type() == 'conserved orfs':
+                export_data = _orf_option()
             else:
                 export_data = (None, None)
 
@@ -425,33 +452,12 @@ def server(input, output, session):
 
                 return tmpfile.name
 
-        # send a notification to the user if no alignment was uploaded
-        except FileNotFoundError:
+        # catch other errors and display them
+        except (FileNotFoundError, ValueError) as error:
             ui.notification_show(ui.tags.div(
-                'No alignment was uploaded.',
+                str(error),
                 style="color: red; font-weight: bold;"
             ), duration=10)
-
-            return None
-        # or if the Threshold was not set correctly
-        except ValueError:
-            if input.download_type() == 'consensus':
-                ui.notification_show(ui.tags.div(
-                    'Threshold frequency value has to be between 0 and 1.',
-                    style="color: red; font-weight: bold;"
-                ), duration=10)
-            elif input.download_type() in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
-                ui.notification_show(ui.tags.div(
-                    'Rolling_average must be between 1 and length of alignment.',
-                    style="color: red; font-weight: bold;"
-                ), duration=10)
-            else:
-                ui.notification_show(ui.tags.div(
-                    'Unknown error occurred...',
-                    style="color: red; font-weight: bold;"
-                ), duration=10)
-
-            return None
 
     @output
     @render.plot

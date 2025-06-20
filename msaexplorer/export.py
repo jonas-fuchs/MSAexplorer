@@ -13,14 +13,24 @@ from numpy import ndarray
 from msaexplorer import config
 
 
-def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', format_type: str = 'vcf') -> str | None | ValueError:
+def _check_and_create_path(path: str):
+    """
+    Check and create path if it doesn't exist.
+    :param path: string to file
+    """
+    if path is not None:
+        output_dir = os.path.dirname(path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+
+def snps(snp_dict: dict, path: str | None = None, format_type: str = 'vcf') -> str | None | ValueError:
     """
     Export a SNP dictionary to a VCF or tabular format. Importantly, the input dictionary has to be in the standard
     format that MSAexplorer produces.
 
     :param snp_dict: Dictionary containing SNP positions and variant information.
     :param path: Path to output VCF or tabular format. (optional)
-    :param file_name: name of output VCF or tabular file. (standard: snps.*)
     :param format_type: Format type ('vcf' or 'tabular'). Default is 'vcf'.
     :return: A string containing the SNP data in the requested format.
     :raises ValueError: if the input dictionary is missing required keys or format_type is invalid.
@@ -36,6 +46,7 @@ def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', forma
             raise ValueError('Expected the \'POS\' key to contain a dictionary of positions.')
         if format_type not in ['vcf', 'tabular']:
             raise ValueError('Invalid format_type.')
+        _check_and_create_path(path)
 
     def _vcf_format(snp_dict: dict) -> list:
         """
@@ -109,7 +120,7 @@ def snps(snp_dict: dict, path: str | None = None, file_name: str = 'snps', forma
 
     # export to file or return plain text
     if path is not None:
-        out_path = os.path.abspath(os.path.join(path, f"{file_name}.{format_type}"))
+        out_path = f"{path}.{format_type}"
         with open(out_path, 'w') as out_file:
             out_file.write('\n'.join(lines))
     else:
@@ -128,6 +139,7 @@ def fasta(sequence: str, path: str | None = None,  header: str = 'consensus') ->
         if not set(sequence).issubset(set(config.POSSIBLE_CHARS)):
             raise ValueError(f'Sequence contains invalid characters{set(sequence)}')
 
+    _check_and_create_path(path)
     _validate_sequence(sequence)
     fasta_formated_sequence = f'>{header}\n{sequence}'
     if path is not None:
@@ -146,11 +158,43 @@ def stats(stat_data: list | ndarray, seperator: str, path: str | None = None) ->
     :param path: path to save the file
     :return: tabular/csv formatted string
     """
-    # ini with header
+    # ini
+    _check_and_create_path(path)
+
     lines = [f'position{seperator}value']
 
     for idx, stat_val in enumerate(stat_data):
         lines.append(f'{idx}{seperator}{stat_val}')
+
+    if path is not None:
+        with open(path, 'w') as out_file:
+            out_file.write('\n'.join(lines))
+    else:
+        return '\n'.join(lines)
+
+
+def orf(orf_dict: dict, chrom: str, path: str | None = None) -> str | ValueError:
+    """
+    Exports the ORF dictionary to a .bed file.
+
+    :param orf_dict: Dictionary containing ORF information.
+    :param path: Path to the output .bed file.
+    :param : Reference name
+    """
+    if not orf_dict:
+        raise ValueError("The ORF dictionary is empty. Nothing to export.")
+    else:
+        if list(orf_dict[list(orf_dict.keys())[0]].keys()) != ['location', 'frame', 'strand', 'conservation', 'internal']:
+            raise ValueError("The ORF dictionary has not the right format.")
+
+    _check_and_create_path(path)
+
+    lines = []
+
+    for orf_id, orf_data in orf_dict.items():
+        lines.append(
+            f"{chrom}\t{orf_data['location'][0][0]}\t{orf_data['location'][0][1]}\t{orf_id}\t{orf_data['conservation']:.2f}\t{orf_data['strand']}"
+        )
 
     if path is not None:
         with open(path, 'w') as out_file:
