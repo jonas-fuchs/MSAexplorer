@@ -295,6 +295,7 @@ def server(input, output, session):
         """
 
         # remove prior ui elements and insert specific once prior the download format div
+        aln = reactive.alignment.get()
         ui.remove_ui(selector="div:has(> #download_type_options_1-label)")
         ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
         ui.remove_ui(selector="div:has(> #download_type_options_3-label)")
@@ -307,7 +308,15 @@ def server(input, output, session):
                 where='beforeBegin'
             )
             ui.insert_ui(
-                ui.input_selectize('reference_2', 'Reference', ['first', 'consensus'], selected='first'),
+                ui.input_selectize(
+                    'reference_2', 'Reference', ['first', 'consensus'], selected='first'
+                ),
+                selector='#download_format-label',
+                where='beforeBegin'
+            ) if aln is None else ui.insert_ui(
+                ui.input_selectize(
+                    id='reference_2', label='Reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
+                ),
                 selector='#download_format-label',
                 where='beforeBegin'
             )
@@ -349,7 +358,6 @@ def server(input, output, session):
             )
 
     # TODO: Download distance matrices
-    # TODO: Download ORFs as bed
     # TODO: Download char frequencies
     # TODO: Download reverse complement
     @render.download()
