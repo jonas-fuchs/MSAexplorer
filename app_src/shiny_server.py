@@ -249,12 +249,12 @@ def server(input, output, session):
                 # Some of the function highly depend on the alignment type
                 if aln.aln_type == 'AA':
                     ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs','consensus', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
+                    ui.update_selectize('download_type', choices=['SNPs','consensus', 'character frequencies', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs'])
                 else:
                     # needed because if an as aln and then a nt aln are loaded it will not change
                     ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
+                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
                 # case if annotation file is uploaded prior to the alignment file
                 if annotation_file:
@@ -358,8 +358,9 @@ def server(input, output, session):
             )
         elif input.download_type() == 'reverse complement alignment':
             ui.update_selectize('download_format', choices=['fasta'])
+        elif input.download_type() == 'character frequencies':
+            ui.update_selectize('download_format', choices=['tabular', 'csv'])
 
-    # TODO: Download distance matrices
     # TODO: Download char frequencies
     @render.download()
     def download_stats():
@@ -444,6 +445,11 @@ def server(input, output, session):
 
             return export.fasta(sequence=data), 'rc_alignment_'
 
+        def _char_freq_option():
+            data = aln.calc_character_frequencies()
+
+            return export.character_freq(data, seperator='\t' if input.download_format() == 'tabular' else ','), 'char_freq_'
+
         try:
             # Initialize
             download_format = input.download_format()
@@ -463,6 +469,8 @@ def server(input, output, session):
                 export_data = _orf_option()
             elif input.download_type() == 'reverse complement alignment':
                 export_data = _reverse_complement_option()
+            elif input.download_type() == 'character frequencies':
+                export_data = _char_freq_option()
             else:
                 export_data = (None, None)
 
@@ -573,7 +581,6 @@ def server(input, output, session):
         return len(aln.get_snps()['POS'])
 
     #TODO: Conditionally exclude options
-
     @reactive.Effect
     @reactive.event(input.analysis_plot_type_left)
     def update_additional_options_left():

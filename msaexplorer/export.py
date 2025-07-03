@@ -158,7 +158,7 @@ def fasta(sequence: str | dict, header: str | None = None, path: str | None = No
         return fasta_formated_sequence
 
 
-def stats(stat_data: list | ndarray, seperator: str, path: str | None = None) -> str | None:
+def stats(stat_data: list | ndarray, seperator: str = '\t', path: str | None = None) -> str | None:
     """
     Export a list of stats per nucleotide to tabular or csv format.
 
@@ -205,6 +205,48 @@ def orf(orf_dict: dict, chrom: str, path: str | None = None) -> str | ValueError
             f"{chrom}\t{orf_data['location'][0][0]}\t{orf_data['location'][0][1]}\t{orf_id}\t{orf_data['conservation']:.2f}\t{orf_data['strand']}"
         )
 
+    if path is not None:
+        with open(path, 'w') as out_file:
+            out_file.write('\n'.join(lines))
+    else:
+        return '\n'.join(lines)
+
+
+def character_freq(char_dict: dict, seperator: str = '\t', path: str | None = None) -> str | None | ValueError:
+    """
+    Export a character frequency dictionary to tabular or csv format.
+
+    :param char_dict: Dictionary containing the character frequencies.
+    :param seperator: seperator for the table e.g. tabular or comma
+    :param path: Path to output table.
+    :return: A string containing the character frequency table.
+    :raises ValueError: if the input dictionary is missing required keys or format_type is invalid.
+    """
+
+    def _validate():
+        if not isinstance(char_dict, dict):
+            raise ValueError('Data must be a dictionary.')
+        for key, value in char_dict.items():
+            for key_2, value_2 in value.items():
+                if key_2 not in config.POSSIBLE_CHARS:
+                    raise ValueError(f'The key {key_2} is invalid.')
+                for key_3, value_3 in value_2.items():
+                    if key_3 not in ['counts', '% of alignment', '% of non-gapped']:
+                        raise ValueError(f'The key "{key_3}" is invalid.')
+
+    # validate input
+    _validate()
+
+    lines = [F'sequence{seperator}char{seperator}counts{seperator}% of non-gapped']
+    for key, value in char_dict.items():
+        if key == 'total':
+            continue
+        for key_2, value_2 in value.items():
+            if key_2 == '-':
+                continue
+            lines.append(f'{key}{seperator}{key_2}{seperator}{value_2["counts"]}{seperator}{value_2["% of non-gapped"]}')
+
+    # export data
     if path is not None:
         with open(path, 'w') as out_file:
             out_file.write('\n'.join(lines))
