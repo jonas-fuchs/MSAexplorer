@@ -254,7 +254,7 @@ def server(input, output, session):
                 else:
                     # needed because if an as aln and then a nt aln are loaded it will not change
                     ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
+                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
                 # case if annotation file is uploaded prior to the alignment file
                 if annotation_file:
@@ -356,10 +356,11 @@ def server(input, output, session):
                 selector='#download_format-label',
                 where='beforeBegin'
             )
+        elif input.download_type() == 'reverse complement alignment':
+            ui.update_selectize('download_format', choices=['fasta'])
 
     # TODO: Download distance matrices
     # TODO: Download char frequencies
-    # TODO: Download reverse complement
     @render.download()
     def download_stats():
         """
@@ -384,9 +385,14 @@ def server(input, output, session):
         def _consensus_option():
             if input.download_type_options_1() == 'Yes' and aln.aln_type != 'AA':
                 download_data = export.fasta(
-                    aln.get_consensus(threshold=input.download_type_options_2(), use_ambig_nt=True))
+                    sequence=aln.get_consensus(threshold=input.download_type_options_2(), use_ambig_nt=True),
+                    header='ambiguous_consensus',
+                )
             else:
-                download_data = export.fasta(aln.get_consensus(threshold=input.download_type_options_2()))
+                download_data = export.fasta(
+                    sequence=aln.get_consensus(threshold=input.download_type_options_2()),
+                    header='consensus',
+                )
             prefix = 'consensus_'
 
             return download_data, prefix
@@ -420,7 +426,7 @@ def server(input, output, session):
             # apply rolling average
             data = draw._moving_average(data, input.download_type_options_1(), None, aln.length)[0]
             # create download data
-            download_data = export.stats(data, seperator)
+            download_data = export.stats(stat_data=data, seperator=seperator)
             prefix = f'{stat_type}_'.replace(' ', '_')  # sanitize prefix
 
             return download_data, prefix
@@ -432,6 +438,11 @@ def server(input, output, session):
                 data = aln.get_non_overlapping_conserved_orfs(min_length=input.download_type_options_1(),identity_cutoff=input.download_type_options_2())
 
             return export.orf(data, aln.reference_id.split(' ')[0]), 'orfs_' if input.download_type_options_3() == 'Yes' else 'non_overlapping_conserved_orfs_'
+
+        def _reverse_complement_option():
+            data = aln.calc_reverse_complement_alignment()
+
+            return export.fasta(sequence=data), 'rc_alignment_'
 
         try:
             # Initialize
@@ -450,6 +461,8 @@ def server(input, output, session):
                 export_data = _stat_option()
             elif input.download_type() == 'conserved orfs':
                 export_data = _orf_option()
+            elif input.download_type() == 'reverse complement alignment':
+                export_data = _reverse_complement_option()
             else:
                 export_data = (None, None)
 

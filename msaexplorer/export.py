@@ -7,9 +7,7 @@ This module lets you export data produced with MSA explorer.
 """
 
 import os
-
 from numpy import ndarray
-
 from msaexplorer import config
 
 
@@ -24,14 +22,14 @@ def _check_and_create_path(path: str):
             os.makedirs(output_dir)
 
 
-def snps(snp_dict: dict, path: str | None = None, format_type: str = 'vcf') -> str | None | ValueError:
+def snps(snp_dict: dict, format_type: str = 'vcf', path: str | None = None) -> str | None | ValueError:
     """
     Export a SNP dictionary to a VCF or tabular format. Importantly, the input dictionary has to be in the standard
     format that MSAexplorer produces.
 
     :param snp_dict: Dictionary containing SNP positions and variant information.
-    :param path: Path to output VCF or tabular format. (optional)
     :param format_type: Format type ('vcf' or 'tabular'). Default is 'vcf'.
+    :param path: Path to output VCF or tabular format. (optional)
     :return: A string containing the SNP data in the requested format.
     :raises ValueError: if the input dictionary is missing required keys or format_type is invalid.
     """
@@ -127,21 +125,32 @@ def snps(snp_dict: dict, path: str | None = None, format_type: str = 'vcf') -> s
         return '\n'.join(lines)
 
 
-def fasta(sequence: str, path: str | None = None,  header: str = 'consensus') -> str | None:
+def fasta(sequence: str | dict, header: str | None = None, path: str | None = None) -> str | None:
     """
-    Export a fasta file to either a string or save directly to file.
+    Export a fasta sequence from str or alignment in dictionary format to either a string or save directly to file.
+    The alignment format must have headers as keys and the corresponding sequence as values.
     :param sequence: sequence to export
-    :param path: path to save the file
     :param header: optional header file
+    :param path: path to save the file
     :return: fasta formatted string
     """
-    def _validate_sequence(sequence: str):
-        if not set(sequence).issubset(set(config.POSSIBLE_CHARS)):
-            raise ValueError(f'Sequence contains invalid characters{set(sequence)}')
+    def _validate_sequence(seq: str):
+        if not set(seq).issubset(set(config.POSSIBLE_CHARS)):
+            raise ValueError(f'Sequence contains invalid characters. Detected chars: {set(seq)}')
 
     _check_and_create_path(path)
-    _validate_sequence(sequence)
-    fasta_formated_sequence = f'>{header}\n{sequence}'
+    fasta_formated_sequence = ''
+
+    if type(sequence) is str:
+        _validate_sequence(sequence)
+        fasta_formated_sequence = f'>{header}\n{sequence}'
+    elif type(sequence) is dict:
+        for header, sequence in sequence.items():
+            if type(sequence) is not str:
+                raise ValueError(f'Sequences in the dictionary must be strings.')
+            _validate_sequence(sequence)
+            fasta_formated_sequence = f'{fasta_formated_sequence}\n>{header}\n{sequence}' if fasta_formated_sequence != '' else f'>{header}\n{sequence}'
+
     if path is not None:
         with open(path, 'w') as out_file:
             out_file.write(fasta_formated_sequence)
