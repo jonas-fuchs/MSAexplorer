@@ -75,6 +75,7 @@ def _custom_sidebar():
                     ui.input_switch('show_legend', 'Legend', value=True),
                     ui.input_switch('show_mask', 'Show mask', value=True),
                     ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
+                    ui.input_switch('seq_names', 'show names', value=False),
 
                 ),
                 ui.column(
@@ -97,9 +98,8 @@ def _custom_sidebar():
                 4,
 
                     ui.input_selectize('matrix', 'Matrix', ['None']),
-                    ui.input_selectize('matrix_color_mapping', 'Colormap Similarity', choices=list(colormaps.keys()),
-                                       selected='PuBu_r'),
-                    ui.input_switch('seq_names', 'show names', value=False),
+                    ui.input_selectize('matrix_color_mapping', 'Colormap Similarity', choices=list(colormaps.keys()), selected='PuBu_r'),
+                    ui.input_selectize('identity_coloring', 'Identity coloring', ['None', 'standard'], selected='None'),
                 )
             ),
             ui.hr(),
@@ -146,7 +146,7 @@ def _upload_tab():
                 ui.card(
                     ui.card_header(ui.h6('Upload files:')),
                     ui.layout_columns(
-                        ui.input_file('alignment_file', 'Multiple sequence alignment:', multiple=False,
+                        ui.input_file('alignment_file', 'Multiple sequence alignment (*.fasta):', multiple=False,
                                       accept=['.fa', '.fasta', '.aln']),
                         ui.input_file('annotation_file', 'Optional annotation file (*.gff, *.bed, *.gb):', multiple=False,
                                       accept=['.gff', '.gff3', '.bed', '.gb']),
@@ -207,8 +207,7 @@ def _plot_tab():
                 ui.input_slider('increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1),
                 ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
                 ui.input_numeric('plot_1_size', 'Plot fraction', 1, min=1, max=200),
-                ui.input_selectize('alignment_type', ui.h6('Second plot'),
-                                   ['Off', 'identity', 'colored identity', 'similarity'], selected='identity'),
+                ui.input_selectize('alignment_type', ui.h6('Second plot'),['Off', 'identity', 'similarity'], selected='identity'),
                 ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
                 ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
                 ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),

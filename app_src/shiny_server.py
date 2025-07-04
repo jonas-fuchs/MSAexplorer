@@ -75,7 +75,8 @@ def server(input, output, session):
             inputs['show_gaps'] = input.show_gaps()
             inputs['show_legend'] = input.show_legend()
             inputs['show_ambiguities'] = input.show_ambiguities()
-            if inputs['alignment_type'] not in ['identity', 'colored identity']:
+            inputs['identity_coloring'] = input.identity_coloring()
+            if inputs['alignment_type'] == 'similarity':
                 inputs['matrix'] = input.matrix()
                 inputs['matrix_color_mapping'] = input.matrix_color_mapping()
 
@@ -181,7 +182,6 @@ def server(input, output, session):
         await session.send_custom_message("update-plot-container-height", {'height': new_plot_height})
 
     #TODO: Also try to conditionally exclude the Annotation column
-
     # Inputs
     @reactive.Effect
     @reactive.event(input.alignment_file)
@@ -251,11 +251,13 @@ def server(input, output, session):
                     ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
                     ui.update_selectize('download_type', choices=['SNPs','consensus', 'character frequencies', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs'])
+                    ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
                 else:
                     # needed because if an as aln and then a nt aln are loaded it will not change
                     ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
                     ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
+                    ui.update_selectize('identity_coloring', choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
                 # case if annotation file is uploaded prior to the alignment file
                 if annotation_file:
                     read_in_annotation(annotation_file)

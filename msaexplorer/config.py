@@ -772,51 +772,115 @@ IDENTITY_COLORS = {
             'color': 'black'}
 }
 
-
+#TODO: Check all colors and adapt
 CHAR_COLORS = {
-        'DNA': {
-                'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
-                'T': '#F26D6D',  # Thymine (T) - muted pinkish red
-                'G': '#64A87B',  # Guanine (G) - strong teal-green
-                'C': '#7095D1',  # Cytosine (C) - soft steel blue
-                '-': 'silver'
+    'DNA': {
+        'standard': {
+            'A': '#F2A45E',
+            'T': '#F26D6D',
+            'G': '#64A87B',
+            'C': '#7095D1',
+            '-': 'silver'
         },
-        'RNA': {
-                'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
-                'U': '#F26D6D',  # Uracil (U) - same as Thymine
-                'G': '#64A87B',  # Guanine (G) - strong teal-green
-                'C': '#7095D1',  # Cytosine (C) - soft steel blue
-                '-': 'silver'
+        'purine_pyrimidine': {
+            'A': '#F2C94C',
+            'G': '#F2C94C',
+            'C': '#56CCF2',
+            'T': '#56CCF2',
+            '-': 'silver'
         },
-        'AA': {
-            # Nonpolar, hydrophobic
-            'A': '#D99058',  # Alanine (A) - warm orange-brown
-            'V': '#E2A876',  # Valine (V) - soft peach-orange
-            'I': '#E0A45F',  # Isoleucine (I) - warm sandy orange
-            'L': '#DA8A54',  # Leucine (L) - light orange
-            'M': '#D99058',  # Methionine (M) - warm orange-brown (same as A)
-            'F': '#B05B61',  # Phenylalanine (F) - muted brick red
-            'W': '#805F9C',  # Tryptophan (W) - deep lavender
-            # Polar, uncharged
-            'S': '#D98B81',  # Serine (S) - warm peach
-            'T': '#D9A86B',  # Threonine (T) - soft caramel
-            'N': '#AB6D9F',  # Asparagine (N) - medium mauve
-            'Q': '#986DB2',  # Glutamine (Q) - medium purple
-            'Y': '#C76F61',  # Tyrosine (Y) - muted terracotta
-            'C': '#D1B758',  # Cysteine (C) - golden yellow
-            # Charged, acidic
-            'D': '#D96666',  # Aspartic Acid (D) - muted red
-            'E': '#D96F5F',  # Glutamic Acid (E) - soft coral
-            # Charged, basic
-            'K': '#5D93C4',  # Lysine (K) - medium blue
-            'R': '#5DA5A4',  # Arginine (R) - soft teal
-            'H': '#916FA7',  # Histidine (H) - muted violet
-            # Unique
-            'G': '#6FAF99',  # Glycine (G) - teal green
-            'P': '#77A86F',  # Proline (P) - muted green
-            # Gap
+        'strong_weak': {
+            'G': '#27AE60',
+            'C': '#27AE60',
+            'A': '#E67E22',
+            'T': '#E67E22',
             '-': 'silver'
         }
+    },
+    'RNA': {
+        'standard': {
+            'A': '#F2A45E',
+            'U': '#F26D6D',
+            'G': '#64A87B',
+            'C': '#7095D1',
+            '-': 'silver'
+        },
+        'purine_pyrimidine': {
+            'A': '#F2C94C',
+            'G': '#F2C94C',
+            'C': '#56CCF2',
+            'U': '#56CCF2',
+            '-': 'silver'
+        },
+        'strong_weak': {
+            'G': '#27AE60',
+            'C': '#27AE60',
+            'A': '#E67E22',
+            'U': '#E67E22',
+            '-': 'silver'
+        }
+    },
+    'AA': {
+        'standard': {
+            'A': '#D99058', 'V': '#E2A876', 'I': '#E0A45F', 'L': '#DA8A54', 'M': '#D99058',
+            'F': '#B05B61', 'W': '#805F9C', 'S': '#D98B81', 'T': '#D9A86B', 'N': '#AB6D9F',
+            'Q': '#986DB2', 'Y': '#C76F61', 'C': '#D1B758', 'D': '#D96666', 'E': '#D96F5F',
+            'K': '#5D93C4', 'R': '#5DA5A4', 'H': '#916FA7', 'G': '#6FAF99', 'P': '#77A86F',
+            '-': 'silver'
+        },
+        'clustal': {  # standard ClustalX coloring scheme
+            'A': '#CCFF00', 'R': '#0000FF', 'N': '#CC00FF', 'D': '#FF0000', 'C': '#FFFF00',
+            'Q': '#FF00CC', 'E': '#FF0066', 'G': '#FF9900', 'H': '#0066FF', 'I': '#66FF66',
+            'L': '#33FF00', 'K': '#6600FF', 'M': '#00FF00', 'F': '#00FF66', 'P': '#FFCC00',
+            'S': '#FF99CC', 'T': '#FFCCFF', 'W': '#00CCFF', 'Y': '#00FFFF', 'V': '#99FF33',
+            '-': 'silver'
+        },
+        'zappo': {  # physicochemical properties (Zappo color scheme)
+            'A': '#FFAF75',
+            'I': '#FFAF75', 'L': '#FFAF75', 'M': '#FFAF75', 'V': '#FFAF75',
+            'F': '#C40000', 'W': '#C40000', 'Y': '#C40000',
+            'K': '#0000FF', 'R': '#0000FF', 'H': '#7070FF',
+            'D': '#FF0000', 'E': '#FF0000',
+            'S': '#00FF00', 'T': '#00FF00', 'N': '#00FF00', 'Q': '#00FF00',
+            'C': '#FFFF00',
+            'G': '#FF00FF',
+            'P': '#A0A0A0',
+            '-': 'silver'
+        },
+        'hydrophobicity': {  # coloring based on Kyte-Doolittle scale
+            'I': '#1b7837', 'V': '#5aa65a', 'L': '#1b7837', 'F': '#00441b', 'C': '#78c679',
+            'M': '#238443', 'A': '#a6dba0', 'G': '#d9f0d3', 'T': '#ccebc5', 'S': '#ccebc5',
+            'W': '#006837', 'Y': '#7bccc4', 'P': '#ffffcc', 'H': '#fdbb84', 'E': '#f03b20',
+            'Q': '#fc9272', 'D': '#e34a33', 'N': '#fdd49e', 'K': '#ef6548', 'R': '#d7301f',
+            '-': 'silver'
+        }
+    }
+}
+
+AA_GROUPS = {
+    'clustal': {
+        'Aliphatic (A, V, L, I, M)': ['A', 'V', 'L', 'I', 'M'],
+        'Aromatic (F, W, Y)': ['F', 'W', 'Y'],
+        'Polar (S, T, N, Q)': ['S', 'T', 'N', 'Q'],
+        'Positive (K, R, H)': ['K', 'R', 'H'],
+        'Negative (D, E)': ['D', 'E'],
+        'Special (C, G, P)': ['C', 'G', 'P']
+    },
+    'zappo': {
+        'Aliphatic': ['A', 'I', 'L', 'M', 'V'],
+        'Aromatic': ['F', 'W', 'Y'],
+        'Positive': ['K', 'R', 'H'],
+        'Negative': ['D', 'E'],
+        'Polar Uncharged': ['S', 'T', 'N', 'Q'],
+        'Cysteine': ['C'],
+        'Glycine': ['G'],
+        'Proline': ['P']
+    },
+    'hydrophobicity': {
+        'Hydrophobic (I, V, L, F, M, A, G)': ['I', 'V', 'L', 'F', 'M', 'A', 'G'],
+        'Moderate (T, S, W, Y, P, C)': ['T', 'S', 'W', 'Y', 'P', 'C'],
+        'Hydrophilic (H, E, Q, D, N, K, R)': ['H', 'E', 'Q', 'D', 'N', 'K', 'R']
+    }
 }
 
 # shiny app specific settings

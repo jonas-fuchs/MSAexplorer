@@ -761,7 +761,7 @@ class MSA:
 
         # encode every different character
         if encode_each_mismatch_char:
-            for idx, char in enumerate(config.CHAR_COLORS[self.aln_type]):
+            for idx, char in enumerate(config.CHAR_COLORS[self.aln_type]['standard']):
                 new_encoding = np.isin(sequences, [char]) & is_mismatch
                 identity_matrix[new_encoding] = idx + 1
         # or encode different with a single value

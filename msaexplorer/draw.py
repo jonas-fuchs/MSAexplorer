@@ -274,7 +274,7 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, values: 
         x_text += 1
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_sequence: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: bool = False, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
+def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_sequence: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
@@ -289,7 +289,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     :param fancy_gaps: show gaps with a small black bar
     :param show_mismatches: whether to show mismatches otherwise it will be shown as match
     :param show_ambiguities: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
-    :param color_mismatching_chars: color mismatching chars with their unique color
+    :param color_mismatching_chars: color mismatching chars with their unique color. Options for DNA/RNA are: standard, purine_pyrimidine, strong_weak; and for AS: standard, clustal, zappo, hydrophobicity
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
@@ -299,6 +299,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     _validate_input_parameters(aln, ax)
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
+
+    if color_mismatching_chars is not None:
+        if aln.aln_type == 'AA' and color_mismatching_chars not in ['standard', 'clustal', 'zappo', 'hydrophobicity']:
+            raise ValueError(f'{color_mismatching_chars} is not a supported coloring scheme for {aln.aln_type} alignments. Supported are: standard, clustal, zappo, hydrophobicity')
+        elif aln.aln_type in ['DNA', 'RNA'] and color_mismatching_chars not in ['standard', 'purine_pyrimidine', 'strong_weak']:
+            raise ValueError(f'{color_mismatching_chars} is not a supported coloring scheme for {aln.aln_type} alignments. Supported are: standard, purine_pyrimidine, strong_weak')
 
     # Both options for gaps work hand in hand
     if fancy_gaps:
@@ -310,8 +316,8 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     # Set up color mapping and identity values
     aln_colors = config.IDENTITY_COLORS.copy()
     identity_values = [-1, -2, -3]  # -1 = mismatch, -2 = mask, -3 ambiguity
-    if color_mismatching_chars:
-        colors_to_extend = config.CHAR_COLORS[aln.aln_type]
+    if color_mismatching_chars is not None:
+        colors_to_extend = config.CHAR_COLORS[aln.aln_type][color_mismatching_chars]
         identity_values += [x + 1 for x in range(len(colors_to_extend))] # x+1 is needed to allow correct mapping
         for idx, char in enumerate(colors_to_extend):
             aln_colors[idx + 1] = {'type': char, 'color': colors_to_extend[char]}
@@ -322,7 +328,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
         encode_gaps=show_gaps,
         encode_mismatches=show_mismatches,
         encode_ambiguities=show_ambiguities,
-        encode_each_mismatch_char=color_mismatching_chars
+        encode_each_mismatch_char=True if color_mismatching_chars is not None else False
     )
 
     # List to store polygons
@@ -362,23 +368,64 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     ax.add_collection(PatchCollection(patch_list, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
     ax.add_collection(PolyCollection(polygons, facecolors=polygon_colors, linewidths=0.5, edgecolors=polygon_colors))
 
+    # TODO: FIX LEGEND
     # custom legend
     if show_legend:
-        # create it
-        custom_legend = [
-            ax.add_line(
-                plt.Line2D(
-                    [],
-                    [],
-                    color=aln_colors[x]['color'], marker='s' ,markeredgecolor='grey', linestyle='', markersize=10)) for x in aln_colors if x in detected_identity_values
-        ]
-        # plot it
+        legend_handles = []
+        legend_labels = []
+
+        # Map from char to color from aln_colors
+        char_to_color = {v['type']: v['color'] for k, v in aln_colors.items() if
+                         k in detected_identity_values and 'type' in v}
+
+        if color_mismatching_chars in ['purine_pyrimidine', 'strong_weak'] and aln.aln_type in ['DNA', 'RNA']:
+            group_mapping = {
+                'purine_pyrimidine': {
+                    'Purines (A/G)': ['A', 'G'],
+                    'Pyrimidines (C/T or C/U)': ['C', 'T'] if aln.aln_type == 'DNA' else ['C', 'U']
+                },
+                'strong_weak': {
+                    'Strong (G≡C)': ['G', 'C'],
+                    'Weak (A=T or A=U)': ['A', 'T'] if aln.aln_type == 'DNA' else ['A', 'U']
+                }
+            }[color_mismatching_chars]
+
+            for label, chars in group_mapping.items():
+                shared_color = char_to_color.get(chars[0])
+                if all(char_to_color.get(c) == shared_color for c in chars):
+                    legend_handles.append(
+                        plt.Line2D([], [], color=shared_color, marker='s', markeredgecolor='grey', linestyle='',
+                                   markersize=10)
+                    )
+                    legend_labels.append(label)
+
+        elif color_mismatching_chars in ['clustal', 'zappo', 'hydrophobicity'] and aln.aln_type == 'AA':
+            group_map = config.AA_GROUPS.get(color_mismatching_chars, {})
+            for label, chars in group_map.items():
+                # Check that all group characters exist and have same color
+                valid_colors = {char_to_color[c] for c in chars if c in char_to_color}
+                if len(valid_colors) == 1:
+                    color = valid_colors.pop()
+                    legend_handles.append(
+                        plt.Line2D([], [], color=color, marker='s', markeredgecolor='grey', linestyle='', markersize=10)
+                    )
+                    legend_labels.append(label)
+        else:
+            # Default: per-character legend from aln_colors
+            for k in sorted(aln_colors):
+                if k in detected_identity_values and 'type' in aln_colors[k]:
+                    legend_handles.append(
+                        plt.Line2D([], [], color=aln_colors[k]['color'], marker='s', markeredgecolor='grey',
+                                   linestyle='', markersize=10)
+                    )
+                    legend_labels.append(aln_colors[k]['type'])
+
         ax.legend(
-            custom_legend,
-            [aln_colors[x]['type'] for x in aln_colors if x in detected_identity_values],
+            legend_handles,
+            legend_labels,
             loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=(len(detected_identity_values) + 1) / 2 if aln.aln_type == 'AA' and color_mismatching_chars else len(detected_identity_values),
+            ncols=(len(legend_labels) + 1) // 2,
             frameon=False
         )
 
@@ -630,7 +677,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
             raise ValueError('lollisize must be floats greater than zero')
 
     # define colors
-    colors = config.CHAR_COLORS[aln.aln_type]
+    colors = config.CHAR_COLORS[aln.aln_type]['standard']
     # get snps
     snps = aln.get_snps()
     # define where to plot (each ref type gets a separate line)

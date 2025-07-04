@@ -67,13 +67,12 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 show_mask=inputs['show_mask'],
                 show_mismatches=True,
                 show_ambiguities=inputs['show_ambiguities'],
-                color_mismatching_chars=True if inputs['alignment_type'] == 'colored identity' else False,
+                color_mismatching_chars=inputs['identity_coloring'] if inputs['identity_coloring'] != 'None' else None,
                 reference_color=inputs['reference_color'],
                 show_seq_names=inputs['seq_names'],
                 show_x_label=True if inputs['annotation'] == 'Off' else False,
                 show_legend=inputs['show_legend']
-        ) if inputs['alignment_type'] == 'identity' or inputs[
-            'alignment_type'] == 'colored identity' else draw.similarity_alignment(
+        ) if inputs['alignment_type'] == 'identity' else draw.similarity_alignment(
                 aln, ax,
                 show_sequence=inputs['show_sequence'],
                 fancy_gaps=inputs['fancy_gaps'],
@@ -247,6 +246,3 @@ def create_freq_heatmap(aln, inputs):
         return fig
     else:
         return None
-
-
-#TODO: Add additional plots for analysis tab?
