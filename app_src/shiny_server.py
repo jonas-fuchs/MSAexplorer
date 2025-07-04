@@ -143,8 +143,6 @@ def server(input, output, session):
         # right analysis plot
         if right_plot:
             inputs['analysis_plot_type_right'] = input.analysis_plot_type_right()
-            if inputs['analysis_plot_type_right'] != 'Off':
-                inputs['additional_analysis_options_right'] = input.additional_analysis_options_right()
         if window_size:
             inputs['dimensions'] = input.window_dimensions()
 
@@ -290,7 +288,9 @@ def server(input, output, session):
         updating_from_numeric = True
         start, end = input.zoom_start(), input.zoom_end()
         # make sure set values make sense
-        if end is not None and start is not None and start >= end:
+        if start is None or end is None:
+            return
+        if start >= end:
             end = start +1
         ui.update_slider("zoom_range", value=(start, end))
         updating_from_numeric = False
@@ -645,16 +645,6 @@ def server(input, output, session):
                 where='beforeBegin'
             )
 
-
-    @reactive.Effect
-    @reactive.event(input.analysis_plot_type_right)
-    def update_additional_options_right():
-        """
-        Update UI for the left plot in the analysis tab
-        """
-        # ensure that it is switched back
-        if input.analysis_plot_type_right() == 'Off':
-            ui.update_selectize('additional_analysis_options_right', choices=['None'], selected='None')
 
     @render.text
     def analysis_info_left():
