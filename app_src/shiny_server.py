@@ -28,6 +28,8 @@ def server(input, output, session):
 
     reactive.alignment = reactive.Value(None)
     reactive.annotation = reactive.Value(None)
+    updating_from_slider = False
+    updating_from_numeric = False
 
     # create inputs for plotting and pdf
     def prepare_inputs():
@@ -267,6 +269,32 @@ def server(input, output, session):
                     style="color: red; font-weight: bold;"
                 ), duration=10)  # print to user
 
+    # make sure that the zoom boxes are updated when the slider changes
+    @reactive.effect
+    def update_zoom_boxes():
+        nonlocal updating_from_slider
+        if updating_from_numeric:
+            return
+        updating_from_slider = True
+        zoom_range = input.zoom_range()
+        ui.update_numeric("zoom_start", value=zoom_range[0])
+        ui.update_numeric("zoom_end", value=zoom_range[1])
+        updating_from_slider = False
+
+    # and vice versa if the input changes, change the zoom slider
+    @reactive.effect
+    def update_zoom_slider():
+        nonlocal updating_from_numeric
+        if updating_from_slider:
+            return
+        updating_from_numeric = True
+        start, end = input.zoom_start(), input.zoom_end()
+        # make sure set values make sense
+        if end is not None and start is not None and start >= end:
+            end = start +1
+        ui.update_slider("zoom_range", value=(start, end))
+        updating_from_numeric = False
+
     @reactive.Effect
     @reactive.event(input.annotation_file)
     def load_annotation():
@@ -361,7 +389,6 @@ def server(input, output, session):
         elif input.download_type() == 'character frequencies':
             ui.update_selectize('download_format', choices=['tabular', 'csv'])
 
-    # TODO: Download char frequencies
     @render.download()
     def download_stats():
         """
@@ -589,18 +616,35 @@ def server(input, output, session):
         """
         # ensure that it is switched back
         if input.analysis_plot_type_left() == 'Off':
-            ui.update_selectize('additional_analysis_options_left', choices=['None'], selected='None')
+            ui.remove_ui(selector="div:has(> #additional_analysis_options_left)")
+            ui.remove_ui(selector="div:has(> #additional_analysis_options_left-label)")
+            ui.remove_ui(selector="div:has(> #analysis_info_left)")
         if input.analysis_plot_type_left() == 'Pairwise identity':
-            ui.update_selectize(
-                'additional_analysis_options_left',
-                choices={
-                    'ghd': 'global hamming distance',
-                    'lhd': 'local hamming distance',
-                    'ged': 'gap excluded distance',
-                    'gcd': 'gap compressed distance'
-                },
-                selected='ghd'
+            ui.insert_ui(
+                ui.input_selectize(
+                    'additional_analysis_options_left',
+                    label='Options left',
+                    choices={
+                        'ghd': 'global hamming distance',
+                        'lhd': 'local hamming distance',
+                        'ged': 'gap excluded distance',
+                        'gcd': 'gap compressed distance'
+                    },
+                    selected='ghd'
+                ),
+                selector='#analysis_plot_type_right-label',
+                where='beforeBegin'
             )
+            ui.insert_ui(
+                ui.div(
+                    ui.output_text_verbatim(
+                        'analysis_info_left', placeholder=False
+                    )
+                ),
+                selector='#analysis_plot_type_right-label',
+                where='beforeBegin'
+            )
+
 
     @reactive.Effect
     @reactive.event(input.analysis_plot_type_right)
@@ -628,13 +672,6 @@ def server(input, output, session):
             return 'INFO gcd (gap compressed distance):\n\nAll consecutive gaps arecompressed to\none mismatch.\n\ndistance = matches / gap_compressed_alignment_length * 100'
         else:
             return None
-
-    @render.text
-    def analysis_info_right():
-        """
-        show custom text for additional options
-        """
-        return None
 
 
     @render_widget

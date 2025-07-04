@@ -148,7 +148,7 @@ def _upload_tab():
                     ui.layout_columns(
                         ui.input_file('alignment_file', 'Multiple sequence alignment:', multiple=False,
                                       accept=['.fa', '.fasta', '.aln']),
-                        ui.input_file('annotation_file', 'Optional annotation file:', multiple=False,
+                        ui.input_file('annotation_file', 'Optional annotation file (*.gff, *.bed, *.gb):', multiple=False,
                                       accept=['.gff', '.gff3', '.bed', '.gb']),
                     )
                 ),
@@ -176,9 +176,20 @@ def _upload_tab():
         ui.card(
             ui.h6('About MSAexplorer:'),
             ui.p(
-                "MSAexplorer is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs)."),
-            ui.p(ui.a("🔗 Learn more and contribute on GitHub", href="https://github.com/jonas-fuchs/MSAexplorer",
-                      target="_blank")),
+                "MSAexplorer is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs)."
+            ),
+            ui.p(
+                ui.a(
+                    "🔗 Full API documentation", href="https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html",
+                      target="_blank"
+                )
+            ),
+            ui.p(
+                ui.a(
+                    "🔗 Contribute on GitHub", href="https://github.com/jonas-fuchs/MSAexplorer",
+                    target="_blank"
+                )
+            ),
             class_="about-card"
         ),
         icon=ui.HTML('<img src="img/upload.svg" alt="Upload Icon" style="height: 1em; vertical-align: middle">')
@@ -208,8 +219,12 @@ def _plot_tab():
                 ),
                 title=ui.h6('Plotting layout'),
             ),
-            ui.input_slider('zoom_range', ui.h6('Zoom'), min=0, max=1000, value=(0, 1000), step=1, width='100vw',
-                            ticks=True),
+            ui.row(
+                ui.column(2, ui.input_numeric("zoom_start", "Start", 0, min=0, max=1000)),
+                ui.column(8, ui.input_slider("zoom_range", "Zoom", min=0, max=1000, value=(0, 1000), step=1,
+                                             width="100%")),
+                ui.column(2, ui.input_numeric("zoom_end", "End", 1000, min=0, max=1000))
+            ),
             ui.output_plot('msa_plot', height='100vh', width='92vw'),
             fillable=False
         ),
@@ -262,11 +277,7 @@ def _analysis_tab():
             ui.column(
                 2,
                 ui.input_selectize('analysis_plot_type_left', ui.h6('Left plot'), ['Off', 'Pairwise identity'], selected='Off'),
-                ui.input_selectize('additional_analysis_options_left', ui.h6('Options'), ['None'], selected='None'),
-                ui.output_text_verbatim('analysis_info_left', placeholder=False),
                 ui.input_selectize('analysis_plot_type_right', ui.h6('Right plot'), ['Off', 'Character frequencies'], selected='Off'),
-                ui.input_selectize('additional_analysis_options_right', ui.h6('Options'), ['None'], selected='None'),
-                ui.output_text_verbatim('analysis_info_right', placeholder=False)
             ),
             ui.column(
                 5,
