@@ -450,7 +450,7 @@ def server(input, output, session):
             # use correct function
             data = stat_functions[stat_type]()
             # calculate the mean (identical to draw module of msaexplorer)
-            if stat_type in ['mean identity', 'mena similarity']:
+            if stat_type in ['mean identity', 'mean similarity']:
                 # for the mean nan values get handled as the lowest possible number in the matrix
                 data = np.nan_to_num(data, True, -1 if stat_type == 'identity' else 0)
                 data = np.mean(data, axis=0)
