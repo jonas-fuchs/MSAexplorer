@@ -79,7 +79,6 @@ def server(input, output, session):
             if inputs['alignment_type'] == 'similarity':
                 inputs['matrix'] = input.matrix()
                 inputs['matrix_color_mapping'] = input.matrix_color_mapping()
-
             # determine if it makes sense to show the sequence or sequence names
             # therefore figure out if there are enough chars/size that sequence fits in there
             complete_size = input.plot_2_size()
@@ -92,8 +91,10 @@ def server(input, output, session):
             # and then decide how to set the show sequence input
             if relative_msa_width >= 11 and relative_msa_height >= 18:
                 inputs['show_sequence'] = input.show_sequence()
+                inputs['show_sequence_all'] = input.show_sequence_all()
             else:
                 inputs['show_sequence'] = False
+                inputs['show_sequence_all'] = False
             # and the seq_names input - check if there is enough y space for the text
             if relative_msa_height >= 15:
                 inputs['seq_names'] = input.seq_names()

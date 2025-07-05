@@ -761,6 +761,7 @@ SUBS_MATRICES = {
         }
 }
 
+# basic color mapping
 IDENTITY_COLORS = {
         0: {'type': 'identical',
             'color': 'lightgrey'},
@@ -772,7 +773,7 @@ IDENTITY_COLORS = {
             'color': 'black'}
 }
 
-#TODO: Check all colors and adapt
+# extended color mappings
 CHAR_COLORS = {
     'DNA': {
         'standard': {
@@ -783,17 +784,17 @@ CHAR_COLORS = {
             '-': 'silver'
         },
         'purine_pyrimidine': {
-            'A': '#F2C94C',
-            'G': '#F2C94C',
-            'C': '#56CCF2',
-            'T': '#56CCF2',
+            'A': '#A18C6C',
+            'G': '#A18C6C',
+            'C': '#7994B1',
+            'T': '#7994B1',
             '-': 'silver'
         },
         'strong_weak': {
-            'G': '#27AE60',
-            'C': '#27AE60',
-            'A': '#E67E22',
-            'T': '#E67E22',
+            'G': '#6B9E88',
+            'C': '#6B9E88',
+            'A': '#CC9C6B',
+            'T': '#CC9C6B',
             '-': 'silver'
         }
     },
@@ -806,80 +807,125 @@ CHAR_COLORS = {
             '-': 'silver'
         },
         'purine_pyrimidine': {
-            'A': '#F2C94C',
-            'G': '#F2C94C',
-            'C': '#56CCF2',
-            'U': '#56CCF2',
+            'A': '#A18C6C',
+            'G': '#A18C6C',
+            'C': '#7994B1',
+            'U': '#7994B1',
             '-': 'silver'
         },
         'strong_weak': {
-            'G': '#27AE60',
-            'C': '#27AE60',
-            'A': '#E67E22',
-            'U': '#E67E22',
+            'G': '#6B9E88',
+            'C': '#6B9E88',
+            'A': '#CC9C6B',
+            'U': '#CC9C6B',
             '-': 'silver'
         }
     },
     'AA': {
         'standard': {
-            'A': '#D99058', 'V': '#E2A876', 'I': '#E0A45F', 'L': '#DA8A54', 'M': '#D99058',
-            'F': '#B05B61', 'W': '#805F9C', 'S': '#D98B81', 'T': '#D9A86B', 'N': '#AB6D9F',
-            'Q': '#986DB2', 'Y': '#C76F61', 'C': '#D1B758', 'D': '#D96666', 'E': '#D96F5F',
-            'K': '#5D93C4', 'R': '#5DA5A4', 'H': '#916FA7', 'G': '#6FAF99', 'P': '#77A86F',
-            '-': 'silver'
+                'A': '#D99058', 'V': '#E2A876', 'I': '#E0A45F', 'L': '#DA8A54', 'M': '#D99058',
+                'F': '#B05B61', 'W': '#805F9C', 'S': '#D98B81', 'T': '#D9A86B', 'N': '#AB6D9F',
+                'Q': '#986DB2', 'Y': '#C76F61', 'C': '#D1B758', 'D': '#D96666', 'E': '#D96F5F',
+                'K': '#5D93C4', 'R': '#5DA5A4', 'H': '#916FA7', 'G': '#6FAF99', 'P': '#77A86F',
+                '-': 'silver'
         },
-        'clustal': {  # standard ClustalX coloring scheme
-            'A': '#CCFF00', 'R': '#0000FF', 'N': '#CC00FF', 'D': '#FF0000', 'C': '#FFFF00',
-            'Q': '#FF00CC', 'E': '#FF0066', 'G': '#FF9900', 'H': '#0066FF', 'I': '#66FF66',
-            'L': '#33FF00', 'K': '#6600FF', 'M': '#00FF00', 'F': '#00FF66', 'P': '#FFCC00',
-            'S': '#FF99CC', 'T': '#FFCCFF', 'W': '#00CCFF', 'Y': '#00FFFF', 'V': '#99FF33',
-            '-': 'silver'
+        'zappo': {
+                'I': '#b89494', 'L': '#b89494', 'V': '#b89494', 'A': '#b89494', 'M': '#b89494',
+                'F': '#c1a14c', 'W': '#c1a14c', 'Y': '#c1a14c',
+                'K': '#5c6ec2', 'R': '#5c6ec2', 'H': '#5c6ec2',
+                'D': '#b45050', 'E': '#b45050',
+                'S': '#5cbf67', 'T': '#5cbf67', 'N': '#5cbf67', 'Q': '#5cbf67',
+                'P': '#cc85cc', 'G': '#cc85cc',
+                'C': '#e0c64a',
+                '-': 'silver'
         },
-        'zappo': {  # physicochemical properties (Zappo color scheme)
-            'A': '#FFAF75',
-            'I': '#FFAF75', 'L': '#FFAF75', 'M': '#FFAF75', 'V': '#FFAF75',
-            'F': '#C40000', 'W': '#C40000', 'Y': '#C40000',
-            'K': '#0000FF', 'R': '#0000FF', 'H': '#7070FF',
-            'D': '#FF0000', 'E': '#FF0000',
-            'S': '#00FF00', 'T': '#00FF00', 'N': '#00FF00', 'Q': '#00FF00',
-            'C': '#FFFF00',
-            'G': '#FF00FF',
-            'P': '#A0A0A0',
-            '-': 'silver'
+        'hydrophobicity': {
+                'I': '#cc3333',
+                'V': '#c73c3c',
+                'L': '#b84747',
+                'F': '#993f4f',
+                'C': '#8d4053',
+                'M': '#7c4a5f',
+                'A': '#794d60',
+                'G': '#6e5b8e',
+                'X': '#6a5890',
+                'T': '#655593',
+                'S': '#615297',
+                'W': '#5e509a',
+                'Y': '#554c9f',
+                'P': '#4f48a3',
+                'H': '#3f4db0',
+                'E': '#374fb5',
+                'Z': '#374fb5',
+                'Q': '#374fb5',
+                'D': '#374fb5',
+                'B': '#374fb5',
+                'N': '#374fb5',
+                'K': '#2d52bb',
+                'R': '#2d52bb',
+                '-': 'silver'
         },
-        'hydrophobicity': {  # coloring based on Kyte-Doolittle scale
-            'I': '#1b7837', 'V': '#5aa65a', 'L': '#1b7837', 'F': '#00441b', 'C': '#78c679',
-            'M': '#238443', 'A': '#a6dba0', 'G': '#d9f0d3', 'T': '#ccebc5', 'S': '#ccebc5',
-            'W': '#006837', 'Y': '#7bccc4', 'P': '#ffffcc', 'H': '#fdbb84', 'E': '#f03b20',
-            'Q': '#fc9272', 'D': '#e34a33', 'N': '#fdd49e', 'K': '#ef6548', 'R': '#d7301f',
-            '-': 'silver'
+        'clustal': {
+                'A': '#6e8cc2', 'C': '#c9aaaa', 'I': '#6e8cc2', 'L': '#6e8cc2',
+                'M': '#6e8cc2', 'F': '#6e8cc2', 'W': '#6e8cc2', 'V': '#6e8cc2',
+                'K': '#c54a3c', 'R': '#c54a3c',
+                'D': '#aa64aa', 'E': '#aa64aa',
+                'N': '#58b858', 'Q': '#58b858', 'S': '#58b858', 'T': '#58b858',
+                'G': '#db9c66',
+                'P': '#c2c24d',
+                'H': '#5db3b3', 'Y': '#5db3b3',
+                '-': '#f0f0f0'
         }
     }
 }
 
-AA_GROUPS = {
-    'clustal': {
-        'Aliphatic (A, V, L, I, M)': ['A', 'V', 'L', 'I', 'M'],
-        'Aromatic (F, W, Y)': ['F', 'W', 'Y'],
-        'Polar (S, T, N, Q)': ['S', 'T', 'N', 'Q'],
-        'Positive (K, R, H)': ['K', 'R', 'H'],
-        'Negative (D, E)': ['D', 'E'],
-        'Special (C, G, P)': ['C', 'G', 'P']
+# used for group allocation in legend
+CHAR_GROUPS = {
+    'DNA': {
+        'purine_pyrimidine': {
+                'Purines (A, G)': ['A', 'G'],
+                'Pyrimidines (C, T)': ['C', 'T'],
+        },
+        'strong_weak': {
+                'Strong (G≡C)': ['G', 'C'],
+                'Weak (A=T)': ['A', 'T'],
+        }
     },
-    'zappo': {
-        'Aliphatic': ['A', 'I', 'L', 'M', 'V'],
-        'Aromatic': ['F', 'W', 'Y'],
-        'Positive': ['K', 'R', 'H'],
-        'Negative': ['D', 'E'],
-        'Polar Uncharged': ['S', 'T', 'N', 'Q'],
-        'Cysteine': ['C'],
-        'Glycine': ['G'],
-        'Proline': ['P']
+    'RNA': {
+        'purine_pyrimidine': {
+                'Purines (A, G)': ['A', 'G'],
+                'Pyrimidines (C, U)': ['C', 'U'],
+        },
+        'strong_weak': {
+                'Strong (G≡C)': ['G', 'C'],
+                'Weak (A=U)': ['A', 'U'],
+        }
     },
-    'hydrophobicity': {
-        'Hydrophobic (I, V, L, F, M, A, G)': ['I', 'V', 'L', 'F', 'M', 'A', 'G'],
-        'Moderate (T, S, W, Y, P, C)': ['T', 'S', 'W', 'Y', 'P', 'C'],
-        'Hydrophilic (H, E, Q, D, N, K, R)': ['H', 'E', 'Q', 'D', 'N', 'K', 'R']
+    'AA': {
+        'zappo': {
+                'aliphatic/hydrophobic': ['I', 'L', 'V', 'A', 'M'],
+                'aromatic': ['F', 'W', 'Y'],
+                'positive': ['K', 'R', 'H'],
+                'negative': ['D', 'E'],
+                'hydrophilic': ['S', 'T', 'N', 'Q'],
+                'conformationally special': ['P', 'G'],
+                'cysteine': ['C']
+        },
+        'hydrophobicity': {
+                'hydrophobic': ['I', 'V', 'L', 'F', 'C', 'M', 'A'],
+                'moderate': ['T', 'S', 'W', 'Y', 'P', 'G'],
+                'hydrophilic': ['H', 'E', 'Q', 'D', 'N', 'K', 'R']
+        },
+        'clustal': {
+                'hydrophobic': ['A', 'I', 'L', 'M', 'F', 'W', 'V'],
+                'positive': ['K', 'R'],
+                'negative': ['D', 'E'],
+                'polar': ['N', 'Q', 'S', 'T'],
+                'cysteine': ['C'],
+                'glycine': ['G'],
+                'proline': ['P'],
+                'aromatic': ['H', 'Y']
+        }
     }
 }
 

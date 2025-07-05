@@ -105,7 +105,7 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
             raise ValueError('length of sequences not equal to number of custom names')
     if show_seq_names:
         ax.yaxis.set_ticks_position('none')
-        ax.set_yticks(np.arange(len(aln.alignment)) + 0.6)
+        ax.set_yticks(np.arange(len(aln.alignment)) + 0.4)
         if custom_seq_names:
             ax.set_yticklabels(custom_seq_names[::-1])
         else:
@@ -238,10 +238,10 @@ def _get_contrast_text_color(rgba_color):
     """
     r, g, b, a = rgba_color
     brightness = (r * 299 + g * 587 + b * 114) / 1000
-    return 'white' if brightness < 0.4 else 'black'
+    return 'white' if brightness < 0.5 else 'black'
 
 
-def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, values: ndarray, matrix: ndarray, ax:plt.Axes, zoom: tuple, y_position:int, value_to_skip: int, ref_color:str, show_gaps: bool, cmap: None | ScalarMappable = None):
+def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, allways_text: bool, values: ndarray, matrix: ndarray, ax:plt.Axes, zoom: tuple, y_position:int, value_to_skip: int, ref_color:str, show_gaps: bool, cmap: None | ScalarMappable = None):
     """
     Plot sequence text - however this will be done even if there is not enough space.
     Might need some rework in the future.
@@ -253,7 +253,7 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, values: 
         different_cols = [False]*aln.length
 
     for idx, (character, value) in enumerate(zip(aln.alignment[seq_name], values)):
-        if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-' or character == '-'and not show_gaps:
+        if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-' or character == '-'and not show_gaps or allways_text and character != '-':
             # text color
             if seq_name == ref_name:
                 text_color = _get_contrast_text_color(to_rgba(ref_color))
@@ -269,19 +269,20 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, values: 
                 fontweight='bold' if different_cols[idx] else 'normal',
                 ha='center',
                 va='center',
-                c='grey' if not different_cols[idx] and seq_name == ref_name else text_color,
+                c=text_color,
             )
         x_text += 1
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_sequence: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_mismatching_chars: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
+def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param show_title: whether to show title
     :param show_seq_names: whether to show seq names
-    :param show_sequence: whether to show sequence for differences and reference - zoom in to avoid plotting issues
+    :param show_identity_sequence: whether to show sequence for only differences and reference - zoom in to avoid plotting issues
+    :param show_sequence_all: whether to show all sequences - zoom in to avoid plotting issues
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
     :param show_mask: whether to show N or X chars otherwise it will be shown as match or mismatch
@@ -289,7 +290,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     :param fancy_gaps: show gaps with a small black bar
     :param show_mismatches: whether to show mismatches otherwise it will be shown as match
     :param show_ambiguities: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
-    :param color_mismatching_chars: color mismatching chars with their unique color. Options for DNA/RNA are: standard, purine_pyrimidine, strong_weak; and for AS: standard, clustal, zappo, hydrophobicity
+    :param color_scheme: color mismatching chars with their unique color. Options for DNA/RNA are: standard, purine_pyrimidine, strong_weak; and for AS: standard, clustal, zappo, hydrophobicity
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
@@ -300,11 +301,11 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
 
-    if color_mismatching_chars is not None:
-        if aln.aln_type == 'AA' and color_mismatching_chars not in ['standard', 'clustal', 'zappo', 'hydrophobicity']:
-            raise ValueError(f'{color_mismatching_chars} is not a supported coloring scheme for {aln.aln_type} alignments. Supported are: standard, clustal, zappo, hydrophobicity')
-        elif aln.aln_type in ['DNA', 'RNA'] and color_mismatching_chars not in ['standard', 'purine_pyrimidine', 'strong_weak']:
-            raise ValueError(f'{color_mismatching_chars} is not a supported coloring scheme for {aln.aln_type} alignments. Supported are: standard, purine_pyrimidine, strong_weak')
+    if color_scheme is not None:
+        if aln.aln_type == 'AA' and color_scheme not in ['standard', 'clustal', 'zappo', 'hydrophobicity']:
+            raise ValueError(f'{color_scheme} is not a supported coloring scheme for {aln.aln_type} alignments. Supported are: standard, clustal, zappo, hydrophobicity')
+        elif aln.aln_type in ['DNA', 'RNA'] and color_scheme not in ['standard', 'purine_pyrimidine', 'strong_weak']:
+            raise ValueError(f'{color_scheme} is not a supported coloring scheme for {aln.aln_type} alignments. Supported are: standard, purine_pyrimidine, strong_weak')
 
     # Both options for gaps work hand in hand
     if fancy_gaps:
@@ -316,10 +317,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     # Set up color mapping and identity values
     aln_colors = config.IDENTITY_COLORS.copy()
     identity_values = [-1, -2, -3]  # -1 = mismatch, -2 = mask, -3 ambiguity
-    if color_mismatching_chars is not None:
-        colors_to_extend = config.CHAR_COLORS[aln.aln_type][color_mismatching_chars]
+    if color_scheme is not None:
+        colors_to_extend = config.CHAR_COLORS[aln.aln_type][color_scheme]
         identity_values += [x + 1 for x in range(len(colors_to_extend))] # x+1 is needed to allow correct mapping
-        for idx, char in enumerate(colors_to_extend):
+        # use the standard setting for the index (same as in aln.calc_identity_alignment)
+        # and map the corresponding color scheme to it
+        for idx, char in enumerate(config.CHAR_COLORS[aln.aln_type]['standard']):
             aln_colors[idx + 1] = {'type': char, 'color': colors_to_extend[char]}
 
     # Compute identity alignment
@@ -328,7 +331,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
         encode_gaps=show_gaps,
         encode_mismatches=show_mismatches,
         encode_ambiguities=show_ambiguities,
-        encode_each_mismatch_char=True if color_mismatching_chars is not None else False
+        encode_each_mismatch_char=True if color_scheme is not None else False
     )
 
     # List to store polygons
@@ -360,72 +363,44 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
         _create_polygons(stretches, identity_values, zoom, y_position, polygons, aln_colors, polygon_colors, detected_identity_values)
 
         # add sequence text
-        if show_sequence:
-            _plot_sequence_text(aln, list(aln.alignment.keys())[i], aln.reference_id, identity_aln[i], identity_aln, ax,
+        if show_identity_sequence or show_sequence_all:
+            _plot_sequence_text(aln, list(aln.alignment.keys())[i], aln.reference_id, show_sequence_all, identity_aln[i], identity_aln, ax,
                                 zoom, y_position, 0, reference_color, show_gaps)
 
     # Create the LineCollection: each segment is drawn in a single call.
     ax.add_collection(PatchCollection(patch_list, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
     ax.add_collection(PolyCollection(polygons, facecolors=polygon_colors, linewidths=0.5, edgecolors=polygon_colors))
 
-    # TODO: FIX LEGEND
     # custom legend
     if show_legend:
-        legend_handles = []
-        legend_labels = []
+        if color_scheme is not None and color_scheme != 'standard':
+            for x in aln_colors:
+                for group in config.CHAR_GROUPS[aln.aln_type][color_scheme]:
+                    if aln_colors[x]['type'] in config.CHAR_GROUPS[aln.aln_type][color_scheme][group]:
+                        aln_colors[x]['type'] = group
+                        break
+        # create it
+        handels, labels, detected_groups = [], [], set()
+        for x in aln_colors:
+            if x in detected_identity_values and aln_colors[x]['type'] not in detected_groups:
+                handels.append(
+                    ax.add_line(
+                        plt.Line2D(
+                            [],
+                            [],
+                            color=aln_colors[x]['color'], marker='s', markeredgecolor='grey', linestyle='',
+                            markersize=10))
+                )
+                labels.append(aln_colors[x]['type'])
+                detected_groups.add(aln_colors[x]['type'])
 
-        # Map from char to color from aln_colors
-        char_to_color = {v['type']: v['color'] for k, v in aln_colors.items() if
-                         k in detected_identity_values and 'type' in v}
-
-        if color_mismatching_chars in ['purine_pyrimidine', 'strong_weak'] and aln.aln_type in ['DNA', 'RNA']:
-            group_mapping = {
-                'purine_pyrimidine': {
-                    'Purines (A/G)': ['A', 'G'],
-                    'Pyrimidines (C/T or C/U)': ['C', 'T'] if aln.aln_type == 'DNA' else ['C', 'U']
-                },
-                'strong_weak': {
-                    'Strong (G≡C)': ['G', 'C'],
-                    'Weak (A=T or A=U)': ['A', 'T'] if aln.aln_type == 'DNA' else ['A', 'U']
-                }
-            }[color_mismatching_chars]
-
-            for label, chars in group_mapping.items():
-                shared_color = char_to_color.get(chars[0])
-                if all(char_to_color.get(c) == shared_color for c in chars):
-                    legend_handles.append(
-                        plt.Line2D([], [], color=shared_color, marker='s', markeredgecolor='grey', linestyle='',
-                                   markersize=10)
-                    )
-                    legend_labels.append(label)
-
-        elif color_mismatching_chars in ['clustal', 'zappo', 'hydrophobicity'] and aln.aln_type == 'AA':
-            group_map = config.AA_GROUPS.get(color_mismatching_chars, {})
-            for label, chars in group_map.items():
-                # Check that all group characters exist and have same color
-                valid_colors = {char_to_color[c] for c in chars if c in char_to_color}
-                if len(valid_colors) == 1:
-                    color = valid_colors.pop()
-                    legend_handles.append(
-                        plt.Line2D([], [], color=color, marker='s', markeredgecolor='grey', linestyle='', markersize=10)
-                    )
-                    legend_labels.append(label)
-        else:
-            # Default: per-character legend from aln_colors
-            for k in sorted(aln_colors):
-                if k in detected_identity_values and 'type' in aln_colors[k]:
-                    legend_handles.append(
-                        plt.Line2D([], [], color=aln_colors[k]['color'], marker='s', markeredgecolor='grey',
-                                   linestyle='', markersize=10)
-                    )
-                    legend_labels.append(aln_colors[k]['type'])
-
+        # plot it
         ax.legend(
-            legend_handles,
-            legend_labels,
+            handels,
+            labels,
             loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=(len(legend_labels) + 1) // 2,
+            ncols=(len(detected_identity_values) + 1) / 2 if aln.aln_type == 'AA' and color_scheme == 'standard' else len(detected_identity_values),
             frameon=False
         )
 
@@ -438,19 +413,19 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_sequence: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot. Importantly the similarity values are normalized!
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param matrix_type: substitution matrix - see config.SUBS_MATRICES, standard: NT - TRANS, AA - BLOSUM65
     :param show_title: whether to show title
-    :param show_sequence: whether to show sequence for differences and reference - zoom in to avoid plotting issues
+    :param show_identity_sequence: whether to show sequence only for differences and reference - zoom in to avoid plotting issues
+    :param show_sequence_all: whether to show all sequences - zoom in to avoid plotting issues
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
     :param cmap: color mapping for % identity - see https://matplotlib.org/stable/users/explain/colors/colormaps.html
-    :param gap_color: color for gaps
     :param show_gaps: whether to show gaps otherwise it will be ignored
     :param fancy_gaps: show gaps with a small black bar
     :param show_x_label: whether to show x label
@@ -523,8 +498,8 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         _create_polygons(stretches, similarity_values, zoom, y_position, polygons, cmap, polygon_colors)
 
         # add sequence text
-        if show_sequence:
-            _plot_sequence_text(aln, list(aln.alignment.keys())[i], aln.reference_id, similarity_aln[i], similarity_aln, ax,
+        if show_sequence_all or show_identity_sequence:
+            _plot_sequence_text(aln, list(aln.alignment.keys())[i], aln.reference_id, show_sequence_all, similarity_aln[i], similarity_aln, ax,
                                 zoom, y_position, 1, reference_color, show_gaps, cmap)
 
     # Create the LineCollection: each segment is drawn in a single call.

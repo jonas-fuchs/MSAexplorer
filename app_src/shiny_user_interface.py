@@ -92,7 +92,8 @@ def _custom_sidebar():
                             """
                         )
                     ),
-                    ui.input_switch('show_sequence', 'show sequence', value=True),
+                    ui.input_switch('show_sequence', 'show sequence for differences', value=True),
+                    ui.input_switch('show_sequence_all', 'show all sequences', value=False),
                 ),
                 ui.column(
                 4,

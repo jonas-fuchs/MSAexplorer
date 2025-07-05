@@ -24,7 +24,7 @@ def set_aln(aln, inputs):
 
     return aln
 
-#TODO: Give additional coloring options
+
 def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     """
     :param aln: MSA object
@@ -61,13 +61,14 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         plot_functions.append(
             lambda ax: draw.identity_alignment(
                 aln, ax,
-                show_sequence=inputs['show_sequence'],
+                show_identity_sequence=inputs['show_sequence'],
+                show_sequence_all=inputs['show_sequence_all'],
                 fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 show_mask=inputs['show_mask'],
                 show_mismatches=True,
                 show_ambiguities=inputs['show_ambiguities'],
-                color_mismatching_chars=inputs['identity_coloring'] if inputs['identity_coloring'] != 'None' else None,
+                color_scheme=inputs['identity_coloring'] if inputs['identity_coloring'] != 'None' else None,
                 reference_color=inputs['reference_color'],
                 show_seq_names=inputs['seq_names'],
                 show_x_label=True if inputs['annotation'] == 'Off' else False,
