@@ -231,7 +231,7 @@ def create_freq_heatmap(aln, inputs):
                 text=hover_text,
                 hoverinfo='text',
                 colorscale='Cividis',
-                colorbar=dict(thickness=20, ticklen=4, title='%', len=0.8)
+                colorbar=dict(thickness=20, ticklen=4, title='%', len=0.7),
             )
         )
 
@@ -289,7 +289,7 @@ def create_recovery_heatmap(aln, inputs):
             cmax=100,
             color=recovery_vals,
             colorscale='RdBu',
-            colorbar=dict(thickness=20, ticklen=4, title='%', len=0.8),
+            colorbar=dict(thickness=20, ticklen=4, title='%', len=0.7),
             line=dict(width=0)
         ),
         text=[

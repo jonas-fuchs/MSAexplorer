@@ -3,7 +3,7 @@
 [![language](https://img.shields.io/badge/python-%3E3.11-green)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/github/license/jonas-fuchs/bamdash)](https://www.gnu.org/licenses/gpl-3.0)
 
-_**Some personal thoughts**, because lets face it: Generating beautiful alignment plots is always a hassle. There are a lot of alignment viewers and cool tools out there.
+_**Some personal thoughts**, because let's face it: Generating beautiful alignment plots is always a hassle. There are a lot of alignment viewers and cool tools out there.
 For all the Geneious users who now think there ain't a problem... While this software has its perks (well it should, as it has the costs of a minivan), I am waiting since 10 years that you can plot a 
 half decent alignment with it. So if you feel the same way, you are probably also switching between tools which is time-consuming and not really satisfying. This is why 
 I wanted something that is primarily developed for generating high quality publication ready figures while retaining simplicity. Most of all I wanted 
