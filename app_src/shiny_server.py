@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colormaps
 
 # load in app resources
-from app_src.shiny_plots import set_aln, create_msa_plot, create_analysis_custom_heatmap, create_freq_heatmap
+from app_src.shiny_plots import set_aln, create_msa_plot, create_analysis_custom_heatmap, create_freq_heatmap, create_recovery_heatmap
 from shinywidgets import render_widget
 
 # msaexplorer
@@ -250,13 +250,13 @@ def server(input, output, session):
                 # Some of the function highly depend on the alignment type
                 if aln.aln_type == 'AA':
                     ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs','consensus', 'character frequencies', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
+                    ui.update_selectize('download_type', choices=['SNPs','consensus', 'character frequencies', '% recovery', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs'])
                     ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
                 else:
                     # needed because if an as aln and then a nt aln are loaded it will not change
                     ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
+                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', '% recovery', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
                     ui.update_selectize('identity_coloring', choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
                 # case if annotation file is uploaded prior to the alignment file
@@ -331,13 +331,14 @@ def server(input, output, session):
         ui.remove_ui(selector="div:has(> #download_type_options_2-label)")
         ui.remove_ui(selector="div:has(> #download_type_options_3-label)")
         ui.remove_ui(selector="div:has(> #reference_2-label)")
-        if input.download_type() == 'SNPs':
+        if input.download_type() == 'SNPs' or input.download_type() == '% recovery':
             ui.update_selectize('download_format', choices=['vcf', 'tabular'])
-            ui.insert_ui(
-                ui.input_selectize('download_type_options_1', label='include ambiguous snps', choices=['Yes', 'No'], selected='No'),
-                selector='#download_format-label',
-                where='beforeBegin'
-            )
+            if input.download_type() == 'SNPs':
+                ui.insert_ui(
+                    ui.input_selectize('download_type_options_1', label='include ambiguous snps', choices=['Yes', 'No'], selected='No'),
+                    selector='#download_format-label',
+                    where='beforeBegin'
+                )
             ui.insert_ui(
                 ui.input_selectize(
                     'reference_2', 'Reference', ['first', 'consensus'], selected='first'
@@ -409,9 +410,8 @@ def server(input, output, session):
             download_data = export.snps(
                 aln.get_snps(include_ambig=True if input.download_type_options_1 == 'Yes' else False),
                 format_type=download_format)
-            prefix = 'SNPs_'
 
-            return download_data, prefix
+            return download_data, 'SNPs_'
 
         def _consensus_option():
             if input.download_type_options_1() == 'Yes' and aln.aln_type != 'AA':
@@ -424,9 +424,8 @@ def server(input, output, session):
                     sequence=aln.get_consensus(threshold=input.download_type_options_2()),
                     header='consensus',
                 )
-            prefix = 'consensus_'
 
-            return download_data, prefix
+            return download_data, 'consensus_'
 
         def _stat_option():
             # create function mapping
@@ -480,6 +479,20 @@ def server(input, output, session):
 
             return export.character_freq(data, seperator='\t' if input.download_format() == 'tabular' else ','), 'char_freq_'
 
+        def _percent_recovery_option():
+            if input.reference_2() == 'first':
+                aln.reference_id = list(aln.alignment.keys())[0]
+            elif input.reference_2() == 'consensus':
+                aln.reference_id = None
+            else:
+                aln.reference_id = input.reference_2()
+
+            download_data = export.percent_recovery(
+                aln.calc_percent_recovery(),
+                seperator='\t' if input.download_format() == 'tabular' else ',')
+
+            return download_data, 'recovery_'
+
         try:
             # Initialize
             download_format = input.download_format()
@@ -501,6 +514,8 @@ def server(input, output, session):
                 export_data = _reverse_complement_option()
             elif input.download_type() == 'character frequencies':
                 export_data = _char_freq_option()
+            elif input.download_type() == '% recovery':
+                export_data = _percent_recovery_option()
             else:
                 export_data = (None, None)
 
@@ -672,9 +687,11 @@ def server(input, output, session):
         Create the heatmap
         """
         aln = reactive.alignment.get()
-
-        return create_analysis_custom_heatmap(aln, prepare_minimal_inputs(left_plot=True, window_size=True))
-
+        inputs = prepare_minimal_inputs(left_plot=True, window_size=True)
+        if inputs['analysis_plot_type_left'] == 'Pairwise identity':
+            return create_analysis_custom_heatmap(aln, inputs)
+        else:
+            return None
 
     @render_widget
     def analysis_char_freq_heatmap():
@@ -682,6 +699,11 @@ def server(input, output, session):
         Create character frequency heatmap
         """
         aln = reactive.alignment.get()
-
-        return create_freq_heatmap(aln,  prepare_minimal_inputs(right_plot=True, window_size=True))
+        inputs = prepare_minimal_inputs(right_plot=True, window_size=True)
+        if inputs['analysis_plot_type_right'] == 'Recovery':
+            return create_recovery_heatmap(aln, inputs)
+        elif inputs['analysis_plot_type_right'] == 'Character frequencies':
+            return create_freq_heatmap(aln,  inputs)
+        else:
+            return None
 

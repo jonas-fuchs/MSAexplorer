@@ -20,7 +20,7 @@ The curently stable version of the MSAexplorer app is hosted on  [github pages](
 - :white_check_mark: The app runs solely in your browser. No need to install anything, just might take a few seconds to load.
 - :white_check_mark: Use the app offline (after loading it).
 - :white_check_mark: Analyse alignments on your smartphone or tablet.
-- :white_check_mark: Download alignment statistics (e.g. entropy, SNPs, coverage, ORFs and more).
+- :white_check_mark: Download alignment statistics (e.g. entropy, SNPs, coverage, consensus, ORFs and more).
 - :white_check_mark: Annotate the alignment by additionally reading in gb, gff or bed files.
 - :white_check_mark: Flexibility to customize plots and colors.
 - :white_check_mark: Easily export the plot as pdf.
@@ -102,7 +102,7 @@ pip install .
 ```
 ### MSAexplorer app
 #### Local installation
-Want to install it locally or run it on your own server?
+Run it locally on your machine with:
 ````bash
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
@@ -112,7 +112,6 @@ shiny run app.py
 ````
 #### Hosting MSAexplorer
 If you want to host MSAexplorer e.g. for your group, you can export the app as a static html with a few easy steps:
-
 ```bash
 # install shinylive for exporting
 pip install shinylive

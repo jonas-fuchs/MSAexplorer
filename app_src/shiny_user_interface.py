@@ -277,7 +277,7 @@ def _analysis_tab():
             ui.column(
                 2,
                 ui.input_selectize('analysis_plot_type_left', ui.h6('Left plot'), ['Off', 'Pairwise identity'], selected='Off'),
-                ui.input_selectize('analysis_plot_type_right', ui.h6('Right plot'), ['Off', 'Character frequencies'], selected='Off'),
+                ui.input_selectize('analysis_plot_type_right', ui.h6('Right plot'), ['Off', 'Character frequencies', 'Recovery'], selected='Off'),
             ),
             ui.column(
                 5,

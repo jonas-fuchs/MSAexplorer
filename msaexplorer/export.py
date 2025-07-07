@@ -219,6 +219,7 @@ def character_freq(char_dict: dict, seperator: str = '\t', path: str | None = No
     :param char_dict: Dictionary containing the character frequencies.
     :param seperator: seperator for the table e.g. tabular or comma
     :param path: Path to output table.
+
     :return: A string containing the character frequency table.
     :raises ValueError: if the input dictionary is missing required keys or format_type is invalid.
     """
@@ -252,3 +253,40 @@ def character_freq(char_dict: dict, seperator: str = '\t', path: str | None = No
             out_file.write('\n'.join(lines))
     else:
         return '\n'.join(lines)
+
+
+def percent_recovery(rec_dict: dict, seperator: str = '\t', path: str | None = None) -> str | None | ValueError:
+    """
+    Export percent_recovery dictionary to tabular or csv format.
+
+    :param rec_dict: Dictionary containing the character frequencies.
+    :param seperator: seperator for the table e.g. tabular or comma
+    :param path: Path to output table.
+
+    :return: A string containing the character frequency table.
+    :raises ValueError: if the input dictionary is missing required keys or format_type is invalid.
+    """
+    def _validate():
+        if not isinstance(rec_dict, dict):
+            raise ValueError('Data must be a dictionary.')
+        for key, value in rec_dict.items():
+            if type(key) != str:
+                raise ValueError(f'The key {key} is invalid.')
+            elif type(value) != float:
+                raise ValueError(f'The value {value} is invalid.')
+
+    # validate input
+    _validate()
+
+    lines = [F'sequence{seperator}% recovery']
+    for key, value in rec_dict.items():
+        lines.append(
+            f'{key}{seperator}{value}')
+
+    # export data
+    if path is not None:
+        with open(path, 'w') as out_file:
+            out_file.write('\n'.join(lines))
+    else:
+        return '\n'.join(lines)
+

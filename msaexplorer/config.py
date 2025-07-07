@@ -761,6 +761,7 @@ SUBS_MATRICES = {
         }
 }
 
+
 # basic color mapping
 IDENTITY_COLORS = {
         0: {'type': 'identical',
@@ -866,13 +867,14 @@ CHAR_COLORS = {
                 '-': 'silver'
         },
         'clustal': {
-                'A': '#6e8cc2', 'C': '#c9aaaa', 'I': '#6e8cc2', 'L': '#6e8cc2',
+                'A': '#6e8cc2', 'I': '#6e8cc2', 'L': '#6e8cc2',
                 'M': '#6e8cc2', 'F': '#6e8cc2', 'W': '#6e8cc2', 'V': '#6e8cc2',
                 'K': '#c54a3c', 'R': '#c54a3c',
                 'D': '#aa64aa', 'E': '#aa64aa',
                 'N': '#58b858', 'Q': '#58b858', 'S': '#58b858', 'T': '#58b858',
                 'G': '#db9c66',
                 'P': '#c2c24d',
+                'C': '#c9aaaa',
                 'H': '#5db3b3', 'Y': '#5db3b3',
                 '-': '#f0f0f0'
         }

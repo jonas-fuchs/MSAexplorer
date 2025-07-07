@@ -3,6 +3,7 @@ This contains the main functions to create the plots in the app
 """
 
 # libs
+import math
 import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
@@ -146,49 +147,46 @@ def create_analysis_custom_heatmap(aln, inputs):
     else:
         figure_size = int(inputs['dimensions']['width'] * 0.7)
 
-    if inputs['analysis_plot_type_left'] == 'Pairwise identity' and inputs['additional_analysis_options_left'] != 'None':
-        matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options_left'])
-        labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
+    matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options_left'])
+    labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
 
-        # generate hover text
-        hover_text = [
-            [
-                f'{labels[i]} & {labels[j]}: {matrix[i][j]:.2f}%'
-                for j in range(len(matrix[i]))
-            ]
-            for i in range(len(matrix))
+    # generate hover text
+    hover_text = [
+        [
+            f'{labels[i]} & {labels[j]}: {matrix[i][j]:.2f}%'
+            for j in range(len(matrix[i]))
         ]
+        for i in range(len(matrix))
+    ]
 
-       # Create the heatmap
-        fig = go.Figure(
-            go.Heatmap(
-                z=matrix,
-                x=labels,
-                y=labels,
-                text=hover_text,
-                hoverinfo='text',
-                colorscale='deep',
-                colorbar=dict(thickness=20, ticklen=4, len=0.9, title='%')
-            )
+   # Create the heatmap
+    fig = go.Figure(
+        go.Heatmap(
+            z=matrix,
+            x=labels,
+            y=labels,
+            text=hover_text,
+            hoverinfo='text',
+            colorscale='deep',
+            colorbar=dict(thickness=20, ticklen=4, len=0.8, title='%')
         )
+    )
 
-        fig.update_layout(
-            title='Pairwise identities',
-            width=figure_size,
-            height=figure_size - 50,
-            margin=dict(t=50, b=50, l=50, r=50),
-            xaxis=dict(scaleanchor='y', constrain='domain'),
-            yaxis=dict(scaleanchor='x', constrain='domain')
-        )
+    fig.update_layout(
+        title='Pairwise identities',
+        width=figure_size,
+        height=figure_size - 50,
+        margin=dict(t=50, b=50, l=50, r=50),
+        xaxis=dict(scaleanchor='y', constrain='domain'),
+        yaxis=dict(scaleanchor='x', constrain='domain')
+    )
 
-        return fig
-
-    return None
+    return fig
 
 
 def create_freq_heatmap(aln, inputs):
     """
-    Create a frequency heatmap (right heatmap)
+    Create a frequency heatmap
     """
     if aln is None:
         return None
@@ -200,50 +198,114 @@ def create_freq_heatmap(aln, inputs):
         figure_height = int(inputs['dimensions']['width'] * 0.7)
 
     # get char freqs
-    if inputs['analysis_plot_type_right'] == 'Character frequencies':
-        freqs = aln.calc_character_frequencies()
-        characters = sorted(set(char for seq_id in freqs if seq_id != 'total' for char in freqs[seq_id] if char not in ['-', 'N', 'X']))
-        sequence_ids = [seq_id for seq_id in freqs if seq_id != 'total']
+    freqs = aln.calc_character_frequencies()
+    characters = sorted(set(char for seq_id in freqs if seq_id != 'total' for char in freqs[seq_id] if char not in ['-', 'N', 'X']))
+    sequence_ids = [seq_id for seq_id in freqs if seq_id != 'total']
 
-        # create the matrix
-        matrix, seq_ids = [], []
-        for seq_id in sequence_ids:
-            row = []
-            seq_ids.append(seq_id.split(' ')[0])
-            for char in characters:
-                row.append(freqs[seq_id].get(char, {'% of non-gapped': 0})['% of non-gapped'])
-            matrix.append(row)
+    # create the matrix
+    matrix, seq_ids = [], []
+    for seq_id in sequence_ids:
+        row = []
+        seq_ids.append(seq_id.split(' ')[0])
+        for char in characters:
+            row.append(freqs[seq_id].get(char, {'% of non-gapped': 0})['% of non-gapped'])
+        matrix.append(row)
 
-        matrix = np.array(matrix)
+    matrix = np.array(matrix)
 
-        # generate hover text
-        hover_text = [
-            [
-                f'{seq_ids[i]}: {matrix[i][j]:.2f}% {characters[j]}'
-                for j in range(len(matrix[i]))
-            ]
-            for i in range(len(matrix))
+    # generate hover text
+    hover_text = [
+        [
+            f'{seq_ids[i]}: {matrix[i][j]:.2f}% {characters[j]}'
+            for j in range(len(matrix[i]))
         ]
+        for i in range(len(matrix))
+    ]
 
-        # plot
-        fig = go.Figure(
-                go.Heatmap(
-                    z=matrix,
-                    x=characters,
-                    y=seq_ids,
-                    text=hover_text,
-                    hoverinfo='text',
-                    colorscale='Cividis',
-                    colorbar=dict(thickness=20, ticklen=4, title='%')
-                )
+    # plot
+    fig = go.Figure(
+            go.Heatmap(
+                z=matrix,
+                x=characters,
+                y=seq_ids,
+                text=hover_text,
+                hoverinfo='text',
+                colorscale='Cividis',
+                colorbar=dict(thickness=20, ticklen=4, title='%', len=0.8)
             )
-
-        fig.update_layout(
-            title='Character frequencies (% ungapped)',
-            height=figure_height - 50,
-            margin=dict(t=50, b=50, l=50, r=50),
         )
 
-        return fig
-    else:
+    fig.update_layout(
+        title='Character frequencies (% ungapped)',
+        height=figure_height - 50,
+        margin=dict(t=50, b=50, l=50, r=50),
+    )
+
+    return fig
+
+
+def create_recovery_heatmap(aln, inputs):
+    """
+    Create a frequency heatmap (right heatmap)
+    """
+
+    if aln is None:
         return None
+
+    # analog to the other heatmap
+    if inputs['dimensions']['width'] > inputs['dimensions']['height']:
+        figure_height = int(inputs['dimensions']['height'] * 0.7)
+    else:
+        figure_height = int(inputs['dimensions']['width'] * 0.7)
+
+    # ini
+    recovery_dict = aln.calc_percent_recovery()
+    sequence_ids = [x.split()[0] for x in recovery_dict.keys()]
+    recovery_vals = list(recovery_dict.values())
+    n = len(sequence_ids)
+    side = math.ceil(math.sqrt(n))
+
+    # fill the grid
+    padded_length = side * side
+    sequence_ids += [0] * (padded_length - n)
+    recovery_vals += [0] * (padded_length - n)
+
+    # get coordinates
+    xs = [i % side for i in range(padded_length)]
+    ys = [i // side for i in range(padded_length)]
+
+    # plot
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=xs,
+        y=ys,
+        mode='markers',
+        marker=dict(
+            size=recovery_vals,
+            sizemode='diameter',
+            sizeref=2.5,
+            sizemin=4,
+            cmin=0,
+            cmax=100,
+            color=recovery_vals,
+            colorscale='RdBu',
+            colorbar=dict(thickness=20, ticklen=4, title='%', len=0.8),
+            line=dict(width=0)
+        ),
+        text=[
+            f"{sid}<br>{round(val, 0)}% recovery" if sid is not None and val !=0 else None
+            for sid, val in zip(sequence_ids, recovery_vals)
+        ],
+        hoverinfo='text'
+    ))
+
+    fig.update_layout(
+        title=f"Recovery compared to: {aln.reference_id.split()[0]}",
+        xaxis=dict(showgrid=False, zeroline=False, visible=False),
+        yaxis=dict(showgrid=False, zeroline=False, visible=False),
+        plot_bgcolor="white",
+        height=figure_height - 50,
+        margin=dict(t=50, b=50, l=50, r=50),
+    )
+
+    return fig
