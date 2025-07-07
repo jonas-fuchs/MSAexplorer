@@ -129,7 +129,7 @@ draw.identity_alignment(
     show_mask=True,
     show_mismatches=True,
     reference_color='lightsteelblue',
-    color_mismatching_chars=True,
+    color_scheme='standard',
     show_seq_names=False,
     show_ambiguities=True,
     fancy_gaps=True,
@@ -185,7 +185,6 @@ fig.tight_layout()  # ensures that everything is correctly plotted
 plt.show()
 ```
 """
-
 
 import importlib.metadata, pathlib, tomllib
 
