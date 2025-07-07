@@ -2,7 +2,7 @@
 
 [![language](https://img.shields.io/badge/python-%3E3.11-green)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/github/license/jonas-fuchs/bamdash)](https://www.gnu.org/licenses/gpl-3.0)
--------
+
 _**Some personal thoughts**, because lets face it: Generating beautiful alignment plots is always a hassle. There are a lot of alignment viewers and cool tools out there.
 For all the Geneious users who now think there ain't a problem... While this software has its perks (well it should, as it has the costs of a minivan), I am waiting since 10 years that you can plot a 
 half decent alignment with it. So if you feel the same way, you are probably also switching between tools which is time-consuming and not really satisfying. This is why 
@@ -10,7 +10,7 @@ I wanted something that is primarily developed for generating high quality publi
 flexibility. I had the vision to generate nice plots of alignments no matter if I just want to plot parts or the whole alignment. 
 Moreover, I wanted something to quickly generate and plot statistics without having to rely on multiple tools. So this is why I developed MSAexplorer and I really hope its
 something for you! I think it turned out pretty cool but I let you be the judge of that :smiley:._
-------
+
 ### MSAexplorer is available as a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. 
 **Want to just use MSAexplorer and generate publication ready figures? 
 The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/shiny).**
