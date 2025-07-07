@@ -268,8 +268,8 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, allways_
                 s=character,
                 fontweight='bold' if different_cols[idx] else 'normal',
                 ha='center',
-                va='center',
-                c=text_color,
+                va='center_baseline',
+                c=text_color if value != value_to_skip or seq_name == ref_name else 'dimgrey'
             )
         x_text += 1
 

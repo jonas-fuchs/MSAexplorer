@@ -610,7 +610,6 @@ def server(input, output, session):
 
         return len(aln.get_snps()['POS'])
 
-    #TODO: Conditionally exclude options
     @reactive.Effect
     @reactive.event(input.analysis_plot_type_left)
     def update_additional_options_left():
