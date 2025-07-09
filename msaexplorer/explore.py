@@ -316,7 +316,9 @@ class MSA:
             """
             for ambiguous, permutations in config.AMBIG_CHARS[self.aln_type].items():
                 if set(permutations) == set(nucleotides):
-                    return ambiguous
+                    break
+
+            return ambiguous
 
         # check if params have been set correctly
         if threshold is not None:
@@ -458,8 +460,8 @@ class MSA:
             if identity_cutoff > 100 or identity_cutoff < 0:
                 raise ValueError('conservation cutoff must be between 0 and 100')
 
-        if min_length <= 0 or min_length > self.length:
-            raise ValueError(f'min_length must be between 0 and {self.length}')
+        if min_length <= 6 or min_length > self.length:
+            raise ValueError(f'min_length must be between 6 and {self.length}')
 
         # ini
         identities = self.calc_identity_alignment()
@@ -507,7 +509,8 @@ class MSA:
                                                               }
                             orf_counter += 1
                         else:
-                            orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
+                            if orf_dict:
+                                orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
 
         return orf_dict
 
@@ -758,7 +761,7 @@ class MSA:
 
         # encode every different character
         if encode_each_mismatch_char:
-            for idx, char in enumerate(config.CHAR_COLORS[self.aln_type]):
+            for idx, char in enumerate(config.CHAR_COLORS[self.aln_type]['standard']):
                 new_encoding = np.isin(sequences, [char]) & is_mismatch
                 identity_matrix[new_encoding] = idx + 1
         # or encode different with a single value
@@ -845,41 +848,50 @@ class MSA:
 
     def calc_position_matrix(self, matrix_type:str='PWM') -> np.ndarray | ValueError:
         """
-        Calculate various position matrices (reference https://en.wikipedia.org/wiki/Position_weight_matrix)
+        Calculates a position matrix of the specified type for the given alignment. The function
+        supports generating matrices of types Position Frequency Matrix (PFM), Position Probability
+        Matrix (PPM), Position Weight Matrix (PWM), and cummulative Information Content (IC). It validates
+        the provided matrix type and includes pseudo-count adjustments to ensure robust calculations.
 
-        **Major steps:**
-            1) calculate character counts (PFM)
-            2) calculate character frequencies (PPM)
-            3) add pseudocount (square root of row length) -> scales with aln size --> needed for positions with 0 counts
-            4) transform to PWM with M_k,j=log_2(M_k,j/b_k) with b_k assuming statistical independence (all chars are equally frequent)
-
-        :param matrix_type: matrix to return (PFM, PPM or PWM)
-        :return: pwm as numpy array
-        :raise: ValueError for incorrect matrix type
+        :param matrix_type: Type of position matrix to calculate. Accepted values are 'PFM', 'PPM',
+            'PWM', and 'IC'. Defaults to 'PWM'.
+        :type matrix_type: str
+        :raises ValueError: If the provided `matrix_type` is not one of the accepted values.
+        :return: A numpy array representing the calculated position matrix of the specified type.
+        :rtype: np.ndarray
         """
 
         # ini
         aln = self.alignment
-        if matrix_type not in ['PFM', 'PPM', 'PWM']:
-            raise ValueError('Matrix_type must be PFM, PPM or PWM.')
-        possible_chars = list(config.CHAR_COLORS[self.aln_type].keys())[:-1]
+        if matrix_type not in ['PFM', 'PPM', 'IC', 'PWM']:
+            raise ValueError('Matrix_type must be PFM, PPM, IC or PWM.')
+        possible_chars = list(config.CHAR_COLORS[self.aln_type]['standard'].keys())[:-1]
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
 
         # calc position frequency matrix
-        pfm = np.array([np.sum(sequences == char, 0) for char in possible_chars]) \
-              + np.sqrt(sequences.shape[0])  # add pseudo-counts
+        pfm = np.array([np.sum(sequences == char, 0) for char in possible_chars])
         if matrix_type == 'PFM':
             return pfm
 
-        # calc position probability matrix
-        ppm = pfm/np.sum(pfm, 0)
+        # calc position probability matrix (probability)
+        pseudo_count = 0.0001  # to avoid 0 values
+        pfm = pfm + pseudo_count
+        ppm_non_char_excluded = pfm/np.sum(pfm, axis=0)  # use this for pwm/ic calculation
+        ppm = pfm/len(aln.keys())  # calculate the frequency based on row number
         if matrix_type == 'PPM':
             return ppm
 
-        # calc position weight matrix
-        pwm = np.log2(ppm*len(possible_chars))
+        # calc position weight matrix (log-likelihood)
+        pwm = np.log2(ppm_non_char_excluded * len(possible_chars))
         if matrix_type == 'PWM':
             return pwm
+
+        # calc information content per position (in bits) - can be used to scale a ppm for sequence logos
+        ic = np.sum(ppm_non_char_excluded * pwm, axis=0)
+        if matrix_type == 'IC':
+            return ic
+
+        return None
 
     def calc_percent_recovery(self) -> dict:
         """
@@ -1253,7 +1265,7 @@ class Annotation:
                     strand = '-'
                 # sanitize operators
                 for operator in ['complement(', 'join(', 'order(']:
-                    string = string.strip(operator)
+                    string = string.replace(operator, '')
                 # sanitize possible chars for splitting start stop -
                 # however in the future might not simply do this
                 # as some useful information is retained
@@ -1305,6 +1317,7 @@ class Annotation:
                         if not line.strip():
                             continue
                         if line[5] != ' ':
+                            location_line = True  # remember that we are in a location for multi-line locations
                             feature_type, qualifier = parts[0], parts[1]
                             if feature_type not in record['features']:
                                 record['features'][feature_type] = {}
@@ -1316,14 +1329,21 @@ class Annotation:
                             }
                             counter_dict[feature_type] += 1
                         else:
-                            try:
-                                qualifier_type, qualifier = parts[0].split('=')
-                            except ValueError:  # we are in the coding sequence
-                                qualifier = qualifier + parts[0]
+                            # edge case for multi-line locations
+                            if location_line and not line.strip().startswith('/'):
+                                locations, strand = sanitize_gb_location(parts[0])
+                                for loc in locations:
+                                    record['features'][feature_type][counter_dict[feature_type]]['location'].append(loc)
+                            else:
+                                location_line = False
+                                try:
+                                    qualifier_type, qualifier = parts[0].split('=')
+                                except ValueError:  # we are in the coding sequence
+                                    qualifier = qualifier + parts[0]
 
-                            qualifier_type, qualifier = qualifier_type.lstrip('/'), qualifier.strip('"')
-                            last_index = counter_dict[feature_type] - 1
-                            record['features'][feature_type][last_index][qualifier_type] = qualifier
+                                qualifier_type, qualifier = qualifier_type.lstrip('/'), qualifier.strip('"')
+                                last_index = counter_dict[feature_type] - 1
+                                record['features'][feature_type][last_index][qualifier_type] = qualifier
 
             records[record['locus']] = record
 

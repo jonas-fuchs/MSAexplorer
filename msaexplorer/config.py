@@ -16,36 +16,36 @@ POSSIBLE_CHARS = [
 
 AMBIG_CHARS = {
         'DNA': {
-        'R': ['A', 'G'],
-        'Y': ['C', 'T'],
-        'S': ['G', 'C'],
-        'W': ['A', 'T'],
-        'K': ['G', 'T'],
-        'M': ['A', 'C'],
-        'B': ['C', 'G', 'T'],
-        'D': ['A', 'G', 'T'],
-        'H': ['A', 'C', 'T'],
-        'V': ['A', 'C', 'G'],
-        'N': ['A', 'C', 'G', 'T'],
-        '-': ['A', 'C', 'G', 'T'],
+                'R': ['A', 'G'],
+                'Y': ['C', 'T'],
+                'S': ['G', 'C'],
+                'W': ['A', 'T'],
+                'K': ['G', 'T'],
+                'M': ['A', 'C'],
+                'B': ['C', 'G', 'T'],
+                'D': ['A', 'G', 'T'],
+                'H': ['A', 'C', 'T'],
+                'V': ['A', 'C', 'G'],
+                'N': ['A', 'C', 'G', 'T'],
+                '-': ['A', 'C', 'G', 'T'],
         },
         'RNA': {
-        'R': ['A', 'G'],
-        'Y': ['C', 'U'],
-        'S': ['G', 'C'],
-        'W': ['A', 'U'],
-        'K': ['G', 'U'],
-        'M': ['A', 'C'],
-        'B': ['C', 'G', 'U'],
-        'D': ['A', 'G', 'U'],
-        'H': ['A', 'C', 'U'],
-        'V': ['A', 'C', 'G'],
-        'N': ['A', 'C', 'G', 'U'],
-        '-': ['A', 'C', 'G', 'T'],
+                'R': ['A', 'G'],
+                'Y': ['C', 'U'],
+                'S': ['G', 'C'],
+                'W': ['A', 'U'],
+                'K': ['G', 'U'],
+                'M': ['A', 'C'],
+                'B': ['C', 'G', 'U'],
+                'D': ['A', 'G', 'U'],
+                'H': ['A', 'C', 'U'],
+                'V': ['A', 'C', 'G'],
+                'N': ['A', 'C', 'G', 'U'],
+                '-': ['A', 'C', 'G', 'U'],
         },
         'AA': {
-        'X': ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*'],
-        '-': ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
+                'X': ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*'],
+                '-': ['A', 'R', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
         }
     }
 
@@ -761,6 +761,8 @@ SUBS_MATRICES = {
         }
 }
 
+
+# basic color mapping
 IDENTITY_COLORS = {
         0: {'type': 'identical',
             'color': 'lightgrey'},
@@ -772,51 +774,161 @@ IDENTITY_COLORS = {
             'color': 'black'}
 }
 
-
+# extended color mappings
 CHAR_COLORS = {
-        'DNA': {
-                'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
-                'T': '#F26D6D',  # Thymine (T) - muted pinkish red
-                'G': '#64A87B',  # Guanine (G) - strong teal-green
-                'C': '#7095D1',  # Cytosine (C) - soft steel blue
-                '-': 'silver'
+    'DNA': {
+        'standard': {
+            'A': '#F2A45E',
+            'T': '#F26D6D',
+            'G': '#64A87B',
+            'C': '#7095D1',
+            '-': 'silver'
         },
-        'RNA': {
-                'A': '#F2A45E',  # Adenine (A) - vibrant but soft orange
-                'U': '#F26D6D',  # Uracil (U) - same as Thymine
-                'G': '#64A87B',  # Guanine (G) - strong teal-green
-                'C': '#7095D1',  # Cytosine (C) - soft steel blue
-                '-': 'silver'
+        'purine_pyrimidine': {
+            'A': '#A18C6C',
+            'G': '#A18C6C',
+            'C': '#7994B1',
+            'T': '#7994B1',
+            '-': 'silver'
         },
-        'AA': {
-            # Nonpolar, hydrophobic
-            'A': '#D99058',  # Alanine (A) - warm orange-brown
-            'V': '#E2A876',  # Valine (V) - soft peach-orange
-            'I': '#E0A45F',  # Isoleucine (I) - warm sandy orange
-            'L': '#DA8A54',  # Leucine (L) - light orange
-            'M': '#D99058',  # Methionine (M) - warm orange-brown (same as A)
-            'F': '#B05B61',  # Phenylalanine (F) - muted brick red
-            'W': '#805F9C',  # Tryptophan (W) - deep lavender
-            # Polar, uncharged
-            'S': '#D98B81',  # Serine (S) - warm peach
-            'T': '#D9A86B',  # Threonine (T) - soft caramel
-            'N': '#AB6D9F',  # Asparagine (N) - medium mauve
-            'Q': '#986DB2',  # Glutamine (Q) - medium purple
-            'Y': '#C76F61',  # Tyrosine (Y) - muted terracotta
-            'C': '#D1B758',  # Cysteine (C) - golden yellow
-            # Charged, acidic
-            'D': '#D96666',  # Aspartic Acid (D) - muted red
-            'E': '#D96F5F',  # Glutamic Acid (E) - soft coral
-            # Charged, basic
-            'K': '#5D93C4',  # Lysine (K) - medium blue
-            'R': '#5DA5A4',  # Arginine (R) - soft teal
-            'H': '#916FA7',  # Histidine (H) - muted violet
-            # Unique
-            'G': '#6FAF99',  # Glycine (G) - teal green
-            'P': '#77A86F',  # Proline (P) - muted green
-            # Gap
+        'strong_weak': {
+            'G': '#6B9E88',
+            'C': '#6B9E88',
+            'A': '#CC9C6B',
+            'T': '#CC9C6B',
             '-': 'silver'
         }
+    },
+    'RNA': {
+        'standard': {
+            'A': '#F2A45E',
+            'U': '#F26D6D',
+            'G': '#64A87B',
+            'C': '#7095D1',
+            '-': 'silver'
+        },
+        'purine_pyrimidine': {
+            'A': '#A18C6C',
+            'G': '#A18C6C',
+            'C': '#7994B1',
+            'U': '#7994B1',
+            '-': 'silver'
+        },
+        'strong_weak': {
+            'G': '#6B9E88',
+            'C': '#6B9E88',
+            'A': '#CC9C6B',
+            'U': '#CC9C6B',
+            '-': 'silver'
+        }
+    },
+    'AA': {
+        'standard': {
+                'A': '#D99058', 'V': '#E2A876', 'I': '#E0A45F', 'L': '#DA8A54', 'M': '#D99058',
+                'F': '#B05B61', 'W': '#805F9C', 'S': '#D98B81', 'T': '#D9A86B', 'N': '#AB6D9F',
+                'Q': '#986DB2', 'Y': '#C76F61', 'C': '#D1B758', 'D': '#D96666', 'E': '#D96F5F',
+                'K': '#5D93C4', 'R': '#5DA5A4', 'H': '#916FA7', 'G': '#6FAF99', 'P': '#77A86F',
+                '-': 'silver'
+        },
+        'zappo': {
+                'I': '#b89494', 'L': '#b89494', 'V': '#b89494', 'A': '#b89494', 'M': '#b89494',
+                'F': '#c1a14c', 'W': '#c1a14c', 'Y': '#c1a14c',
+                'K': '#5c6ec2', 'R': '#5c6ec2', 'H': '#5c6ec2',
+                'D': '#b45050', 'E': '#b45050',
+                'S': '#5cbf67', 'T': '#5cbf67', 'N': '#5cbf67', 'Q': '#5cbf67',
+                'P': '#cc85cc', 'G': '#cc85cc',
+                'C': '#e0c64a',
+                '-': 'silver'
+        },
+        'hydrophobicity': {
+                'I': '#cc3333',
+                'V': '#c73c3c',
+                'L': '#b84747',
+                'F': '#993f4f',
+                'C': '#8d4053',
+                'M': '#7c4a5f',
+                'A': '#794d60',
+                'G': '#6e5b8e',
+                'X': '#6a5890',
+                'T': '#655593',
+                'S': '#615297',
+                'W': '#5e509a',
+                'Y': '#554c9f',
+                'P': '#4f48a3',
+                'H': '#3f4db0',
+                'E': '#374fb5',
+                'Z': '#374fb5',
+                'Q': '#374fb5',
+                'D': '#374fb5',
+                'B': '#374fb5',
+                'N': '#374fb5',
+                'K': '#2d52bb',
+                'R': '#2d52bb',
+                '-': 'silver'
+        },
+        'clustal': {
+                'A': '#6e8cc2', 'I': '#6e8cc2', 'L': '#6e8cc2',
+                'M': '#6e8cc2', 'F': '#6e8cc2', 'W': '#6e8cc2', 'V': '#6e8cc2',
+                'K': '#c54a3c', 'R': '#c54a3c',
+                'D': '#aa64aa', 'E': '#aa64aa',
+                'N': '#58b858', 'Q': '#58b858', 'S': '#58b858', 'T': '#58b858',
+                'G': '#db9c66',
+                'P': '#c2c24d',
+                'C': '#c9aaaa',
+                'H': '#5db3b3', 'Y': '#5db3b3',
+                '-': '#f0f0f0'
+        }
+    }
+}
+
+# used for group allocation in legend
+CHAR_GROUPS = {
+    'DNA': {
+        'purine_pyrimidine': {
+                'Purines (A, G)': ['A', 'G'],
+                'Pyrimidines (C, T)': ['C', 'T'],
+        },
+        'strong_weak': {
+                'Strong (G≡C)': ['G', 'C'],
+                'Weak (A=T)': ['A', 'T'],
+        }
+    },
+    'RNA': {
+        'purine_pyrimidine': {
+                'Purines (A, G)': ['A', 'G'],
+                'Pyrimidines (C, U)': ['C', 'U'],
+        },
+        'strong_weak': {
+                'Strong (G≡C)': ['G', 'C'],
+                'Weak (A=U)': ['A', 'U'],
+        }
+    },
+    'AA': {
+        'zappo': {
+                'aliphatic/hydrophobic': ['I', 'L', 'V', 'A', 'M'],
+                'aromatic': ['F', 'W', 'Y'],
+                'positive': ['K', 'R', 'H'],
+                'negative': ['D', 'E'],
+                'hydrophilic': ['S', 'T', 'N', 'Q'],
+                'conformationally special': ['P', 'G'],
+                'cysteine': ['C']
+        },
+        'hydrophobicity': {
+                'hydrophobic': ['I', 'V', 'L', 'F', 'C', 'M', 'A'],
+                'moderate': ['T', 'S', 'W', 'Y', 'P', 'G'],
+                'hydrophilic': ['H', 'E', 'Q', 'D', 'N', 'K', 'R']
+        },
+        'clustal': {
+                'hydrophobic': ['A', 'I', 'L', 'M', 'F', 'W', 'V'],
+                'positive': ['K', 'R'],
+                'negative': ['D', 'E'],
+                'polar': ['N', 'Q', 'S', 'T'],
+                'cysteine': ['C'],
+                'glycine': ['G'],
+                'proline': ['P'],
+                'aromatic': ['H', 'Y']
+        }
+    }
 }
 
 # shiny app specific settings

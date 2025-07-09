@@ -1,0 +1,324 @@
+/* Contains CSS custom definitions for the msaexplorer shiny app */
+
+/* Define Color Variables */
+:root {
+    --primary-color: #004B83;
+    --secondary-color: #0086C1;
+    --light-bg: #ffffff;
+    --light-border: #e9ecef;
+    --dark-color: #333;
+    --alt-color: #B67B28;
+}
+
+/* General Styles */
+body {
+    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.9rem;
+    background-color: var(--light-bg);
+    color: var(--dark-color);
+    line-height: 1.4;
+    margin-top: 100px;
+}
+
+h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--alt-color);
+    margin-bottom: 4px;
+}
+
+.about-card {
+    margin-top: 20px;
+    width: 100%;
+    text-align: center;
+    border: none !important;
+    box-shadow: none !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Navbar */
+.navbar {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--light-border);
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: transform 0.4s ease-in-out;
+}
+
+.navbar .navbar-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.2rem;
+    color: var(--light-bg);
+    width: 100%;
+    justify-content: space-between;
+}
+
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: auto;
+}
+
+.navbar .nav-link {
+    font-size: 1rem;
+    padding: 10px 15px;
+    transition: color 0.3s ease;
+    margin-right: 6px;
+    background: transparent;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+}
+
+.navbar .nav-link:hover {
+    border-bottom: 2px solid var(--secondary-color);
+    color: var(--secondary-color);
+}
+
+.navbar .nav-link.active {
+    border-bottom: 2px solid var(--secondary-color);
+    color: var(--secondary-color);
+}
+
+.navbar .nav-link img {
+    transition: filter 0.3s ease;
+    fill: var(--light-bg);
+}
+
+.navbar .nav-link:hover img {
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+.navbar .nav-link.active img {
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+/* Navbar collapsing */
+.navbar-collapse {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Allow overflow of download options */
+#download_type {
+    position: relative; /* Ensure relative positioning for the dropdown trigger */
+}
+
+#download_type ~ .selectize-control .selectize-dropdown {
+    z-index: 1050 !important;
+    position: absolute !important;
+    overflow: visible !important;
+    margin-top: 0px; /* Prevent dropdown overlapping with the trigger */
+}
+
+.bslib-card {
+    overflow: visible !important; /* Ensure the parent card doesn't clip */
+}
+
+.bslib-gap-spacing {
+    overflow: visible !important; /* Ensure nested containers don't clip */
+}
+
+/* Upload bar */
+.shiny-file-input-progress {
+    height: 1.5rem;
+    border-radius: 5px;
+}
+
+.shiny-file-input-progress .progress-bar {
+    background-color: var(--alt-color);
+    height: 100%;
+}
+
+/* Inputs and Controls */
+input, select, button {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    box-sizing: border-box;
+    border: 1px solid var(--light-border);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: var(--light-bg);
+    color: #333;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus, select:focus, button:focus {
+    outline: none;
+    border-color: var(--alt-color);
+    box-shadow: 0 0 5px rgba(0,75,131, 0.3);
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+}
+
+.input-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #495057;
+}
+
+/* Sliders */
+input[type="range"] {
+    width: 100%;
+    margin: 10px 0;
+}
+
+.ui-slider {
+    margin: 10px 0;
+    background-color: var(--light-border);
+    height: 5px;
+    border-radius: 3px;
+}
+
+.ui-slider-thumb {
+    background-color: var(--primary-color);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.ui-slider-thumb:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.1);
+}
+
+/* Buttons */
+button {
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--light-bg);
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+button:hover {
+    background-color: var(--secondary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Download */
+.shiny-download-link:hover img {
+    filter: brightness(1) invert(1);
+}
+
+/* Sidebar */
+.bslib-sidebar-layout {
+    border: none !important;
+    box-shadow: none !important;
+    z-index: 500; /* ensure that the whole layout is below the bar */
+}
+
+.sidebar {
+    background-color: var(--light-bg);
+    padding: 15px;
+    gap: 1px;
+    border: none !important;
+    box-shadow: none !important;
+    overflow-y: auto;
+    transition: width 0.3s ease;
+}
+
+#overlay-sidebar {
+    position: fixed;
+    top: 0;
+    right: -50%; /* Start hidden */
+    width: 50%;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0px 10px rgba(0, 0, 0, 0.3);
+    transition: right 0.3s ease-in-out;
+    padding: 20px;
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+#overlay-sidebar.show {
+    right: 0;
+}
+#overlay-bg {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.action-button:hover img {
+    filter: brightness(1) invert(1);
+}
+
+
+/* Value Boxes */
+.value-box-grid {
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+/* Plots and Visualizations */
+#msa_plot, #analysis_plot  {
+    border: 1px solid var(--light-border);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background-color: var(--light-bg);
+    padding: 5px;
+    transition: width 0.3s ease;
+}
+
+/* Responsiveness */
+@media screen and (max-width: 900px) {
+
+    .sidebar {
+        padding: 15px;
+    }
+
+    .ui-slider {
+        width: 100%;
+    }
+
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+    }
+    #overlay-sidebar {
+        width: 90%;
+        right: -90%; /* Initially hidden */
+    }
+
+    #overlay-sidebar.show {
+        right: 0;
+    }
+    .navbar {
+        position: fixed;
+        width: 100%;
+        z-index: 1050;
+    }
+
+    body {
+        padding-top: 70px;
+    }
+    .about-card {
+        position: relative !important;
+        bottom: auto !important;
+        margin-bottom: 20px;
+    }
+}
+
