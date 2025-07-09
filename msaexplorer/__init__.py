@@ -1,14 +1,14 @@
 r"""
 # What is MSAexplorer?
 
-MSAexplorer allows the analysis and straight forward plotting of multiple sequence alignments .
-It's focus is to act as simple python3 extension or shiny app with minimal dependencies and syntax. It's easy
-to setup and highly customizable.
+MSAexplorer allows the analysis and straight forward plotting of multiple sequence alignments.
+Its focus is to act as a simple python3 extension or shiny app with minimal dependencies and syntax. It's easy
+to set up and highly customizable.
 
 # Usage as a shiny application
 
-The current version of the app is deployed to [github pages](https://jonas-fuchs.github.io/MSAexplorer/shiny/). This application is serverless and all
-computation runs through your browser. There is no need to install anything. Just enjoy the app!
+The current version of the app is deployed to [GitHub pages](https://jonas-fuchs.github.io/MSAexplorer/app/). This application is serverless, and all
+computation runs through your browser. There is no need to install anything. Enjoy the app!
 
 However, you can also deploy it yourself and host it however you like!
 
@@ -70,7 +70,7 @@ ATCGATCGATCGATCG
 ATCGATCGATCGATCG
 ```
 
-Addtionally, you can also read in an annotation in `bed`, `gff3` or `gb` format and connect them to the MSA. Importantly,
+Additionally, you can also read in an annotation in `bed`, `gff3` or `gb` format and connect them to the MSA. Importantly,
 the sequence identifier has to be part of the alignment. All genomic locations are then automatically adapted to the
 alignment.
 
@@ -89,7 +89,7 @@ from msaexplorer import draw
 
 #  load alignment
 aln = explore.MSA("example_alignments/DNA.fasta", reference_id=None, zoom_range=None)
-# set reference to e.g. first sequence
+# set reference to e.g. the first sequence
 aln.reference_id = list(aln.alignment.keys())[0]
 
 fig, ax = plt.subplots(nrows=2, height_ratios=[0.2, 2], sharex=False)
