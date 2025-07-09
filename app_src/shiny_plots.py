@@ -44,7 +44,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     plot_functions = []
 
     # First plot
-    if inputs['stat_type'] != 'Off':
+    if inputs['stat_type'] not in ['Off', 'sequence logo']:
         height_ratios.append(inputs['plot_1_size'])
         plot_functions.append(
             lambda ax: draw.stat_plot(
@@ -54,6 +54,16 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 rolling_average=inputs['rolling_average'],
                 show_x_label=True if inputs['annotation'] == 'Off' and inputs['alignment_type'] == 'Off' else False,
                 line_color=inputs['stat_color'])
+        )
+    elif inputs['stat_type'] == 'sequence logo':
+        height_ratios.append(inputs['plot_1_size'])
+        plot_functions.append(
+            lambda ax: draw.sequence_logo(
+                aln, ax,
+                show_x_label=True if inputs['annotation'] == 'Off' and inputs['alignment_type'] == 'Off' else False,
+                plot_type = inputs['logo_type'],
+                color_scheme = inputs['logo_coloring']
+            )
         )
 
     # Second plot
@@ -111,6 +121,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 aln, ax,
                 show_x_label=True,
                 lollisize=(inputs['stem_size'], inputs['head_size']),
+                color_scheme=inputs['snp_coloring'],
                 show_legend=inputs['show_legend_third_plot'])
     )
     # do not plot anything if all plots are off

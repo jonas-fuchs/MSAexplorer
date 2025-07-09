@@ -30,6 +30,10 @@ import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import is_color_like, Normalize, to_rgba
 from matplotlib.collections import PatchCollection, PolyCollection
+from matplotlib.text import TextPath
+from matplotlib.patches import PathPatch
+from matplotlib.font_manager import FontProperties
+from matplotlib.transforms import Affine2D
 
 
 # general helper functions
@@ -388,7 +392,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
                         plt.Line2D(
                             [],
                             [],
-                            color=aln_colors[x]['color'], marker='s', markeredgecolor='grey', linestyle='',
+                            color=aln_colors[x]['color'] if color_scheme != 'hydrophobicity' or x == 0 else config.CHAR_COLORS[aln.aln_type]['hydrophobicity'][
+                                config.CHAR_GROUPS[aln.aln_type]['hydrophobicity'][aln_colors[x]['type']][0]
+                            ],
+                            marker='s',
+                            markeredgecolor='grey',
+                            linestyle='',
                             markersize=10))
                 )
                 labels.append(aln_colors[x]['type'])
@@ -632,12 +641,13 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
 
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
+def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), color_scheme: str = 'standard', show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
     """
     Plots variants.
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param lollisize: (stem_size, head_size)
+    :param color_scheme: color scheme for characters. see config.CHAR_COLORS for available options
     :param show_x_label:  whether to show the x-axis label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
@@ -652,7 +662,7 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
             raise ValueError('lollisize must be floats greater than zero')
 
     # define colors
-    colors = config.CHAR_COLORS[aln.aln_type]['standard']
+    colors = config.CHAR_COLORS[aln.aln_type][color_scheme]
     # get snps
     snps = aln.get_snps()
     # define where to plot (each ref type gets a separate line)
@@ -790,7 +800,6 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     :param ax: matplotlib axes
     :param feature_to_plot: potential feature to plot (not for bed files as it is parsed as one feature)
     :param color: color for the annotation
-    :param show_direction: show strand information
     :param direction_marker_size: marker size for direction marker, only relevant if show_direction is True
     :param show_x_label: whether to show the x-axis label
     """
@@ -839,4 +848,70 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     ax.set_yticklabels([])
     ax.set_title(f'{annotation.locus} ({feature_to_plot})', loc='left')
 
-#TODO plot a stacked bar/sequence logo based on PWM
+
+def sequence_logo(aln:explore.MSA, ax:plt.Axes, color_scheme: str = 'standard', plot_type: str = 'logo', show_x_label:bool = False):
+    """
+    Plot sequence logo or stacked area plot (use the first one with appropriate zoom levels). The
+    logo visualizes the relative frequency of nt or aa characters in the alignment. The char frequency
+    is scaled to the information content at each position. --> identical to how Geneious calculates it.
+
+    :param aln: alignment MSA class
+    :param ax: matplotlib axes
+    :param color_scheme: color scheme for characters. see config.CHAR_COLORS for available options
+    :param plot_type: 'logo' for sequence logo, 'stacked' for stacked area plot
+    :param show_x_label: whether to show the x-axis label
+    """
+
+    _validate_input_parameters(aln, ax)
+    # calc matrix
+    matrix = aln.calc_position_matrix('IC') * aln.calc_position_matrix('PPM')
+    letters_to_plot = list(config.CHAR_COLORS[aln.aln_type]['standard'].keys())[:-1]
+
+    #matrix = np.clip(matrix, 0, None)  # only positive values
+    # plot
+    if plot_type == 'logo':
+        for pos in range(matrix.shape[1]):
+            # sort the positive matrix row values by size
+            items = [(letters_to_plot[i], matrix[i, pos]) for i in range(len(letters_to_plot)) if matrix[i, pos] > 0]
+            items.sort(key=lambda x: x[1])
+            # plot each position
+            y_offset = 0
+            for letter, h in items:
+                tp = TextPath((aln.zoom[0] - 0.325 if aln.zoom is not None else - 0.325, 0), letter, size=1, prop=FontProperties(weight='bold'))
+                bb = tp.get_extents()
+                glyph_height = bb.height if bb.height > 0 else 1e-6  # avoid div by zero
+                scale_to_1 = 1.0 / glyph_height
+
+                transform = (Affine2D()
+                             .scale(1.0, h * scale_to_1)  # scale manually by IC and normalize font
+                             .translate(pos, y_offset)
+                             + ax.transData)
+
+                patch = PathPatch(tp, transform=transform,
+                                  facecolor=config.CHAR_COLORS[aln.aln_type][color_scheme][letter],
+                                  edgecolor='none')
+                ax.add_patch(patch)
+                y_offset += h
+    elif plot_type == 'stacked':
+        y_values = np.zeros(matrix.shape[1])
+        x_values = np.arange(0, matrix.shape[1]) if aln.zoom is None else np.arange(aln.zoom[0], aln.zoom[1])
+        for row in range(matrix.shape[0]):
+            y = matrix[row]
+            ax.fill_between(x_values,
+                            y_values,
+                            y_values + y,
+                            fc=config.CHAR_COLORS[aln.aln_type][color_scheme].get(letters_to_plot[row]),
+                            ec='None',
+                            label=letters_to_plot[row],
+                            step='pre')
+            y_values += y
+
+    # adjust limits & labels
+    _format_x_axis(aln, ax, show_x_label, show_left=True)
+    if aln.aln_type == 'AA':
+        ax.set_ylim(bottom=0, top=5)
+    else:
+        ax.set_ylim(bottom=0, top=2)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.set_ylabel('bits')

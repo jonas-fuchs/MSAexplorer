@@ -92,7 +92,7 @@ aln = explore.MSA("example_alignments/DNA.fasta", reference_id=None, zoom_range=
 # set reference to e.g. first sequence
 aln.reference_id = list(aln.alignment.keys())[0]
 
-fig, ax = plt.subplots(nrows=10, height_ratios=[0.2, 2], sharex=False)
+fig, ax = plt.subplots(nrows=2, height_ratios=[0.2, 2], sharex=False)
 
 draw.stat_plot(
     aln,

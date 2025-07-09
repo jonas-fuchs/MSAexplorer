@@ -61,10 +61,18 @@ def server(input, output, session):
         inputs['stat_type'] = input.stat_type()
 
         # STATISTICS (first plot)
-        if inputs['stat_type'] != 'Off':
+        if inputs['stat_type'] not in ['Off', 'sequence logo']:
             inputs['plot_1_size'] = input.plot_1_size()
             inputs['rolling_average'] = input.rolling_avg()
             inputs['stat_color'] = input.stat_color()
+        elif inputs['stat_type'] == 'sequence logo':
+            inputs['plot_1_size'] = input.plot_1_size()
+            inputs['logo_coloring'] = input.logo_coloring()
+            relative_msa_width = window_width / (inputs['zoom_range'][1]-inputs['zoom_range'][0])
+            if relative_msa_width >= 11:
+                inputs['logo_type'] = 'logo'
+            else:
+                inputs['logo_type'] = 'stacked'
 
         # ALIGNMENT (second plot)
         if inputs['alignment_type'] != 'Off':
@@ -116,6 +124,7 @@ def server(input, output, session):
                 inputs['strand_marker_size'] = input.strand_marker_size()
                 inputs['show_legend_third_plot'] = input.show_legend_third_plot()
             else:
+                inputs['snp_coloring'] = input.snp_coloring()
                 inputs['stem_size'] = input.stem_size()
                 inputs['head_size'] = input.head_size()
                 inputs['show_legend_third_plot'] = input.show_legend_third_plot()
@@ -249,16 +258,20 @@ def server(input, output, session):
                 ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
                 # Some of the function highly depend on the alignment type
                 if aln.aln_type == 'AA':
-                    ui.update_selectize('stat_type', choices=['Off', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
+                    ui.update_selectize('stat_type', choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
                     ui.update_selectize('download_type', choices=['SNPs','consensus', 'character frequencies', '% recovery', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs'])
                     ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
+                    ui.update_selectize('logo_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
+                    ui.update_selectize('snp_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
                 else:
                     # needed because if an as aln and then a nt aln are loaded it will not change
-                    ui.update_selectize('stat_type', choices=['Off', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
+                    ui.update_selectize('stat_type', choices=['Off', 'sequence logo', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
                     ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', '% recovery', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
                     ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
                     ui.update_selectize('identity_coloring', choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
+                    ui.update_selectize('logo_coloring',choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
+                    ui.update_selectize('snp_coloring',choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
                 # case if annotation file is uploaded prior to the alignment file
                 if annotation_file:
                     read_in_annotation(annotation_file)
@@ -688,9 +701,12 @@ def server(input, output, session):
         """
         aln = reactive.alignment.get()
         inputs = prepare_minimal_inputs(left_plot=True, window_size=True)
-        if inputs['analysis_plot_type_left'] == 'Pairwise identity':
-            return create_analysis_custom_heatmap(aln, inputs)
-        else:
+        try:
+            if inputs['analysis_plot_type_left'] == 'Pairwise identity':
+                return create_analysis_custom_heatmap(aln, inputs)
+            else:
+                return None
+        except TypeError:
             return None
 
     @render_widget
@@ -700,10 +716,12 @@ def server(input, output, session):
         """
         aln = reactive.alignment.get()
         inputs = prepare_minimal_inputs(right_plot=True, window_size=True)
-        if inputs['analysis_plot_type_right'] == 'Recovery':
-            return create_recovery_heatmap(aln, inputs)
-        elif inputs['analysis_plot_type_right'] == 'Character frequencies':
-            return create_freq_heatmap(aln,  inputs)
-        else:
+        try:
+            if inputs['analysis_plot_type_right'] == 'Recovery':
+                return create_recovery_heatmap(aln, inputs)
+            elif inputs['analysis_plot_type_right'] == 'Character frequencies':
+                return create_freq_heatmap(aln,  inputs)
+            return None
+        except TypeError:
             return None
 

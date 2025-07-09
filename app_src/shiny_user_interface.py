@@ -63,7 +63,8 @@ def _custom_sidebar():
                         </div>
                         """
                     )
-                )
+                ),
+                ui.input_selectize('logo_coloring', 'Coloring sequence logo', ['standard'], selected='standard')
             ),
             ui.hr(),
             ui.h6('Alignment settings'),
@@ -105,13 +106,14 @@ def _custom_sidebar():
             ),
             ui.hr(),
             ui.h6('Annotation settings'),
+            ui.input_switch('show_legend_third_plot', 'Legend', value=True),
             ui.row(
                 ui.column(
                 4,
                 ui.h6('SNP plot'),
                     ui.input_numeric('head_size', 'Head size', value=3, min=1),
                     ui.input_numeric('stem_size', 'Stem length', value=1, min=1),
-                    ui.input_switch('show_legend_third_plot', 'Legend', value=True),
+                    ui.input_selectize('snp_coloring', 'Coloring', ['standard'], selected='standard'),
                     id='snp_column'
                 ),
                 ui.column(
