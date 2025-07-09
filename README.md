@@ -13,7 +13,7 @@ something for you! I think it turned out pretty cool but I let you be the judge 
 
 ### MSAexplorer is available as a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. 
 **Want to just use MSAexplorer and generate publication ready figures? 
-The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/shiny).**
+The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/app).**
 
 
 ### Features of MSAexplorer as an app

@@ -48,10 +48,10 @@ jobs:
           rm -rf public
           mkdir public
           # Create subdirectories for the Shiny app and the API docs.
-          mkdir -p public/shiny
+          mkdir -p public/app
           mkdir -p public/docs
-          # Move the entire exported Shiny app (with its directory structure) into public/shiny.
-          cp -r site/* public/shiny/
+          # Move the entire exported Shiny app (with its directory structure) into public/app.
+          cp -r site/* public/app/
           # Move the pdoc-generated docs into public/docs.
           cp -r docs/* public/docs/
 
