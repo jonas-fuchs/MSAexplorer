@@ -86,7 +86,8 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 show_legend=inputs['show_legend']
         ) if inputs['alignment_type'] == 'identity' else draw.similarity_alignment(
                 aln, ax,
-                show_sequence=inputs['show_sequence'],
+                show_similarity_sequence=inputs['show_sequence'],
+                show_sequence_all=inputs['show_sequence_all'],
                 fancy_gaps=inputs['fancy_gaps'],
                 show_gaps=inputs['show_gaps'],
                 reference_color=inputs['reference_color'],

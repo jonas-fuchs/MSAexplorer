@@ -422,14 +422,14 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_similarity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot. Importantly the similarity values are normalized!
     :param aln: alignment MSA class
     :param ax: matplotlib axes
     :param matrix_type: substitution matrix - see config.SUBS_MATRICES, standard: NT - TRANS, AA - BLOSUM65
     :param show_title: whether to show title
-    :param show_identity_sequence: whether to show sequence only for differences and reference - zoom in to avoid plotting issues
+    :param show_similarity_sequence: whether to show sequence only for differences and reference - zoom in to avoid plotting issues
     :param show_sequence_all: whether to show all sequences - zoom in to avoid plotting issues
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
@@ -507,7 +507,7 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         _create_polygons(stretches, similarity_values, zoom, y_position, polygons, cmap, polygon_colors)
 
         # add sequence text
-        if show_sequence_all or show_identity_sequence:
+        if show_sequence_all or show_similarity_sequence:
             _plot_sequence_text(aln, list(aln.alignment.keys())[i], aln.reference_id, show_sequence_all, similarity_aln[i], similarity_aln, ax,
                                 zoom, y_position, 1, reference_color, show_gaps, cmap)
 
