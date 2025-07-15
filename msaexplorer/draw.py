@@ -403,16 +403,23 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
                 labels.append(aln_colors[x]['type'])
                 detected_groups.add(aln_colors[x]['type'])
 
+        # ncols
+        if color_scheme is None or aln.aln_type != 'AA':
+            ncols = len(detected_identity_values)
+        elif color_scheme == 'standard':
+            ncols = (len(detected_identity_values) + 1) / 2
+        else:
+            ncols = (len(detected_groups) + 1) / 2
+
         # plot it
         ax.legend(
             handels,
             labels,
             loc='lower right',
             bbox_to_anchor=bbox_to_anchor,
-            ncols=(len(detected_identity_values) + 1) / 2 if aln.aln_type == 'AA' and color_scheme == 'standard' else len(detected_identity_values),
+            ncols=ncols,
             frameon=False
         )
-
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
 
     # configure axis
