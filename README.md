@@ -38,7 +38,8 @@ The curently stable version of the MSAexplorer app is hosted on  [github pages](
 - :white_check_mark: Minimal requirements.
 
 ```python
-# Minimal analysis example
+### Minimal analysis example ###
+
 from msaexplorer import explore, export
 
 # load the alignment
@@ -55,21 +56,35 @@ snps = aln.get_snps(include_ambig=True)
 print(snps)
 # and then save to file
 export.snps(snps, path='my_path/snps.vcf', format_type='vcf')
+
+# see documentation for full usage
 ```
 
 
 ```python
-# Minimal plotting example
+### Two minimal plotting examples ###
+
 from msaexplorer import explore, draw
 import matplotlib.pyplot as plt
 
+# Example 1
 aln = explore.MSA('example_alignments/DNA.fasta')
 draw.identity_alignment(aln)
 plt.show()
+
+# Example 2
+aln = explore.MSA('example_alignments/DNA.fasta')
+# adjust zoom levels (for example to also plot sequence text)
+aln.zoom = (0,60)
+plt.figure(figsize=(10,12))  # adjust so the sequence text fits in your figure well
+draw.identity_alignment(aln, show_identity_sequence=True)
+plt.show()
+
 ```
 
 ```python
-# Extended plotting example
+### Extended plotting example  ####
+
 import matplotlib.pyplot as plt
 from msaexplorer import explore
 from msaexplorer import draw
