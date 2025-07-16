@@ -222,10 +222,9 @@ def _plot_tab():
                 title=ui.h6('Plotting layout'),
             ),
             ui.row(
-                ui.column(2, ui.input_numeric("zoom_start", "Start", 0, min=0, max=1000)),
-                ui.column(8, ui.input_slider("zoom_range", "Zoom", min=0, max=1000, value=(0, 1000), step=1,
-                                             width="100%")),
-                ui.column(2, ui.input_numeric("zoom_end", "End", 1000, min=0, max=1000))
+                ui.column(2, ui.input_numeric('zoom_start', 'Start', 0, min=0, max=None, update_on='blur')),
+                ui.column(8, ui.input_slider('zoom_range', 'Zoom', min=0, max=1000, value=(0, 1000), step=1, width="100%")),
+                ui.column(2, ui.input_numeric('zoom_end', 'End', 1000, min=0, max=None, update_on='blur'))
             ),
             ui.output_plot('msa_plot', height='100vh', width='92vw'),
             fillable=False
