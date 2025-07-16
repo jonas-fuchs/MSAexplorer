@@ -43,8 +43,8 @@ def _validate_input_parameters(aln: explore.MSA, ax: plt.Axes, annotation: explo
     """
     if not isinstance(aln, explore.MSA):
         raise ValueError('alignment has to be an MSA class. use explore.MSA() to read in alignment')
-    if not isinstance(ax, plt.Axes):
-        raise ValueError('ax has to be an matplotlib axis')
+    if ax is not None and not isinstance(ax, plt.Axes):
+            raise ValueError('ax has to be an matplotlib axis')
     if annotation is not None:
         if not isinstance(annotation, explore.Annotation):
             raise ValueError('annotation has to be an annotation class. use explore.Annotation() to read in annotation')
@@ -279,7 +279,7 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, always_t
         x_text += 1
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
+def identity_alignment(aln: explore.MSA, ax: plt.Axes | None = None, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class
@@ -303,6 +303,8 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
 
     # Validate inputs and colors
     _validate_input_parameters(aln, ax)
+    if ax is None:
+        ax = plt.gca()
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
 
@@ -428,8 +430,10 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
         ax.set_title('identity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
+    return ax
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None = None, show_title: bool = True, show_similarity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+
+def similarity_alignment(aln: explore.MSA, ax: plt.Axes | None = None, matrix_type: str | None = None, show_title: bool = True, show_similarity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot. Importantly the similarity values are normalized!
     :param aln: alignment MSA class
@@ -450,7 +454,8 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
     """
     # input check
     _validate_input_parameters(aln, ax)
-
+    if ax is None:
+        ax = plt.gca()
     # validate colors
     if not is_color_like(reference_color):
         raise ValueError(f'{reference_color} for reference is not a color')
@@ -537,6 +542,8 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes, matrix_type: str | None
         ax.set_title('similarity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
 
+    return ax
+
 
 def _moving_average(arr: ndarray, window_size: int, zoom: tuple | None, aln_length: int) -> tuple[ndarray, ndarray]:
     """
@@ -563,7 +570,7 @@ def _moving_average(arr: ndarray, window_size: int, zoom: tuple | None, aln_leng
         return arr, np.arange(zoom[0], zoom[1]) if zoom is not None else np.arange(aln_length)
 
 
-def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
+def stat_plot(aln: explore.MSA, stat_type: str, ax: plt.Axes | None = None, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
     """
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class
@@ -591,6 +598,8 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     # input check
     _validate_input_parameters(aln, ax)
+    if ax is None:
+        ax = plt.gca()
     if not is_color_like(line_color):
         raise ValueError('line color is not a color')
 
@@ -647,8 +656,10 @@ def stat_plot(aln: explore.MSA, ax: plt.Axes, stat_type: str, line_color: str = 
 
     _format_x_axis(aln, ax, show_x_label, show_left=True)
 
+    return ax
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | list[int, int] = (1, 3), color_scheme: str = 'standard', show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
+
+def variant_plot(aln: explore.MSA, ax: plt.Axes | None = None, lollisize: tuple[int, int] | list[int, int] = (1, 3), color_scheme: str = 'standard', show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
     """
     Plots variants.
     :param aln: alignment MSA class
@@ -662,6 +673,8 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
 
     # validate input
     _validate_input_parameters(aln, ax)
+    if ax is None:
+        ax = plt.gca()
     if not isinstance(lollisize, tuple) or len(lollisize) != 2:
         raise ValueError('lollisize must be tuple of length 2 (stem, head)')
     for _size in lollisize:
@@ -745,8 +758,10 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes, lollisize: tuple[int, int] | li
     ax.set_ylim(0, y_pos)
     ax.set_ylabel('reference')
 
+    return ax
 
-def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
+
+def orf_plot(aln: explore.MSA, ax: plt.Axes | None = None, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Plot conserved ORFs.
     :param aln: alignment MSA class
@@ -765,6 +780,8 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
 
     # validate input
     _validate_input_parameters(aln, ax)
+    if ax is None:
+        ax = plt.gca()
 
     # get orfs --> first deepcopy and reset zoom that the orfs are also zoomed in (by default, the orfs are only
     # searched within the zoomed region)
@@ -798,8 +815,10 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes, min_length: int = 500, non_overlapp
     ax.set_yticklabels([])
     ax.set_title('conserved orfs', loc='left')
 
+    return ax
 
-def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: plt.Axes, feature_to_plot: str, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
+
+def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, feature_to_plot: str, ax: plt.Axes | None = None, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
     """
     Plot annotations from bed, gff or gb files. Are automatically mapped to alignment.
     :param aln: alignment MSA class
@@ -832,6 +851,8 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
 
     # validate input
     _validate_input_parameters(aln, ax, annotation)
+    if ax is None:
+        ax = plt.gca()
     if not is_color_like(color):
         raise ValueError(f'{color} for reference is not a color')
 
@@ -855,8 +876,10 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, ax: 
     ax.set_yticklabels([])
     ax.set_title(f'{annotation.locus} ({feature_to_plot})', loc='left')
 
+    return ax
 
-def sequence_logo(aln:explore.MSA, ax:plt.Axes, color_scheme: str = 'standard', plot_type: str = 'logo', show_x_label:bool = False):
+
+def sequence_logo(aln:explore.MSA, ax:plt.Axes | None = None, color_scheme: str = 'standard', plot_type: str = 'logo', show_x_label:bool = False):
     """
     Plot sequence logo or stacked area plot (use the first one with appropriate zoom levels). The
     logo visualizes the relative frequency of nt or aa characters in the alignment. The char frequency
@@ -870,6 +893,8 @@ def sequence_logo(aln:explore.MSA, ax:plt.Axes, color_scheme: str = 'standard', 
     """
 
     _validate_input_parameters(aln, ax)
+    if ax is None:
+        ax = plt.gca()
     # calc matrix
     matrix = aln.calc_position_matrix('IC') * aln.calc_position_matrix('PPM')
     letters_to_plot = list(config.CHAR_COLORS[aln.aln_type]['standard'].keys())[:-1]
@@ -922,3 +947,5 @@ def sequence_logo(aln:explore.MSA, ax:plt.Axes, color_scheme: str = 'standard', 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.set_ylabel('bits')
+
+    return ax
