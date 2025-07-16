@@ -242,10 +242,11 @@ def _get_contrast_text_color(rgba_color):
     """
     r, g, b, a = rgba_color
     brightness = (r * 299 + g * 587 + b * 114) / 1000
+
     return 'white' if brightness < 0.5 else 'black'
 
 
-def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, allways_text: bool, values: ndarray, matrix: ndarray, ax:plt.Axes, zoom: tuple, y_position:int, value_to_skip: int, ref_color:str, show_gaps: bool, cmap: None | ScalarMappable = None):
+def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, always_text: bool, values: ndarray, matrix: ndarray, ax:plt.Axes, zoom: tuple, y_position:int, value_to_skip: int, ref_color:str, show_gaps: bool, cmap: None | ScalarMappable = None, colorscheme: None | dict = None):
     """
     Plot sequence text - however this will be done even if there is not enough space.
     Might need some rework in the future.
@@ -257,14 +258,14 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, allways_
         different_cols = [False]*aln.length
 
     for idx, (character, value) in enumerate(zip(aln.alignment[seq_name], values)):
-        if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-' or character == '-'and not show_gaps or allways_text and character != '-':
+        if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-' or character == '-'and not show_gaps or always_text and character != '-':
             # text color
             if seq_name == ref_name:
                 text_color = _get_contrast_text_color(to_rgba(ref_color))
             elif cmap is not None:
                 text_color = _get_contrast_text_color(cmap.to_rgba(value))
             else:
-                text_color = 'black'
+                text_color = _get_contrast_text_color(to_rgba(colorscheme[value]['color']))
 
             ax.text(
                 x=x_text + zoom[0] if zoom is not None else x_text,
@@ -368,8 +369,7 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes, show_title: bool = True, 
 
         # add sequence text
         if show_identity_sequence or show_sequence_all:
-            _plot_sequence_text(aln, list(aln.alignment.keys())[i], aln.reference_id, show_sequence_all, identity_aln[i], identity_aln, ax,
-                                zoom, y_position, 0, reference_color, show_gaps)
+            _plot_sequence_text(aln, list(aln.alignment.keys())[i], aln.reference_id, show_sequence_all, identity_aln[i], identity_aln, ax, zoom, y_position, 0, reference_color, show_gaps, colorscheme=aln_colors)
 
     # Create the LineCollection: each segment is drawn in a single call.
     ax.add_collection(PatchCollection(patch_list, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
