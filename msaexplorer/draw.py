@@ -10,7 +10,7 @@ The functions will raise the appropriate exception in such a case.
 ## Functions
 
 """
-
+import pathlib
 # built-in
 from itertools import chain
 from typing import Callable, Dict
@@ -279,10 +279,10 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, always_t
         x_text += 1
 
 
-def identity_alignment(aln: explore.MSA, ax: plt.Axes | None = None, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
+def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
-    :param aln: alignment MSA class
+    :param aln: alignment MSA class or path
     :param ax: matplotlib axes
     :param show_title: whether to show title
     :param show_seq_names: whether to show seq names
@@ -302,6 +302,12 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes | None = None, show_title:
     """
 
     # Validate inputs and colors
+    if type(aln) is str:
+        if os.path.exists(aln):
+            aln = explore.MSA(aln)
+        else:
+            raise FileNotFoundError(f'File {aln} does not exist')
+
     _validate_input_parameters(aln, ax)
     if ax is None:
         ax = plt.gca()
@@ -433,10 +439,10 @@ def identity_alignment(aln: explore.MSA, ax: plt.Axes | None = None, show_title:
     return ax
 
 
-def similarity_alignment(aln: explore.MSA, ax: plt.Axes | None = None, matrix_type: str | None = None, show_title: bool = True, show_similarity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, matrix_type: str | None = None, show_title: bool = True, show_similarity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r', show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Generates a similarity alignment overview plot. Importantly the similarity values are normalized!
-    :param aln: alignment MSA class
+    :param aln: alignment MSA class or path
     :param ax: matplotlib axes
     :param matrix_type: substitution matrix - see config.SUBS_MATRICES, standard: NT - TRANS, AA - BLOSUM65
     :param show_title: whether to show title
@@ -453,6 +459,11 @@ def similarity_alignment(aln: explore.MSA, ax: plt.Axes | None = None, matrix_ty
     :param cbar_fraction: fraction of the original ax reserved for the legend
     """
     # input check
+    if type(aln) is str:
+        if os.path.exists(aln):
+            aln = explore.MSA(aln)
+        else:
+            raise FileNotFoundError(f'File {aln} does not exist')
     _validate_input_parameters(aln, ax)
     if ax is None:
         ax = plt.gca()
@@ -570,10 +581,10 @@ def _moving_average(arr: ndarray, window_size: int, zoom: tuple | None, aln_leng
         return arr, np.arange(zoom[0], zoom[1]) if zoom is not None else np.arange(aln_length)
 
 
-def stat_plot(aln: explore.MSA, stat_type: str, ax: plt.Axes | None = None, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
+def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
     """
     Generate a plot for the various alignment stats.
-    :param aln: alignment MSA class
+    :param aln: alignment MSA class or path
     :param ax: matplotlib axes
     :param stat_type: 'entropy', 'gc', 'coverage', 'ts/tv', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
     :param line_color: color of the line
@@ -597,6 +608,11 @@ def stat_plot(aln: explore.MSA, stat_type: str, ax: plt.Axes | None = None, line
         raise ValueError('stat_type must be one of {}'.format(list(stat_functions.keys())))
 
     # input check
+    if type(aln) is str:
+        if os.path.exists(aln):
+            aln = explore.MSA(aln)
+        else:
+            raise FileNotFoundError(f'File {aln} does not exist')
     _validate_input_parameters(aln, ax)
     if ax is None:
         ax = plt.gca()
@@ -659,10 +675,10 @@ def stat_plot(aln: explore.MSA, stat_type: str, ax: plt.Axes | None = None, line
     return ax
 
 
-def variant_plot(aln: explore.MSA, ax: plt.Axes | None = None, lollisize: tuple[int, int] | list[int, int] = (1, 3), color_scheme: str = 'standard', show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
+def variant_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, lollisize: tuple[int, int] | list[int, int] = (1, 3), color_scheme: str = 'standard', show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
     """
     Plots variants.
-    :param aln: alignment MSA class
+    :param aln: alignment MSA class or path
     :param ax: matplotlib axes
     :param lollisize: (stem_size, head_size)
     :param color_scheme: color scheme for characters. see config.CHAR_COLORS for available options
@@ -672,6 +688,11 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes | None = None, lollisize: tuple[
     """
 
     # validate input
+    if type(aln) is str:
+        if os.path.exists(aln):
+            aln = explore.MSA(aln)
+        else:
+            raise FileNotFoundError(f'File {aln} does not exist')
     _validate_input_parameters(aln, ax)
     if ax is None:
         ax = plt.gca()
@@ -761,10 +782,10 @@ def variant_plot(aln: explore.MSA, ax: plt.Axes | None = None, lollisize: tuple[
     return ax
 
 
-def orf_plot(aln: explore.MSA, ax: plt.Axes | None = None, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
+def orf_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
     """
     Plot conserved ORFs.
-    :param aln: alignment MSA class
+    :param aln: alignment MSA class or path
     :param ax: matplotlib axes
     :param min_length: minimum length of orf
     :param non_overlapping_orfs: whether to consider overlapping orfs
@@ -779,6 +800,12 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes | None = None, min_length: int = 500
     cmap = ScalarMappable(norm=Normalize(0, 100), cmap=plt.get_cmap(cmap))
 
     # validate input
+    if type(aln) is str:
+        if os.path.exists(aln):
+            aln = explore.MSA(aln)
+        else:
+            raise FileNotFoundError(f'File {aln} does not exist')
+    _validate_input_parameters(aln, ax)
     _validate_input_parameters(aln, ax)
     if ax is None:
         ax = plt.gca()
@@ -818,7 +845,7 @@ def orf_plot(aln: explore.MSA, ax: plt.Axes | None = None, min_length: int = 500
     return ax
 
 
-def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, feature_to_plot: str, ax: plt.Axes | None = None, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
+def annotation_plot(aln: explore.MSA | str, annotation: explore.Annotation | str, feature_to_plot: str, ax: plt.Axes | None = None, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
     """
     Plot annotations from bed, gff or gb files. Are automatically mapped to alignment.
     :param aln: alignment MSA class
@@ -845,11 +872,14 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, feat
         else:
             raise FileNotFoundError()
 
-    # parse from path
+    # validate input
+    if type(aln) is str:
+        if os.path.exists(aln):
+            aln = explore.MSA(aln)
+        else:
+            raise FileNotFoundError(f'File {aln} does not exist')
     if type(annotation) is str:
         annotation = parse_annotation_from_string(annotation, aln)
-
-    # validate input
     _validate_input_parameters(aln, ax, annotation)
     if ax is None:
         ax = plt.gca()
@@ -879,19 +909,24 @@ def annotation_plot(aln: explore.MSA, annotation: explore.Annotation | str, feat
     return ax
 
 
-def sequence_logo(aln:explore.MSA, ax:plt.Axes | None = None, color_scheme: str = 'standard', plot_type: str = 'logo', show_x_label:bool = False):
+def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme: str = 'standard', plot_type: str = 'stacked', show_x_label:bool = False):
     """
     Plot sequence logo or stacked area plot (use the first one with appropriate zoom levels). The
     logo visualizes the relative frequency of nt or aa characters in the alignment. The char frequency
     is scaled to the information content at each position. --> identical to how Geneious calculates it.
 
-    :param aln: alignment MSA class
+    :param aln: alignment MSA class or path
     :param ax: matplotlib axes
     :param color_scheme: color scheme for characters. see config.CHAR_COLORS for available options
     :param plot_type: 'logo' for sequence logo, 'stacked' for stacked area plot
     :param show_x_label: whether to show the x-axis label
     """
 
+    if type(aln) is str:
+        if os.path.exists(aln):
+            aln = explore.MSA(aln)
+        else:
+            raise FileNotFoundError(f'File {aln} does not exist')
     _validate_input_parameters(aln, ax)
     if ax is None:
         ax = plt.gca()

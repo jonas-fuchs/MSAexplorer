@@ -42,19 +42,16 @@ h6 {
 
 /* Navbar */
 .navbar {
-    padding: 5px 10px;
     width: 100%;
     position: fixed;
     background-color: #dadada;
     top: 0;
     left: 0;
     z-index: 1000;
-    transition: transform 0.4s ease-in-out;
 }
 .navbar-nav {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
     width: auto;
 }
 
@@ -69,11 +66,12 @@ h6 {
 }
 
 .navbar .nav-link:hover {
-    border-bottom: 2px solid var(--secondary-color);
+    border-bottom: 0;
     color: var(--secondary-color);
 }
 
 .navbar .nav-link.active {
+    border-bottom: 0;
     color: var(--secondary-color);
 }
 /* Icon control */
@@ -90,10 +88,8 @@ h6 {
     filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
 }
 
-/* Navbar collapsing */
-.navbar-collapse {
-    max-height: 300px;
-    overflow-y: auto;
+.nav-underline .nav-link, .nav-underline .nav-tabs > li > a, .nav-underline .nav-pills > li > a, .nav-underline :where(ul.nav.navbar-nav > li) > a {
+    border-bottom: none;
 }
 
 /* Allow overflow of download options */
@@ -129,9 +125,6 @@ h6 {
 
 /* Inputs and Controls */
 input, select, button {
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0;
     box-sizing: border-box;
     border: 1px solid var(--light-border);
     border-radius: 4px;
@@ -149,6 +142,43 @@ button:hover {
 
 .action-button:hover img {
     filter: brightness(1) invert(1);
+}
+
+.action-button {
+    position: relative;
+    border: none;
+    background-color: transparent;
+    margin: 0;
+    cursor: pointer;
+}
+
+#open_sidebar{
+    border: none;
+    background-color: transparent;
+    margin: 0;
+    transition: transform 0.4s ease-in-out;
+}
+
+#open_sidebar:focus {
+    border-bottom: 0;
+    color: var(--secondary-color);
+    background-color: inherit;
+    box-shadow: none;
+}
+
+#open_sidebar:hover {
+    border-bottom: 0;
+    color: var(--secondary-color);
+    background-color: inherit;
+    box-shadow: none;
+}
+
+#open_sidebar:focus img{
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+#open_sidebar:hover img{
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
 }
 
 input:focus, select:focus, button:focus {
@@ -263,7 +293,7 @@ input[type="range"] {
 }
 
 /* Responsiveness */
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 830px) {
 
     .sidebar {
         padding: 15px;
@@ -275,29 +305,56 @@ input[type="range"] {
 
     .nav-tabs .nav-link {
         font-size: var(--main-size);
-        padding: 8px 12px;
-    }
-    #overlay-sidebar {
-        width: 80%;
-        right: -80%; /* Initially hidden */
     }
 
     #overlay-sidebar.show {
         right: 0;
     }
     .navbar {
-        position: fixed;
+        background-color: #dadada;
         width: 100%;
         z-index: 1050;
     }
 
+    .navbar-nav {
+        flex-direction: column; !important
+        justify-content: space-between;
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .navbar-toggler {
+        display: block;
+    }
+    .navbar-toggler {
+        border: none;
+        padding: 0;
+        background: #9f9f9f;
+        margin: 0;
+    }
+    .navbar-toggler:focus,
+    .navbar-toggler:active,
+    .navbar-toggler:focus-visible {
+        outline: none;
+        box-shadow: none;
+        background: #9f9f9f;
+        border: none;
+    }
+
     body {
-        padding-top: 70px;
+        padding-top: 5px;
     }
     .about-card {
         position: relative !important;
         bottom: auto !important;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    .card .form-group {
+        max-width: 100%;
+        width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
     }
 }
-

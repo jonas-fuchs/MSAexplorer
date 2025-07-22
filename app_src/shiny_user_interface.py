@@ -148,12 +148,11 @@ def _upload_tab():
             ui.layout_columns(
                 ui.card(
                     ui.card_header(ui.h6('Upload files:')),
-                    ui.layout_columns(
-                        ui.input_file('alignment_file', 'Multiple sequence alignment:', multiple=False,
+                        ui.input_file('alignment_file', 'Required multiple sequence alignment:', multiple=False,
                                       accept=['.fa', '.fasta', '.aln']),
-                        ui.input_file('annotation_file', 'Optional annotation file:', multiple=False,
+                        ui.input_file('annotation_file','Optional Annotation file:', multiple=False,
                                       accept=['.gff', '.gff3', '.bed', '.gb']),
-                    )
+                        fillable=False
                 ),
                 ui.card(
                     ui.card_header(ui.h6('Download files:'),

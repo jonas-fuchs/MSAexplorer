@@ -68,8 +68,7 @@ from msaexplorer import explore, draw
 import matplotlib.pyplot as plt
 
 # Example 1
-aln = explore.MSA('example_alignments/DNA.fasta')
-draw.identity_alignment(aln)
+draw.identity_alignment('example_alignments/DNA.fasta')
 plt.show()
 
 # Example 2

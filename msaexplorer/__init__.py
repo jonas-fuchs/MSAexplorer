@@ -18,7 +18,6 @@ cd MSAexplorer
 pip install -r requirements.txt  # installs all dependencies
 shiny run app.py
 ```
-
 Now just follow the link provided in your terminal.
 
 
@@ -26,15 +25,9 @@ Now just follow the link provided in your terminal.
 
 ## Installation
 
-Some simple steps are needed at the moment but in the future you will be able to install MSAexplorer via `pip install msaexplorer`.
-
 ```bash
-git clone https://github.com/jonas-fuchs/MSAexplorer
-cd MSAexplorer
-pip install .
+pip install msaexplorer
 ```
-
-Now you are able to use MSAexplorer like any package that you would install via `pip`.
 
 ## Analysis
 

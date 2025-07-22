@@ -1016,8 +1016,8 @@ class MSA:
         def ghd(seq1: str, seq2: str) -> float:
             return hamming_distance(seq1, seq2) / self.length * 100
 
-        def lhd(seq1: str, seq2: str) -> float:
-            # remove 5' trailing gaps
+        def lhd(seq1, seq2):
+            # Trim gaps from both sides
             i, j = 0, self.length - 1
             while i < self.length and (seq1[i] == '-' or seq2[i] == '-'):
                 i += 1
@@ -1025,10 +1025,11 @@ class MSA:
                 j -= 1
             if i > j:
                 return 0.0
-            # slice seq
-            seq1_, seq2_ = seq1[i:j + 1], seq2[i:j + 1]
 
-            return hamming_distance(seq1_, seq2_) / min([len(seq1_), len(seq2_)]) * 100
+            seq1_, seq2_ = seq1[i:j + 1], seq2[i:j + 1]
+            matches = sum(c1 == c2 for c1, c2 in zip(seq1_, seq2_))
+            length = j - i + 1
+            return (matches / length) * 100 if length > 0 else 0.0
 
         def ged(seq1: str, seq2: str) -> float:
 
@@ -1081,11 +1082,14 @@ class MSA:
         distance_matrix = np.zeros((len(aln), len(aln)))
 
         sequences = list(aln.values())
-        for i, seq1 in enumerate(sequences):
-            for j, seq2 in enumerate(sequences):
-                if i <= j:  # Compute only once for symmetric matrix
-                    distance_matrix[i, j] = distance_func(seq1, seq2)
-                    distance_matrix[j, i] = distance_matrix[i, j]
+        n = len(sequences)
+        for i in range(n):
+            seq1 = sequences[i]
+            for j in range(i, n):
+                seq2 = sequences[j]
+                dist = distance_func(seq1, seq2)
+                distance_matrix[i, j] = dist
+                distance_matrix[j, i] = dist
 
         return distance_matrix
 
