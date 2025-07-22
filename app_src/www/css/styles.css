@@ -48,6 +48,7 @@ h6 {
     top: 0;
     left: 0;
     z-index: 1000;
+    transition: transform 0.4s ease-in-out;
 }
 .navbar-nav {
     display: flex;
