@@ -38,7 +38,52 @@ The curently stable version of the MSAexplorer app is hosted on  [github pages](
 - :white_check_mark: Minimal requirements.
 
 ```python
-# A short example for generating plots with MSAexplorer. Visit the documentation for full usage.
+### Minimal analysis example ###
+
+from msaexplorer import explore, export
+
+# load the alignment
+aln = explore.MSA('example_alignments/DNA.fasta')
+print(aln.aln_type)  # print alignment type
+print(aln.length)  # print alignment length
+
+# adjust what you want to look at
+aln.reference_id = 'AB032031.1 Borna disease virus 1 genomic RNA, complete genome'  # set a reference if needed
+aln.zoom = (0, 1000)  # set a zoom range
+
+# now print for example all snps in that zoom range compared to the reference id
+snps = aln.get_snps(include_ambig=True)
+print(snps)
+# and then save to file
+export.snps(snps, path='my_path/snps.vcf', format_type='vcf')
+
+# see documentation for full usage
+```
+
+
+```python
+### Two minimal plotting examples ###
+
+from msaexplorer import explore, draw
+import matplotlib.pyplot as plt
+
+# Example 1
+draw.identity_alignment('example_alignments/DNA.fasta')
+plt.show()
+
+# Example 2
+aln = explore.MSA('example_alignments/DNA.fasta')
+# adjust zoom levels (for example to also plot sequence text)
+aln.zoom = (0,60)
+plt.figure(figsize=(10,12))  # adjust so the sequence text fits in your figure well
+draw.identity_alignment(aln, show_identity_sequence=True)
+plt.show()
+
+```
+
+```python
+### Extended plotting example  ####
+
 import matplotlib.pyplot as plt
 from msaexplorer import explore
 from msaexplorer import draw

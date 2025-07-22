@@ -48,7 +48,8 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         height_ratios.append(inputs['plot_1_size'])
         plot_functions.append(
             lambda ax: draw.stat_plot(
-                aln, ax,
+                aln,
+                ax=ax,
                 stat_type=inputs['stat_type'],
                 line_width=1,
                 rolling_average=inputs['rolling_average'],
@@ -59,7 +60,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         height_ratios.append(inputs['plot_1_size'])
         plot_functions.append(
             lambda ax: draw.sequence_logo(
-                aln, ax,
+                aln, ax=ax,
                 show_x_label=True if inputs['annotation'] == 'Off' and inputs['alignment_type'] == 'Off' else False,
                 plot_type = inputs['logo_type'],
                 color_scheme = inputs['logo_coloring']
@@ -71,7 +72,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         height_ratios.append(inputs['plot_2_size'])
         plot_functions.append(
             lambda ax: draw.identity_alignment(
-                aln, ax,
+                aln, ax=ax,
                 show_identity_sequence=inputs['show_sequence'],
                 show_sequence_all=inputs['show_sequence_all'],
                 fancy_gaps=inputs['fancy_gaps'],
@@ -85,7 +86,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 show_x_label=True if inputs['annotation'] == 'Off' else False,
                 show_legend=inputs['show_legend']
         ) if inputs['alignment_type'] == 'identity' else draw.similarity_alignment(
-                aln, ax,
+                aln, ax=ax,
                 show_similarity_sequence=inputs['show_sequence'],
                 show_sequence_all=inputs['show_sequence_all'],
                 fancy_gaps=inputs['fancy_gaps'],
@@ -104,13 +105,13 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
         height_ratios.append(inputs['plot_3_size'])
         plot_functions.append(
             lambda ax: draw.annotation_plot(
-                aln, ann, ax,
+                aln, ann, ax=ax,
                 feature_to_plot=inputs['feature_display'],
                 color=inputs['feature_color'],
                 direction_marker_size=inputs['strand_marker_size'],
                 show_x_label=True
         ) if inputs['annotation'] == 'Annotation' and inputs['annotation_file'] else draw.orf_plot(
-                aln, ax,
+                aln, ax=ax,
                 cmap=inputs['color_mapping'],
                 non_overlapping_orfs=inputs['non_overlapping'],
                 direction_marker_size=inputs['strand_marker_size'],
@@ -119,7 +120,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 cbar_fraction=0.2,
                 min_length=inputs['min_orf_length']
         ) if inputs['annotation'] == 'Conserved ORFs' else draw.variant_plot(
-                aln, ax,
+                aln, ax=ax,
                 show_x_label=True,
                 lollisize=(inputs['stem_size'], inputs['head_size']),
                 color_scheme=inputs['snp_coloring'],

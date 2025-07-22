@@ -31,7 +31,7 @@ def shiny_ui(css_file, js_file):
                 )
             ),
             title=ui.a(
-                ui.img(src='img/logo.svg', height='60px'),
+                ui.img(src='img/logo.svg', height='50px'),
                 href='https://github.com/jonas-fuchs/MSAexplorer'
             )
         )
@@ -57,7 +57,7 @@ def _custom_sidebar():
                     ui.HTML(
                         """
                         <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                            <label for="stat_color" style="font-size: 14px; margin-bottom: 5px;">Color for stat plot:</label>
+                            <label for="stat_color" style="font-size: 0.8rem; margin-bottom: 5px;">Color for stat plot:</label>
                             <input type="color" id="stat_color" value="#808080" onchange="updateColor(this.value)" 
                                    style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
                         </div>
@@ -86,7 +86,7 @@ def _custom_sidebar():
                         ui.HTML(
                             """
                             <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                                <label for="reference_color" style="font-size: 14px; margin-bottom: 5px;">Reference color:</label>
+                                <label for="reference_color" style="font-size: 0.8rem; margin-bottom: 5px;">Reference color:</label>
                                 <input type="color" id="reference_color" value="#4682B4" onchange="updateColor(this.value)" 
                                        style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
                             </div>
@@ -124,7 +124,7 @@ def _custom_sidebar():
                         ui.HTML(
                             """
                             <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                                <label for="feature_color" style="font-size: 14px; margin-bottom: 5px;">Feature color:</label>
+                                <label for="feature_color" style="font-size: 0.8rem; margin-bottom: 5px;">Feature color:</label>
                                 <input type="color" id="feature_color" value="#808080" onchange="updateColor(this.value)" 
                                        style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
                             </div>
@@ -148,12 +148,11 @@ def _upload_tab():
             ui.layout_columns(
                 ui.card(
                     ui.card_header(ui.h6('Upload files:')),
-                    ui.layout_columns(
-                        ui.input_file('alignment_file', 'Multiple sequence alignment (*.fasta):', multiple=False,
+                        ui.input_file('alignment_file', 'Required multiple sequence alignment:', multiple=False,
                                       accept=['.fa', '.fasta', '.aln']),
-                        ui.input_file('annotation_file', 'Optional annotation file (*.gff, *.bed, *.gb):', multiple=False,
+                        ui.input_file('annotation_file','Optional Annotation file:', multiple=False,
                                       accept=['.gff', '.gff3', '.bed', '.gb']),
-                    )
+                        fillable=False
                 ),
                 ui.card(
                     ui.card_header(ui.h6('Download files:'),
@@ -222,10 +221,9 @@ def _plot_tab():
                 title=ui.h6('Plotting layout'),
             ),
             ui.row(
-                ui.column(2, ui.input_numeric("zoom_start", "Start", 0, min=0, max=1000)),
-                ui.column(8, ui.input_slider("zoom_range", "Zoom", min=0, max=1000, value=(0, 1000), step=1,
-                                             width="100%")),
-                ui.column(2, ui.input_numeric("zoom_end", "End", 1000, min=0, max=1000))
+                ui.column(2, ui.input_numeric('zoom_start', 'Start', 0, min=0, max=None, update_on='blur')),
+                ui.column(8, ui.input_slider('zoom_range', 'Zoom', min=0, max=1000, value=(0, 1000), step=1, width="100%")),
+                ui.column(2, ui.input_numeric('zoom_end', 'End', 1000, min=0, max=None, update_on='blur'))
             ),
             ui.output_plot('msa_plot', height='100vh', width='92vw'),
             fillable=False
