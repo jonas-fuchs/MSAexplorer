@@ -317,6 +317,10 @@ def server(input, output, session):
         alignment_file = input.alignment_file()
         if alignment_file:
             align_sequences_task.invoke(alignment_file)
+            ui.notification_show(ui.tags.div(
+                'Alignment was successfull.',
+                style="color: green; font-weight: bold;"
+            ), duration=10)
 
     @ui.bind_task_button(button_id='align')
     @reactive.extended_task
@@ -348,13 +352,9 @@ def server(input, output, session):
         annotation_file = input.annotation_file()
         try:
             alignment_finished = align_sequences_task.result()
-            if alignment_finished:
-                aln = explore.MSA(alignment_finished, reference_id=None, zoom_range=None)
-            else:
-                aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
+            aln = explore.MSA(alignment_finished, reference_id=None, zoom_range=None)
             finalize_loaded_alignment(aln, annotation_file)
         except Exception as e:
-            print(f"Error (aligned result): {e}")
             show_alignment_error(e, alignment_file)
 
     @reactive.Effect
@@ -369,7 +369,6 @@ def server(input, output, session):
             aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
             finalize_loaded_alignment(aln, annotation_file)
         except Exception as e:
-            print(f"Error (direct load): {e}")
             show_alignment_error(e, alignment_file)
 
     @reactive.Effect
