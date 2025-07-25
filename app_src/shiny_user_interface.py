@@ -176,6 +176,11 @@ def _upload_tab():
             style="display: flex; flex-direction: column; justify-content: center; align-items: center",
         ),
         ui.card(
+            ui.input_task_button("align", "Align sequences"),
+            ui.input_action_button("align_cancel", "Cancel"),
+            class_="about-card"
+        ),
+        ui.card(
             ui.h6('About MSAexplorer:'),
             ui.p(
                 "MSAexplorer is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs)."

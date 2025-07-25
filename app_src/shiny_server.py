@@ -5,6 +5,7 @@ This module creates the Server logic
 # built-in
 import tempfile
 from typing import Callable, Dict
+import asyncio
 
 # libs
 import numpy as np
@@ -16,6 +17,8 @@ from matplotlib import colormaps
 # load in app resources
 from app_src.shiny_plots import set_aln, create_msa_plot, create_analysis_custom_heatmap, create_freq_heatmap, create_recovery_heatmap
 from shinywidgets import render_widget
+from pyfamsa import Aligner, Sequence
+
 
 # msaexplorer
 from msaexplorer import explore, config, export, draw
@@ -159,6 +162,7 @@ def server(input, output, session):
 
         return inputs
 
+
     def read_in_annotation(annotation_file):
         """
         Read in an annotation and update the ui accordingly
@@ -180,6 +184,162 @@ def server(input, output, session):
             ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs', 'Annotation'],
                                 selected='Off')
 
+
+    def is_sequence_list(filepath):
+        with open(filepath) as f:
+            lines = [line.strip() for line in f if not line.startswith(">")]
+        lengths = set(len(line) for line in lines if line)
+        return len(lengths) > 1  # likely unaligned
+
+
+    def align_sequences(alignment_file):
+        sequences, seq_id = [], None
+        with open(alignment_file[0]['datapath'], 'r') as file:
+            for i, line in enumerate(file):
+                line = line.strip()
+                if line.startswith(">"):
+                    if seq_id is not None:
+                        seq = ''.join(seq).upper()
+                        sequences.append(Sequence(seq_id.encode(), seq.encode()))
+                    seq_id = line[1:]
+                    seq = []
+                else:
+                    seq.append(line)
+            aligner = Aligner()
+            alignment_new = aligner.align(sequences)
+            aln_string = ''
+            for sequence in alignment_new:
+                aln_string = f"{aln_string}>{sequence.id.decode()}\n{sequence.sequence.decode()}\n"
+
+        return aln_string
+
+
+    def finalize_loaded_alignment(aln, annotation_file):
+        aln.reference_id = list(aln.alignment.keys())[0]
+        reactive.alignment.set(aln)
+
+        alignment_length = len(next(iter(aln.alignment.values()))) - 1
+        ui.update_slider('zoom_range', max=alignment_length - 1, value=(0, alignment_length - 1))
+
+        ui.remove_ui(selector="#orf_column")
+        if aln.aln_type != 'AA':
+            ui.insert_ui(
+                ui.column(
+                    4,
+                    ui.h6('ORF plot'),
+                    ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
+                    ui.input_selectize('color_mapping', 'Colormap ORF identity', choices=list(colormaps.keys()),
+                                       selected='jet'),
+                    ui.input_switch('non_overlapping', 'non-overlapping', value=False),
+                    id='orf_column'
+                ),
+                selector='#snp_column',
+                where='afterEnd'
+            )
+
+        for id in ['reference', 'reference_2']:
+            ui.update_selectize(id=id, choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first')
+
+        ui.update_selectize(
+            id='matrix',
+            choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
+            selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
+        )
+
+        aln_len, seq_threshold = len(aln.alignment.keys()), 5
+        for ratio in config.STANDARD_HEIGHT_RATIOS.keys():
+            if aln_len >= ratio:
+                seq_threshold = ratio
+
+        ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
+        ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
+        ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
+
+        if aln.aln_type == 'AA':
+            ui.update_selectize('stat_type',
+                                choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity'],
+                                selected='Off')
+            ui.update_selectize('download_type',
+                                choices=['SNPs', 'consensus', 'character frequencies', '% recovery', 'entropy',
+                                         'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
+            ui.update_selectize('annotation', choices=['Off', 'SNPs'])
+            ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
+            ui.update_selectize('logo_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
+            ui.update_selectize('snp_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
+        else:
+            ui.update_selectize('stat_type',
+                                choices=['Off', 'sequence logo', 'gc', 'entropy', 'coverage', 'identity', 'similarity',
+                                         'ts tv score'], selected='Off')
+            ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', '% recovery',
+                                                          'reverse complement alignment', 'conserved orfs', 'gc',
+                                                          'entropy', 'coverage', 'mean identity', 'mean similarity',
+                                                          'ts tv score'], selected='SNPs')
+            ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
+            ui.update_selectize('identity_coloring',
+                                choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
+            ui.update_selectize('logo_coloring', choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
+            ui.update_selectize('snp_coloring', choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
+
+        if annotation_file:
+            read_in_annotation(annotation_file)
+
+
+    def show_alignment_error(e, alignment_file):
+        ui.notification_show(ui.tags.div(f'Error: {e}', style="color: red; font-weight: bold;"), duration=10)
+        if alignment_file and is_sequence_list(alignment_file[0]['datapath']):
+            ui.notification_show(ui.tags.div(
+                'It seems like you have uploaded a list of sequences. You can align them with FAMSA2.',
+                style="color: black"
+            ), duration=10)
+
+    @ui.bind_task_button(button_id='align')
+    @reactive.extended_task
+    async def align_sequences_task(alignment_file):
+        return await asyncio.to_thread(align_sequences, alignment_file)
+
+    @reactive.Effect
+    @reactive.event(input.align)
+    def trigger_task():
+        alignment_file = input.alignment_file()
+        if alignment_file:
+            align_sequences_task.invoke(alignment_file)
+
+    @reactive.effect
+    @reactive.event(input.align_cancel)
+    def handle_cancel():
+        align_sequences_task.cancel()
+
+    @reactive.Effect
+    @reactive.event(align_sequences_task.result, input.alignment_file)
+    def load_aligned_result():
+        alignment_file = input.alignment_file()
+        annotation_file = input.annotation_file()
+        try:
+            alignment_finished = align_sequences_task.result()
+            if alignment_finished:
+                aln = explore.MSA(alignment_finished, reference_id=None, zoom_range=None)
+            else:
+                aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
+            finalize_loaded_alignment(aln, annotation_file)
+        except Exception as e:
+            print(f"Error (aligned result): {e}")
+            show_alignment_error(e, alignment_file)
+
+    @reactive.Effect
+    @reactive.event(input.alignment_file)
+    def load_direct_alignment():
+        alignment_file = input.alignment_file()
+        annotation_file = input.annotation_file()
+        # If alignment is requested via button, ignore this path
+        if input.align() or not alignment_file:
+            return
+        try:
+            aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
+            finalize_loaded_alignment(aln, annotation_file)
+        except Exception as e:
+            print(f"Error (direct load): {e}")
+            show_alignment_error(e, alignment_file)
+
     # Updates the plot container
     @reactive.Effect
     async def update_height():
@@ -190,98 +350,6 @@ def server(input, output, session):
         new_plot_height = f'{input.increase_height() * 100}vh'
 
         await session.send_custom_message("update-plot-container-height", {'height': new_plot_height})
-
-    #TODO: Also try to conditionally exclude the Annotation column
-    # Inputs
-    @reactive.Effect
-    @reactive.event(input.alignment_file)
-    def load_alignment():
-        """
-        Load an alignment and update different now accessible ui elements
-        """
-        try:
-            alignment_file = input.alignment_file()
-            annotation_file = input.annotation_file()
-            if alignment_file:
-                aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
-
-                # set standard ref
-                aln.reference_id = list(aln.alignment.keys())[0]
-                reactive.alignment.set(aln)
-
-                # Update zoom slider based on alignment length and user input
-                alignment_length = len(next(iter(aln.alignment.values())))-1
-                ui.update_slider('zoom_range', max=alignment_length-1, value=(0, alignment_length -1))
-
-                # add specific settings to settings tab
-                # on each upload first remove potential ui elements
-                ui.remove_ui(selector="#orf_column")
-                # then add the ui element
-                if aln.aln_type != 'AA':
-                    ui.insert_ui(
-                        ui.column(
-                            4,
-                            ui.h6('ORF plot'),
-                            ui.input_numeric('min_orf_length', 'Length', value=150, min=1),
-                            ui.input_selectize('color_mapping', 'Colormap ORF identity', choices=list(colormaps.keys()),
-                                               selected='jet'),
-                            ui.input_switch('non_overlapping', 'non-overlapping', value=False),
-                            id='orf_column'
-                        ),
-                        selector='#snp_column',
-                        where='afterEnd'
-                    )
-
-                # Update reference
-                for id in ['reference', 'reference_2']:
-                    ui.update_selectize(
-                        id=id, choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
-                    )
-
-                # Update substitution matrix
-                ui.update_selectize(
-                    id='matrix',
-                    choices=list(config.SUBS_MATRICES[aln.aln_type].keys()),
-                    selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
-                )
-
-                # update plot size sliders
-                # Adjust the size depending on the number of alignment sequences
-                aln_len, seq_threshold = len(aln.alignment.keys()), 5
-                for ratio in config.STANDARD_HEIGHT_RATIOS.keys():
-                    if aln_len >= ratio:
-                        seq_threshold = ratio
-
-                # update standard settings
-                ui.update_numeric('plot_1_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][0])
-                ui.update_numeric('plot_2_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][1])
-                ui.update_numeric('plot_3_size', value=config.STANDARD_HEIGHT_RATIOS[seq_threshold][2])
-                # Some of the function highly depend on the alignment type
-                if aln.aln_type == 'AA':
-                    ui.update_selectize('stat_type', choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs','consensus', 'character frequencies', '% recovery', 'entropy', 'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
-                    ui.update_selectize('annotation', choices=['Off', 'SNPs'])
-                    ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
-                    ui.update_selectize('logo_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
-                    ui.update_selectize('snp_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
-                else:
-                    # needed because if an as aln and then a nt aln are loaded it will not change
-                    ui.update_selectize('stat_type', choices=['Off', 'sequence logo', 'gc', 'entropy', 'coverage', 'identity', 'similarity', 'ts tv score'], selected='Off')
-                    ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', '% recovery', 'reverse complement alignment', 'conserved orfs', 'gc', 'entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score'], selected='SNPs')
-                    ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
-                    ui.update_selectize('identity_coloring', choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
-                    ui.update_selectize('logo_coloring',choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
-                    ui.update_selectize('snp_coloring',choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
-                # case if annotation file is uploaded prior to the alignment file
-                if annotation_file:
-                    read_in_annotation(annotation_file)
-        # show the user if something with parsing went wrong
-        except Exception as e:
-            print(f"Error: {e}")  # print to console
-            ui.notification_show(ui.tags.div(
-                    f'Error: {e}',
-                    style="color: red; font-weight: bold;"
-                ), duration=10)  # print to user
 
     # make sure that the zoom boxes are updated when the slider changes
     @reactive.effect
