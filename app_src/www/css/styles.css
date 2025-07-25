@@ -29,6 +29,10 @@ h6 {
     margin-bottom: 4px;
 }
 
+.control-label {
+    font-size: var(--main-size);
+}
+
 .about-card {
     margin-top: 20px;
     width: 100%;

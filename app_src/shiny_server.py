@@ -18,6 +18,7 @@ from matplotlib import colormaps
 from app_src.shiny_plots import set_aln, create_msa_plot, create_analysis_custom_heatmap, create_freq_heatmap, create_recovery_heatmap
 from shinywidgets import render_widget
 from pyfamsa import Aligner, Sequence
+from pytrimal import Alignment, AutomaticTrimmer
 
 
 # msaexplorer
@@ -164,7 +165,7 @@ def server(input, output, session):
         return inputs
 
 
-    def read_in_annotation(annotation_file):
+    def read_in_annotation(annotation_file:str):
         """
         Read in an annotation and update the ui accordingly
         """
@@ -186,7 +187,7 @@ def server(input, output, session):
                                 selected='Off')
 
 
-    def is_sequence_list(filepath):
+    def is_sequence_list(filepath:str):
         """
         Quickly check if the file is a list of sequences, not a full file
         """
@@ -196,7 +197,7 @@ def server(input, output, session):
         return len(lengths) > 1
 
 
-    def align_sequences(alignment_file):
+    def align_sequences(alignment_file, n_threads:int, guide_tree:str, refine:bool, keep_duplicates:bool):
         """
         What happens when the align sequences button is pressed.
         """
@@ -212,11 +213,36 @@ def server(input, output, session):
                     seq = []
                 else:
                     seq.append(line)
-            aligner = Aligner()
+            # define the aligner method
+            aligner = Aligner(threads=n_threads, guide_tree=guide_tree, refine=refine, keep_duplicates=keep_duplicates)
+            # align sequences
             alignment_new = aligner.align(sequences)
             aln_string = ''
             for sequence in alignment_new:
                 aln_string = f"{aln_string}>{sequence.id.decode()}\n{sequence.sequence.decode()}\n"  # create str and decode
+
+        return aln_string
+
+
+    def transfer_alignment_to_trimAI(aln):
+        """Compatibility between trimAI and msaexplorer by reading and writing to a temporary file"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.tmp', delete=False) as tmp:
+            tmp.write(export.fasta(aln.alignment))
+            tmp.flush()
+            return Alignment.load(tmp.name)
+
+
+    def trim_sequences(aln, method:str):
+        """
+        What happens when the trim button is pressed.
+        """
+
+        aln = transfer_alignment_to_trimAI(aln)
+        trimmer = AutomaticTrimmer(method=method)
+        trimmed_aln = trimmer.trim(aln)
+        aln_string = ''
+        for name, seq in zip(trimmed_aln.names, trimmed_aln.sequences):
+            aln_string = f"{aln_string}>{name.decode()}\n{seq}\n"
 
         return aln_string
 
@@ -271,8 +297,8 @@ def server(input, output, session):
                                 choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity'],
                                 selected='Off')
             ui.update_selectize('download_type',
-                                choices=['SNPs', 'consensus', 'character frequencies', '% recovery', 'entropy',
-                                         'coverage', 'mean identity', 'mean similarity'], selected='SNPs')
+                                choices=['alignment','SNPs', 'consensus', 'character frequencies', '% recovery', 'entropy',
+                                         'coverage', 'mean identity', 'mean similarity'])
             ui.update_selectize('annotation', choices=['Off', 'SNPs'])
             ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
             ui.update_selectize('logo_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
@@ -281,10 +307,10 @@ def server(input, output, session):
             ui.update_selectize('stat_type',
                                 choices=['Off', 'sequence logo', 'gc', 'entropy', 'coverage', 'identity', 'similarity',
                                          'ts tv score'], selected='Off')
-            ui.update_selectize('download_type', choices=['SNPs', 'consensus', 'character frequencies', '% recovery',
+            ui.update_selectize('download_type', choices=['alignment', 'SNPs', 'consensus', 'character frequencies', '% recovery',
                                                           'reverse complement alignment', 'conserved orfs', 'gc',
                                                           'entropy', 'coverage', 'mean identity', 'mean similarity',
-                                                          'ts tv score'], selected='SNPs')
+                                                          'ts tv score'])
             ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
             ui.update_selectize('identity_coloring',
                                 choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
@@ -308,14 +334,23 @@ def server(input, output, session):
 
 
     ##### handel everything upload and sequence processing related #####
-    @ui.bind_task_button(button_id='align')
+    @ui.bind_task_button(button_id='trim')
     @reactive.extended_task
-    async def align_sequences_task(alignment_file):
+    async def trimming(aln, method):
         """
         Asynchronous task handler for aligning sequences. This function binds a button
         action to a reactive extended task for sequence alignment.
         """
-        return await asyncio.to_thread(align_sequences, alignment_file)
+        return await asyncio.to_thread(trim_sequences, aln, method)
+
+    @ui.bind_task_button(button_id='align')
+    @reactive.extended_task
+    async def aligning(alignment_file, n_threads:int, guide_tree:str, refine:bool, keep_duplicates:bool):
+        """
+        Asynchronous task handler for aligning sequences. This function binds a button
+        action to a reactive extended task for sequence alignment.
+        """
+        return await asyncio.to_thread(align_sequences, alignment_file, n_threads, guide_tree, refine, keep_duplicates)
 
     @reactive.Effect
     @reactive.event(input.align)
@@ -325,22 +360,57 @@ def server(input, output, session):
         """
         alignment_file = input.alignment_file()
         if alignment_file:
-            align_sequences_task.invoke(alignment_file)
+            # decode guide tree options
+            guide_tree_map = {
+                'MST + Prim single linkage': 'sl',
+                'SLINK single linkage': 'slink',
+                'UPGMA': 'upgma',
+                'neighbour joining': 'nj'
+            }
+            aligning.invoke(
+                alignment_file=alignment_file,
+                n_threads=input.n_threads(),
+                guide_tree=guide_tree_map[input.guide_tree()],
+                refine=input.refine(),
+                keep_duplicates=input.keep_duplicates()
+            )
             ui.notification_show(ui.tags.div(
-                'Alignment was successfull.',
-                style="color: green; font-weight: bold;"
+                'Alignment execution started.',
+                style="color: black; font-weight: bold;"
+            ), duration=10)
+
+    @reactive.Effect
+    @reactive.event(input.trim)
+    def trim_task():
+        """
+        Handles the trimming execution.
+        """
+        aln = reactive.alignment.get()
+        if aln is not None:
+            trimming.invoke(
+                aln=aln,
+                method=input.trim_method()
+            )
+            ui.notification_show(ui.tags.div(
+                'Trimming execution started.',
+                style="color: black; font-weight: bold;"
             ), duration=10)
 
     @reactive.effect
-    @reactive.event(input.align_cancel)
+    @reactive.event(input.cancel)
     def execution_cancel():
         """
         Handles the cancel button.
         """
-        align_sequences_task.cancel()
+        aligning.cancel()
+        trimming.cancel()
+        ui.notification_show(ui.tags.div(
+            'Execution cancelled.',
+            style="color: black; font-weight: bold;"
+        ), duration=10)
 
     @reactive.Effect
-    @reactive.event(align_sequences_task.result)
+    @reactive.event(aligning.result)
     def load_aligned_result():
         """
         The function listens for the completion of the `align_sequences_task` and loads the aligned
@@ -351,11 +421,36 @@ def server(input, output, session):
         alignment_file = input.alignment_file()
         annotation_file = input.annotation_file()
         try:
-            alignment_finished = align_sequences_task.result()
+            alignment_finished = aligning.result()
+            ui.notification_show(ui.tags.div(
+                'Alignment was successful.',
+                style="color: green; font-weight: bold;"
+            ), duration=10)
             aln = explore.MSA(alignment_finished, reference_id=None, zoom_range=None)
             finalize_loaded_alignment(aln, annotation_file)
         except Exception as e:
             show_alignment_error(e, alignment_file)
+
+    @reactive.Effect
+    @reactive.event(trimming.result)
+    def load_trimmed_result():
+        """
+        reload trimmed alignment
+        """
+        annotation_file = input.annotation_file()
+        try:
+            alignment_finished = trimming.result()
+            ui.notification_show(ui.tags.div(
+                'Trimming was successful.',
+                style="color: green; font-weight: bold;"
+            ), duration=10)
+            aln = explore.MSA(alignment_finished, reference_id=None, zoom_range=None)
+            finalize_loaded_alignment(aln, annotation_file)
+        except Exception as e:
+            ui.notification_show(ui.tags.div(
+                f'{e}',
+                style="color: red"
+            ), duration=10)
 
     @reactive.Effect
     @reactive.event(input.alignment_file)
@@ -461,7 +556,10 @@ def server(input, output, session):
         ui.remove_ui(selector="div:has(> #download_type_options_3-label)")
         ui.remove_ui(selector="div:has(> #reference_2-label)")
         if input.download_type() == 'SNPs' or input.download_type() == '% recovery':
-            ui.update_selectize('download_format', choices=['vcf', 'tabular'])
+            if input.download_type() == '% recovery':
+                ui.update_selectize('download_format', choices=['csv', 'tabular'])
+            else:
+                ui.update_selectize('download_format', choices=['vcf', 'tabular'])
             if input.download_type() == 'SNPs':
                 ui.insert_ui(
                     ui.input_selectize('download_type_options_1', label='include ambiguous snps', choices=['Yes', 'No'], selected='No'),
@@ -517,7 +615,7 @@ def server(input, output, session):
                 selector='#download_format-label',
                 where='beforeBegin'
             )
-        elif input.download_type() == 'reverse complement alignment':
+        elif input.download_type() in ['alignment', 'reverse complement alignment']:
             ui.update_selectize('download_format', choices=['fasta'])
         elif input.download_type() == 'character frequencies':
             ui.update_selectize('download_format', choices=['tabular', 'csv'])
@@ -598,6 +696,11 @@ def server(input, output, session):
 
             return export.orf(data, aln.reference_id.split(' ')[0]), 'orfs_' if input.download_type_options_3() == 'Yes' else 'non_overlapping_conserved_orfs_'
 
+        def _alignment_option():
+            data = aln.alignment
+
+            return export.fasta(sequence=data), 'alignment_'
+
         def _reverse_complement_option():
             data = aln.calc_reverse_complement_alignment()
 
@@ -641,6 +744,8 @@ def server(input, output, session):
                 export_data = _orf_option()
             elif input.download_type() == 'reverse complement alignment':
                 export_data = _reverse_complement_option()
+            elif input.download_type() == 'alignment':
+                export_data = _alignment_option()
             elif input.download_type() == 'character frequencies':
                 export_data = _char_freq_option()
             elif input.download_type() == '% recovery':

@@ -2,6 +2,7 @@
 This module contains the resources to generate the main ui.
 """
 
+import os
 # import libs
 from shiny import ui
 from shinywidgets import output_widget
@@ -26,7 +27,7 @@ def shiny_ui(css_file, js_file):
             ui.nav_spacer(),
             ui.nav_control(
                 ui.input_action_button(
-                "open_sidebar", "SETTINGS", onclick="toggleSidebar()",
+                "open_sidebar", "PLOTTING SETTINGS", onclick="toggleSidebar()",
                     icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">'),
                 )
             ),
@@ -48,7 +49,7 @@ def _custom_sidebar():
     return ui.div(
     ui.h6(
         ui.img(src='img/settings.svg', height='20px'),
-        ' SETTINGS', style="margin-top: 15px;"),
+        ' PLOTTING SETTINGS', style="margin-top: 15px;"),
             ui.hr(),
             ui.h6('Statistic settings (entropy, similarity etc)'),
             ui.layout_columns(
@@ -148,23 +149,44 @@ def _upload_tab():
             ui.layout_columns(
                 ui.card(
                     ui.card_header(ui.h6('Upload files:')),
-                        ui.input_file('alignment_file', 'Required multiple sequence alignment:', multiple=False,
+                        ui.input_file('alignment_file', 'Sequences or alignment:', multiple=False,
                                       accept=['.fa', '.fasta', '.aln']),
                         ui.input_file('annotation_file','Optional Annotation file:', multiple=False,
                                       accept=['.gff', '.gff3', '.bed', '.gb']),
-                        fillable=False
                 ),
                 ui.card(
-                    ui.card_header(ui.h6('Download files:'),
-                                   ui.popover(
-                                       ui.span(
-                                           ui.HTML(
-                                               '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
-                                       ),
-                                       ui.input_selectize('download_format', label='Format:', choices=[]),
-                                )
+                    ui.card_header(
+                        ui.h6('Process files:'),
+                        ui.popover(
+                            ui.span(
+                                ui.HTML(
+                                    '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
                             ),
-                    ui.input_selectize('download_type', label='Choose:', choices=['SNPs', 'consensus']),
+                            ui.h6('FAMSA2 options'),
+                            ui.input_numeric('n_threads', label='number of threads', min=1, value=os.cpu_count(), max=os.cpu_count()),
+                            ui.input_selectize('guide_tree', label='Guide tree', choices=['MST + Prim single linkage', 'SLINK single linkage', 'UPGMA', 'neighbour joining']),
+                            ui.input_switch('refine', 'Refine alignment?', value=False),
+                            ui.input_switch('keep_duplicates', 'Keep duplicates?', value=False),
+                            ui.h6('TrimAI options'),
+                            ui.input_selectize('trim_method', label='Trim mode', choices=['strict', 'strictplus', 'gappyout', 'nogaps', 'noallgaps', 'automated1', 'noduplicateseqs']),
+                        )
+                    ),
+                    ui.input_task_button("align", 'align with FAMSA2'),
+                    ui.input_task_button("trim", 'trim with trimAI'),
+                    ui.input_action_button("cancel", "Cancel"),
+                ),
+                ui.card(
+                    ui.card_header(
+                        ui.h6('Download files:'),
+                               ui.popover(
+                                   ui.span(
+                                       ui.HTML(
+                                           '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
+                                   ),
+                                   ui.input_selectize('download_format', label='Format:', choices=[]),
+                            )
+                        ),
+                    ui.input_selectize('download_type', label='Choose:', choices=['alignment', 'SNPs', 'consensus']),
                     ui.download_button(
                         'download_stats',
                         'Download',
@@ -173,28 +195,38 @@ def _upload_tab():
                     )
                 )
             ),
-            style="display: flex; flex-direction: column; justify-content: center; align-items: center",
-        ),
-        ui.card(
-            ui.input_task_button("align", "Align sequences"),
-            ui.input_action_button("align_cancel", "Cancel"),
-            class_="about-card"
+            style="max-width: 1200px; margin: auto;",
         ),
         ui.card(
             ui.h6('About MSAexplorer:'),
             ui.p(
-                "MSAexplorer is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs)."
+                'The MSAexplorer app is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs).'
             ),
             ui.p(
                 ui.a(
-                    "🔗 Full API documentation", href="https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html",
-                      target="_blank"
+                    '🔗 Full API documentation', href="https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html",
+                      target='_blank'
                 )
             ),
             ui.p(
                 ui.a(
-                    "🔗 Contribute on GitHub", href="https://github.com/jonas-fuchs/MSAexplorer",
-                    target="_blank"
+                    '🔗 Contribute on GitHub', href="https://github.com/jonas-fuchs/MSAexplorer",
+                    target='_blank'
+                )
+            ),
+            ui.p(
+                'MSAexplorer makes use of the pyfamsa and pytrimal which is a python wrapper for FAMSA2 and trimAI, respectively.'
+            ),
+            ui.p(
+                ui.a(
+                    '🔗 Checkout pyfamsa on Github', href='https://github.com/althonos/pyfamsa',
+                    target='_blank'
+                )
+            ),
+            ui.p(
+                ui.a(
+                    '🔗 Checkout pytrimal on Github', href='https://github.com/althonos/pytrimal',
+                    target='_blank'
                 )
             ),
             class_="about-card"
