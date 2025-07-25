@@ -5,3 +5,4 @@ shiny>=1.3
 numpy>=2.0
 shinywidgets>=0.5.2
 plotly>=5.23
+pyfamsa>=0.5.3

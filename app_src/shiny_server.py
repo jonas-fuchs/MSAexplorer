@@ -207,7 +207,7 @@ def server(input, output, session):
                 if line.startswith(">"):
                     if seq_id is not None:
                         seq = ''.join(seq).upper()
-                        sequences.append(Sequence(seq_id.encode(), seq.encode()))
+                        sequences.append(Sequence(seq_id.encode(), seq.encode()))  # the wrapper needs bit encoding
                     seq_id = line[1:]
                     seq = []
                 else:
@@ -216,7 +216,7 @@ def server(input, output, session):
             alignment_new = aligner.align(sequences)
             aln_string = ''
             for sequence in alignment_new:
-                aln_string = f"{aln_string}>{sequence.id.decode()}\n{sequence.sequence.decode()}\n"
+                aln_string = f"{aln_string}>{sequence.id.decode()}\n{sequence.sequence.decode()}\n"  # create str and decode
 
         return aln_string
 
@@ -307,7 +307,16 @@ def server(input, output, session):
             ), duration=10)
 
 
-    ##### handel everything upload related #####
+    ##### handel everything upload and sequence processing related #####
+    @ui.bind_task_button(button_id='align')
+    @reactive.extended_task
+    async def align_sequences_task(alignment_file):
+        """
+        Asynchronous task handler for aligning sequences. This function binds a button
+        action to a reactive extended task for sequence alignment.
+        """
+        return await asyncio.to_thread(align_sequences, alignment_file)
+
     @reactive.Effect
     @reactive.event(input.align)
     def alignment_task():
@@ -322,18 +331,9 @@ def server(input, output, session):
                 style="color: green; font-weight: bold;"
             ), duration=10)
 
-    @ui.bind_task_button(button_id='align')
-    @reactive.extended_task
-    async def align_sequences_task(alignment_file):
-        """
-        Asynchronous task handler for aligning sequences. This function binds a button
-        action to a reactive extended task for sequence alignment.
-        """
-        return await asyncio.to_thread(align_sequences, alignment_file)
-
     @reactive.effect
     @reactive.event(input.align_cancel)
-    def alignment_execution_cancel():
+    def execution_cancel():
         """
         Handles the cancel button.
         """
