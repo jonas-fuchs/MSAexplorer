@@ -134,6 +134,7 @@ If you want to use the MSAexplorer app then you will additionally need to instal
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
 - `plotly>=5.23`
+- `pyfamsa>=0.5.3`
 
 ## Installation
 ### MSAexplorer python package
@@ -151,8 +152,8 @@ Run it locally on your machine with:
 ````bash
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
-pip install .  # installs the msaexplorer package
-pip install -r requirements.txt  # installs shiny dependencies
+pip install msaexplorer  # installs the msaexplorer package
+pip install -r requirements.txt  # installs app dependencies
 shiny run app.py
 ````
 #### Hosting MSAexplorer

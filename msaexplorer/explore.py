@@ -9,10 +9,11 @@ and can be used to compute several statistics or be used as the input for the `d
 """
 
 # built-in
+import os
+import io
 import math
 import collections
 import re
-from copy import deepcopy
 from typing import Callable, Dict
 
 # installed
@@ -27,14 +28,14 @@ class MSA:
     An alignment class that allows computation of several stats
     """
 
-    def __init__(self, alignment_path: str, reference_id: str = None, zoom_range: tuple | int = None):
+    def __init__(self, alignment_string: str, reference_id: str = None, zoom_range: tuple | int = None):
         """
         Initialise an Alignment object.
-        :param alignment_path: path to alignment file
+        :param alignment_string: Path to alignment file or raw alignment string
         :param reference_id: reference id
         :param zoom_range: start and stop positions to zoom into the alignment
         """
-        self._alignment = self._read_alignment(alignment_path)
+        self._alignment = self._read_alignment(alignment_string)
         self._reference_id = self._validate_ref(reference_id, self._alignment)
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
@@ -48,6 +49,15 @@ class MSA:
         :param file_path: path to alignment file
         :return: dictionary with ids as keys and sequences as values
         """
+
+        def get_line_iterator(source):
+            """
+            allow reading in both raw string or paths
+            """
+            if isinstance(source, str) and os.path.exists(source):
+                return open(source, 'r')
+            else:
+                return io.StringIO(source)
 
         def add_seq(aln: dict, sequence_id: str, seq_list: list):
             """
@@ -71,7 +81,7 @@ class MSA:
         alignment, seq_lines = {}, []
         seq_id = None
 
-        with open(file_path, 'r') as file:
+        with get_line_iterator(file_path) as file:
             for i, line in enumerate(file):
                 line = line.strip()
                 # initial check for fasta format
