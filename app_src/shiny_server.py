@@ -29,12 +29,13 @@ def server(input, output, session):
     creates the server logic
     """
 
+    # ini several params
     reactive.alignment = reactive.Value(None)
     reactive.annotation = reactive.Value(None)
     updating_from_slider = False
     updating_from_numeric = False
 
-    # create inputs for plotting and pdf
+    #### define all reactive independent functions ###
     def prepare_inputs():
         """
         Collect inputs from the UI for the plot tab, only adding the ones needed for enabled features.
@@ -134,7 +135,7 @@ def server(input, output, session):
 
         return inputs
 
-    # separate function if not all inputs are needed
+
     def prepare_minimal_inputs(zoom: bool = True, window_size: bool = False, ref: bool = False, left_plot: bool = False, right_plot: bool = False):
         """
         minimal inputs with options depending on which are needed
@@ -186,13 +187,19 @@ def server(input, output, session):
 
 
     def is_sequence_list(filepath):
+        """
+        Quickly check if the file is a list of sequences, not a full file
+        """
         with open(filepath) as f:
             lines = [line.strip() for line in f if not line.startswith(">")]
         lengths = set(len(line) for line in lines if line)
-        return len(lengths) > 1  # likely unaligned
+        return len(lengths) > 1
 
 
     def align_sequences(alignment_file):
+        """
+        What happens when the align sequences button is pressed.
+        """
         sequences, seq_id = [], None
         with open(alignment_file[0]['datapath'], 'r') as file:
             for i, line in enumerate(file):
@@ -215,6 +222,10 @@ def server(input, output, session):
 
 
     def finalize_loaded_alignment(aln, annotation_file):
+        """
+        All the necessary steps to load an alignment into the app are done here.
+        """
+
         aln.reference_id = list(aln.alignment.keys())[0]
         reactive.alignment.set(aln)
 
@@ -285,33 +296,54 @@ def server(input, output, session):
 
 
     def show_alignment_error(e, alignment_file):
+        """
+        Triggers the ui notification to show an error message.
+        """
         ui.notification_show(ui.tags.div(f'Error: {e}', style="color: red; font-weight: bold;"), duration=10)
         if alignment_file and is_sequence_list(alignment_file[0]['datapath']):
             ui.notification_show(ui.tags.div(
-                'It seems like you have uploaded a list of sequences. You can align them with FAMSA2.',
+                'It seems like you have uploaded a list of sequences. No worries, go ahead and align them in the app.',
                 style="color: black"
             ), duration=10)
 
-    @ui.bind_task_button(button_id='align')
-    @reactive.extended_task
-    async def align_sequences_task(alignment_file):
-        return await asyncio.to_thread(align_sequences, alignment_file)
 
+    ##### handel everything upload related #####
     @reactive.Effect
     @reactive.event(input.align)
-    def trigger_task():
+    def alignment_task():
+        """
+        Handles the alignment execution.
+        """
         alignment_file = input.alignment_file()
         if alignment_file:
             align_sequences_task.invoke(alignment_file)
 
+    @ui.bind_task_button(button_id='align')
+    @reactive.extended_task
+    async def align_sequences_task(alignment_file):
+        """
+        Asynchronous task handler for aligning sequences. This function binds a button
+        action to a reactive extended task for sequence alignment.
+        """
+        return await asyncio.to_thread(align_sequences, alignment_file)
+
     @reactive.effect
     @reactive.event(input.align_cancel)
-    def handle_cancel():
+    def alignment_execution_cancel():
+        """
+        Handles the cancel button.
+        """
         align_sequences_task.cancel()
 
     @reactive.Effect
-    @reactive.event(align_sequences_task.result, input.alignment_file)
+    @reactive.event(align_sequences_task.result)
     def load_aligned_result():
+        """
+        The function listens for the completion of the `align_sequences_task` and loads the aligned
+        result into an MSA (Multiple Sequence Alignment) object. This function is reactive, meaning
+        it automatically responds to changes in the `align_sequences_task.result` value. It also
+        handles any potential errors during the alignment loading process.
+        """
         alignment_file = input.alignment_file()
         annotation_file = input.annotation_file()
         try:
@@ -328,56 +360,17 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.alignment_file)
     def load_direct_alignment():
+        """
+        Monitors if an new alignment file is uploaded and loads it directly into the app.
+        """
         alignment_file = input.alignment_file()
         annotation_file = input.annotation_file()
-        # If alignment is requested via button, ignore this path
-        if input.align() or not alignment_file:
-            return
         try:
             aln = explore.MSA(alignment_file[0]['datapath'], reference_id=None, zoom_range=None)
             finalize_loaded_alignment(aln, annotation_file)
         except Exception as e:
             print(f"Error (direct load): {e}")
             show_alignment_error(e, alignment_file)
-
-    # Updates the plot container
-    @reactive.Effect
-    async def update_height():
-        """
-        update the plot container height -> Sends a message that is picked up by the js and updates the CSS height
-        property for the plot container
-        """
-        new_plot_height = f'{input.increase_height() * 100}vh'
-
-        await session.send_custom_message("update-plot-container-height", {'height': new_plot_height})
-
-    # make sure that the zoom boxes are updated when the slider changes
-    @reactive.effect
-    def update_zoom_boxes():
-        nonlocal updating_from_slider
-        if updating_from_numeric:
-            return
-        updating_from_slider = True
-        zoom_range = input.zoom_range()
-        ui.update_numeric("zoom_start", value=zoom_range[0])
-        ui.update_numeric("zoom_end", value=zoom_range[1])
-        updating_from_slider = False
-
-    # and vice versa if the input changes, change the zoom slider
-    @reactive.effect
-    def update_zoom_slider():
-        nonlocal updating_from_numeric
-        if updating_from_slider:
-            return
-        updating_from_numeric = True
-        start, end = input.zoom_start(), input.zoom_end()
-        # make sure set values make sense
-        if start is None or end is None:
-            return
-        if start >= end:
-            end = start +1
-        ui.update_slider("zoom_range", value=(start, end))
-        updating_from_numeric = False
 
     @reactive.Effect
     @reactive.event(input.annotation_file)
@@ -399,6 +392,62 @@ def server(input, output, session):
             ), duration=10)  # print to user
 
 
+    #### Handle everything plotting related ####
+    @reactive.Effect
+    async def update_height():
+        """
+        update the plot container height -> Sends a message that is picked up by the js and updates the CSS height
+        property for the plot container
+        """
+        new_plot_height = f'{input.increase_height() * 100}vh'
+
+        await session.send_custom_message("update-plot-container-height", {'height': new_plot_height})
+
+    @reactive.effect
+    def update_zoom_boxes():
+        """
+        Update the zoom boxes when the slider changes.
+        """
+        nonlocal updating_from_slider
+        if updating_from_numeric:
+            return
+        updating_from_slider = True
+        zoom_range = input.zoom_range()
+        ui.update_numeric("zoom_start", value=zoom_range[0])
+        ui.update_numeric("zoom_end", value=zoom_range[1])
+        updating_from_slider = False
+
+    @reactive.effect
+    def update_zoom_slider():
+        """
+        Update the zoom slider when the zoom input changes.
+        """
+        nonlocal updating_from_numeric
+        if updating_from_slider:
+            return
+        updating_from_numeric = True
+        start, end = input.zoom_start(), input.zoom_end()
+        # make sure set values make sense
+        if start is None or end is None:
+            return
+        if start >= end:
+            end = start +1
+        ui.update_slider("zoom_range", value=(start, end))
+        updating_from_numeric = False
+
+    @output
+    @render.plot
+    def msa_plot():
+        """
+        plot the alignment
+        """
+        aln = reactive.alignment.get()
+        ann = reactive.annotation.get()
+
+        return create_msa_plot(aln, ann, prepare_inputs())
+
+
+    #### Handle everything download related ###
     @reactive.Effect
     @reactive.event(input.download_type)
     def update_download_options():
@@ -615,17 +664,6 @@ def server(input, output, session):
             ), duration=10)
 
     @output
-    @render.plot
-    def msa_plot():
-        """
-        plot the alignment
-        """
-        aln = reactive.alignment.get()
-        ann = reactive.annotation.get()
-
-        return create_msa_plot(aln, ann, prepare_inputs())
-
-    @output
     @render.download
     def download_pdf():
         """
@@ -650,7 +688,7 @@ def server(input, output, session):
             plt.close(fig)
             return tmpfile.name
 
-    # showcases:
+    #### Handle everything in the analysis tab ####
     @render.ui
     def aln_type():
         aln = reactive.alignment.get()
@@ -743,7 +781,6 @@ def server(input, output, session):
                 where='beforeBegin'
             )
 
-
     @render.text
     def analysis_info_left():
         """
@@ -760,7 +797,6 @@ def server(input, output, session):
             return 'INFO gcd (gap compressed distance):\n\nAll consecutive gaps arecompressed to\none mismatch.\n\ndistance = matches / gap_compressed_alignment_length * 100'
         else:
             return None
-
 
     @render_widget
     def analysis_custom_heatmap():
