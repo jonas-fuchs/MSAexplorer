@@ -8,6 +8,14 @@ from shiny import ui
 from shinywidgets import output_widget
 from matplotlib import colormaps
 
+
+try:
+    from pyfamsa import Aligner, Sequence
+    pyfamsa_installed = True
+except ImportError:
+    pyfamsa_installed = False
+
+
 def shiny_ui(css_file, js_file):
     """
     main UI generation
@@ -143,18 +151,16 @@ def _upload_tab():
     """
     creates the upload panel
     """
-    return ui.nav_panel(
-        ' UPLOAD/DOWNLOAD',
-        ui.div(
-            ui.layout_columns(
-                ui.card(
+
+    upload = ui.card(
                     ui.card_header(ui.h6('Upload files:')),
                         ui.input_file('alignment_file', 'Sequences or alignment:', multiple=False,
                                       accept=['.fa', '.fasta', '.aln']),
                         ui.input_file('annotation_file','Optional Annotation file:', multiple=False,
                                       accept=['.gff', '.gff3', '.bed', '.gb']),
-                ),
-                ui.card(
+                )
+
+    process = ui.card(
                     ui.card_header(
                         ui.h6('Process files:'),
                         ui.popover(
@@ -174,8 +180,9 @@ def _upload_tab():
                     ui.input_task_button("align", 'align with FAMSA2'),
                     ui.input_task_button("trim", 'trim with trimAI'),
                     ui.input_action_button("cancel", "Cancel"),
-                ),
-                ui.card(
+                    id='processing_options',
+                )
+    download = ui.card(
                     ui.card_header(
                         ui.h6('Download files:'),
                                ui.popover(
@@ -194,11 +201,21 @@ def _upload_tab():
                             '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
                     )
                 )
-            ),
-            style="max-width: 1200px; margin: auto;",
+
+    cols = ui.layout_columns(
+        upload,
+        process,
+        download,
+    ) if pyfamsa_installed else ui.layout_columns(upload, download)
+
+    return ui.nav_panel(
+        ' UPLOAD/DOWNLOAD',
+        ui.div(
+            cols,
+            style="max-width: 1200px; margin: auto",
         ),
-        ui.card(
-            ui.h6('About MSAexplorer:'),
+        ui.div(
+            ui.h5('About MSAexplorer:'),
             ui.p(
                 'The MSAexplorer app is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs).'
             ),
@@ -215,8 +232,22 @@ def _upload_tab():
                 )
             ),
             ui.p(
-                'MSAexplorer makes use of the pyfamsa and pytrimal which is a python wrapper for FAMSA2 and trimAI, respectively.'
+                'MSAexplorer makes use of the pyfamsa and pytrimal which is a python wrapper for FAMSA2 and trimAI, respectively.\n'
+                'Currently this works only on non-static websites (e.g. not on my github page). Host MSAexplorer yourself:'
             ),
+            ui.HTML("""
+                <div style="display: flex; justify-content: center;">
+                <pre style="
+                background-color: #2b2b2b;
+                color: white;
+                border-radius: 5px;
+                overflow-x: auto;
+                max-width: 100%;
+                text-align: left;
+                font-family: monospace;
+                "><code>git clone https://github.com/jonas-fuchs/MSAexplorer\ncd MSAexplorer\npip install msaexplorer\npip install -r requirements.txt\npip install pyfamsa\npip install pytrimal\nshiny run app.py</code></pre>
+                </div>
+            """),
             ui.p(
                 ui.a(
                     '🔗 Checkout pyfamsa on Github', href='https://github.com/althonos/pyfamsa',
@@ -231,6 +262,7 @@ def _upload_tab():
             ),
             class_="about-card"
         ),
+        ui.p('Copyright: Jonas Fuchs, 2025 (jonas.fuchs@uniklinik-freiburg.de)'),
         icon=ui.HTML('<img src="img/upload.svg" alt="Upload Icon" style="height: 1em; vertical-align: middle">')
     ),
 

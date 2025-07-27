@@ -134,7 +134,9 @@ If you want to use the MSAexplorer app then you will additionally need to instal
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
 - `plotly>=5.23`
+And optionally install tools for in-app calculations (aligning and trimming):
 - `pyfamsa>=0.5.3`
+- `pytrimal>=0.8.1`
 
 ## Installation
 ### MSAexplorer python package
@@ -152,8 +154,10 @@ Run it locally on your machine with:
 ````bash
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
-pip install msaexplorer  # installs the msaexplorer package
-pip install -r requirements.txt  # installs app dependencies
+pip install .  # installs the msaexplorer package
+pip install -r requirements.txt  # installs main app dependencies
+pip install pyfamsa   # optional app dependency - in-app aligning
+pip install pytrimal  # optional app dependency - in-app trimming
 shiny run app.py
 ````
 #### Hosting MSAexplorer

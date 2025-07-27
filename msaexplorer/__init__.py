@@ -15,8 +15,10 @@ However, you can also deploy it yourself and host it however you like!
 ```bash
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
-pip install msaexplorer
-pip install -r requirements.txt  # installs all dependencies
+pip install msaexplorer  # installs the msaexplorer package
+pip install -r requirements.txt  # installs main app dependencies
+pip install pyfamsa   # optional app dependency - in-app aligning
+pip install pytrimal  # optional app dependency - in-app trimming
 shiny run app.py
 ```
 Now just follow the link provided in your terminal.
