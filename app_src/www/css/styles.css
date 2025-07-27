@@ -34,14 +34,12 @@ h6 {
 }
 
 .about-card {
-    margin-top: 20px;
-    width: 100%;
     text-align: center;
-    border: none !important;
-    box-shadow: none !important;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background-color: #e8e8e8;
+    padding-top: 2rem;
+    margin-top: 2rem;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
 }
 
 /* Navbar */

@@ -14,12 +14,22 @@ from shiny import render, ui, reactive
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
 
+# try to load pyfamsa and pytrimal for static website compatibility
+try:
+    from pyfamsa import Aligner, Sequence
+    pyfamsa_check = True
+except ImportError:
+    pyfamsa_check = False
+
+try:
+    from pytrimal import Alignment, AutomaticTrimmer
+    pytrimal_check = True
+except ImportError:
+    pytrimal_check = False
+
 # load in app resources
 from app_src.shiny_plots import set_aln, create_msa_plot, create_analysis_custom_heatmap, create_freq_heatmap, create_recovery_heatmap
 from shinywidgets import render_widget
-from pyfamsa import Aligner, Sequence
-from pytrimal import Alignment, AutomaticTrimmer
-
 
 # msaexplorer
 from msaexplorer import explore, config, export, draw
@@ -35,6 +45,11 @@ def server(input, output, session):
     reactive.annotation = reactive.Value(None)
     updating_from_slider = False
     updating_from_numeric = False
+
+    # remove ui for calculations for static websites due to lack of support
+    # of pytrimal and pyfamsa from pyodoide
+    if not pyfamsa_check:
+        ui.remove_ui(selector="div:has(> #processing_options)")
 
     #### define all reactive independent functions ###
     def prepare_inputs():
@@ -326,7 +341,7 @@ def server(input, output, session):
         Triggers the ui notification to show an error message.
         """
         ui.notification_show(ui.tags.div(f'Error: {e}', style="color: red; font-weight: bold;"), duration=10)
-        if alignment_file and is_sequence_list(alignment_file[0]['datapath']):
+        if alignment_file and is_sequence_list(alignment_file[0]['datapath']) and pyfamsa_check:
             ui.notification_show(ui.tags.div(
                 'It seems like you have uploaded a list of sequences. No worries, go ahead and align them in the app.',
                 style="color: black"
@@ -418,6 +433,8 @@ def server(input, output, session):
         it automatically responds to changes in the `align_sequences_task.result` value. It also
         handles any potential errors during the alignment loading process.
         """
+        if not pyfamsa_check:
+            return None
         alignment_file = input.alignment_file()
         annotation_file = input.annotation_file()
         try:
@@ -437,6 +454,8 @@ def server(input, output, session):
         """
         reload trimmed alignment
         """
+        if not pytrimal_check:
+            return None
         annotation_file = input.annotation_file()
         try:
             alignment_finished = trimming.result()
