@@ -228,6 +228,10 @@ def server(input, output, session):
                     seq = []
                 else:
                     seq.append(line)
+            # append the last sequence
+            if seq_id is not None and seq:
+                seq = ''.join(seq).upper()
+                sequences.append(Sequence(seq_id.encode(), seq.encode()))
             # define the aligner method
             aligner = Aligner(threads=n_threads, guide_tree=guide_tree, refine=refine, keep_duplicates=keep_duplicates)
             # align sequences
