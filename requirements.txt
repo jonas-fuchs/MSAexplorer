@@ -1,5 +1,8 @@
 # this contains all requirements
-# for running the shiny app
+# for exporting the shiny app with shinylive
+# currently pyfamsa and pytrimal are not supported
+# these modules are loaded seperately
+
 matplotlib>=3.8
 shiny>=1.3
 numpy>=2.0

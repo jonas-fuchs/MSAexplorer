@@ -1,22 +1,59 @@
-![Logo](app_src/img/logo.svg)
+![Logo](app_src/www/img/logo.svg)
 
 [![language](https://img.shields.io/badge/python-%3E3.11-green)](https://www.python.org/)
 [![License: GPL v3](https://img.shields.io/github/license/jonas-fuchs/bamdash)](https://www.gnu.org/licenses/gpl-3.0)
+[![PiPy](https://img.shields.io/pypi/v/msaexplorer?label=pypi%20version)](https://pypi.org/project/msaexplorer/)
+[![Downloads](https://static.pepy.tech/badge/msaexplorer)](https://pypi.org/project/msaexplorer/)
 
-_**Some personal thoughts**, because let's face it: Generating beautiful alignment plots is always a hassle. There are a lot of alignment viewers and cool tools out there.
-For all the Geneious users who now think there ain't a problem... While this software has its perks (well it should, as it has the costs of a minivan), I am waiting since 10 years that you can plot a 
-half decent alignment with it. So if you feel the same way, you are probably also switching between tools which is time-consuming and not really satisfying. This is why 
-I wanted something that is primarily developed for generating high quality publication ready figures while retaining simplicity. Most of all I wanted 
-flexibility. I had the vision to generate nice plots of alignments no matter if I just want to plot parts or the whole alignment. 
-Moreover, I wanted something to quickly generate and plot statistics without having to rely on multiple tools. So this is why I developed MSAexplorer and I really hope its
-something for you! I think it turned out pretty cool but I let you be the judge of that :smiley:._
+#### MSAexplorer is a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. Want to just use MSAexplorer and generate publication ready figures? The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/app).
 
-### MSAexplorer is available as a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. 
-**Want to just use MSAexplorer and generate publication ready figures? 
-The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/app).**
+## Requirements
 
+`python >= python 3.11`
+
+Requirements:
+- `matplotlib>=3.8`
+- `numpy>=2.0`
+- `shiny>=1.3`
+- `shinywidgets>=0.5.2`
+- `plotly>=5.23`
+
+And optionally tools for in-app calculations (aligning and trimming):
+- `pyfamsa>=0.5.3`
+- `pytrimal>=0.8.1`
+
+
+### Installation
+
+#### Via pip (recommended)
+```bash
+pip install msaexplorer # or
+# additionally installs pyfamsa and pytrimal (not required, but optional in the app)
+pip install msaexplorer[process]
+```
+
+#### From this repo
+```bash
+git clone https://github.com/jonas-fuchs/MSAexplorer
+cd MSAexplorer
+pip install . # or
+pip install .[process]
+```
 
 ### Features of MSAexplorer as an app
+
+```
+usage:  msaexplorer --run
+
+The MSAexplorer app is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs).
+
+options:
+  -h, --help  show this help message and exit
+  --run       Run the MSAexplorer app
+  --version   show program version and exit
+  
+```
+
 - :white_check_mark: The app runs solely in your browser. No need to install anything, just might take a few seconds to load.
 - :white_check_mark: Use the app offline (after loading it).
 - :white_check_mark: Analyse alignments on your smartphone or tablet.
@@ -30,6 +67,16 @@ The curently stable version of the MSAexplorer app is hosted on  [github pages](
 | ![](readme_assets/upload_tab.png) | ![](readme_assets/plot_tab.png) | ![](readme_assets/plot2_tab.png) | ![](readme_assets/analysis_tab.png) |
 |-----------------------------------|---------------------------------|----------------------------------|-------------------------------------|
 
+### Hosting MSAexplorer yourself
+If you want to host MSAexplorer e.g. for your group, you can export the app as a static html with a few easy steps.
+However, in-app calculations with pyfamsa and pytrimal are currently not supported.
+```bash
+# install shinylive for exporting
+pip install shinylive
+git clone https://github.com/jonas-fuchs/MSAexplorer
+cd MSAexplorer
+shinylive export ./ site/  # you should now have a new 'site' folder with the app
+```
 
 ### Features of MSAexplorer as a python package ([full documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html))
 - :white_check_mark: Access MSAexplorer as a python package
@@ -120,52 +167,4 @@ draw.identity_alignment(
 )
 
 plt.show()
-```
-
-## Requirements
-
-`python >= python 3.11`
-
-The requirements for the python package have been kept minimal:
-- `matplotlib>=3.8`
-- `numpy>=2.0`
-
-If you want to use the MSAexplorer app then you will additionally need to install:
-- `shiny>=1.3`
-- `shinywidgets>=0.5.2`
-- `plotly>=5.23`
-And optionally install tools for in-app calculations (aligning and trimming):
-- `pyfamsa>=0.5.3`
-- `pytrimal>=0.8.1`
-
-## Installation
-### MSAexplorer python package
-```bash
-# via pip
-pip install msaexplorer
-# from this repo
-git clone https://github.com/jonas-fuchs/MSAexplorer
-cd MSAexplorer
-pip install .
-```
-### MSAexplorer app
-#### Local installation
-Run it locally on your machine with:
-````bash
-git clone https://github.com/jonas-fuchs/MSAexplorer
-cd MSAexplorer
-pip install .  # installs the msaexplorer package
-pip install -r requirements.txt  # installs main app dependencies
-pip install pyfamsa   # optional app dependency - in-app aligning
-pip install pytrimal  # optional app dependency - in-app trimming
-shiny run app.py
-````
-#### Hosting MSAexplorer
-If you want to host MSAexplorer e.g. for your group, you can export the app as a static html with a few easy steps:
-```bash
-# install shinylive for exporting
-pip install shinylive
-git clone https://github.com/jonas-fuchs/MSAexplorer
-cd MSAexplorer
-shinylive export ./ site/  # you should now have a new 'site' folder with the app
 ```
