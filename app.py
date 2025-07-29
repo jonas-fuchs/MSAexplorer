@@ -1,5 +1,5 @@
 """
-This contains the code to create the MSAexplorer shiny application
+This contains the code to create the MSAexplorer shiny application with shinylive. Not needed for usage as a python module.
 """
 
 # build-in

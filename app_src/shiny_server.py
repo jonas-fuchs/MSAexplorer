@@ -246,7 +246,7 @@ def server(input, output, session):
     def transfer_alignment_to_trimAI(aln):
         """Compatibility between trimAI and msaexplorer by reading and writing to a temporary file"""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.tmp', delete=False) as tmp:
-            tmp.write(export.fasta(aln.alignment))
+            tmp.write(export.fasta(aln._alignment))
             tmp.flush()
             return Alignment.load(tmp.name)
 

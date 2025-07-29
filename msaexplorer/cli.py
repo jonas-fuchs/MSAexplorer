@@ -9,9 +9,12 @@ as an entry point for launching the application or retrieving its version.
 
 import sys
 import argparse
-from pathlib import Path
 from shiny import run_app
+from shiny import App
 from msaexplorer import __version__
+from app_src.shiny_user_interface import shiny_ui
+from app_src.shiny_server import server
+from importlib.resources import files
 
 
 def parse_args(sysargs):
@@ -46,8 +49,20 @@ def main(sysargs=sys.argv[1:]):
     args = parse_args(sysargs)
 
     if args.run:
-        app_path = Path(__file__).parent.parent / "app_src" / "app.py"
-        run_app(str(app_path))
+        css_path = files("app_src").joinpath("www/css/styles.css")
+        js_path = files("app_src").joinpath("www/js/helper_functions.js")
+        img_path = files("app_src").joinpath("www/img")
+        # same code as in root/app.py
+        run_app(
+            App(
+                shiny_ui(
+                    css_file=css_path,
+                    js_file=js_path
+                ),
+                server,
+                static_assets={'/img': str(img_path)}
+            )
+        )
 
 
 if __name__ == "__main__":

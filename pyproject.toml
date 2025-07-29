@@ -36,5 +36,4 @@ app_src = ["www/css/*.css", "www/js/*.js", 'www/img/*.svg']
 [tool.setuptools.packages.find]
 where = ["."]
 include = ['msaexplorer', 'app_src']
-exclude = ['example_alignments', 'readme_assets']
 namespaces = false
