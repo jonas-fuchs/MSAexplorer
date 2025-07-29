@@ -5,28 +5,46 @@ MSAexplorer allows the analysis and straight forward plotting of multiple sequen
 Its focus is to act as a simple python3 extension or shiny app with minimal dependencies and syntax. It's easy
 to set up and highly customizable.
 
-# Usage as a shiny application
+# Installation
 
-The current version of the app is deployed to [GitHub pages](https://jonas-fuchs.github.io/MSAexplorer/app/). This application is serverless, and all
-computation runs through your browser. There is no need to install anything. Enjoy the app!
+#### Via pip (recommended)
+```bash
+pip install msaexplorer # or
+pip install msaexplorer[process]  # additionally installs pyfamsa and pytrimal (not required, but optional in the app)
+```
 
-However, you can also deploy it yourself and host it however you like!
-
+#### From this repo
 ```bash
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
-pip install msaexplorer  # installs the msaexplorer package
-pip install -r requirements.txt  # installs main app dependencies
-pip install pyfamsa   # optional app dependency - in-app aligning
-pip install pytrimal  # optional app dependency - in-app trimming
-shiny run app.py
+pip install . # or
+pip install .[process]
+```
+
+# Usage as a shiny application
+
+The current version of the app is also deployed to [GitHub pages](https://jonas-fuchs.github.io/MSAexplorer/app/). This application is serverless, and all
+computation runs through your browser. There is no need to install anything. Enjoy the app!
+
+However, you can also run it yourself or host it however you like!
+
+#### Running the app
+```bash
+msaexplorer --run
 ```
 Now just follow the link provided in your terminal.
 
+#### Exporting as a static site
+```bash
+pip install shinylive
+git clone https://github.com/jonas-fuchs/MSAexplorer
+cd MSAexplorer
+shinylive export ./ site/  # you should now have a new 'site' folder with the app
+```
 
 # Usage as a python3 package
 
-## Installation
+If you only want to use the MSAexplorer package without the shiny app, you can install it as follows:
 
 ```bash
 pip install msaexplorer
