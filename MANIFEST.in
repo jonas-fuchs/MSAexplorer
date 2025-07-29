@@ -1,4 +1,5 @@
 # MANIFEST.in
 include README.md
 include LICENSE
+include app.py
 recursive-include app_src/www *
