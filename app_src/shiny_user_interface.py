@@ -245,7 +245,7 @@ def _upload_tab():
                 overflow-x: auto;
                 max-width: 100%;
                 text-align: left;
-                font-family: monospace;">pip install msaexplorer[process]\nmsaexplorer --run</pre>
+                font-family: monospace;">pip install msaexplorer[app-plus]\nmsaexplorer --run</pre>
                 </div>
             """),
             ui.p(

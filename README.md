@@ -8,12 +8,12 @@
 #### MSAexplorer is a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. Want to just use the MSAexplorer app? The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/app).
 
 > [!WARNING]  
-> You might get in love with plotting alignments in python.
+> You might fall in love with plotting alignments in python.
 
 ## Requirements and installation
 
 > [!NOTE]
-> MSAexplorer can be installed via PyPi. There are three different possibilities depending on whether you want to only install the python package or the python package and front end app or the python package, front end app and additional app tools for aligning and trimming.
+> MSAexplorer can be installed via PyPi. There are three different possibilities depending on whether you want to only install the python package or the python package and front end app or the python package, front end app and additional tools for aligning and trimming.
 
 ![](readme_assets/Structure.png)
 
@@ -199,3 +199,7 @@ plt.show()
 ![](readme_assets/full.png)
 ![](readme_assets/linked.png)
 ![](readme_assets/stats_only.png)
+
+## Citing MSAexplorer
+
+Coming soon...

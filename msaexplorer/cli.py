@@ -9,12 +9,7 @@ as an entry point for launching the application or retrieving its version.
 
 import sys
 import argparse
-from shiny import run_app
-from shiny import App
 from msaexplorer import __version__
-from app_src.shiny_user_interface import shiny_ui
-from app_src.shiny_server import server
-from importlib.resources import files
 
 
 def parse_args(sysargs):
@@ -49,6 +44,17 @@ def main(sysargs=sys.argv[1:]):
     args = parse_args(sysargs)
 
     if args.run:
+        try:
+            from shiny import run_app
+            from shiny import App
+            from app_src.shiny_user_interface import shiny_ui
+            from app_src.shiny_server import server
+            from importlib.resources import files
+        except ImportError:
+            sys.exit(
+                "Please install the MSAexplorer front end app via 'pip install msaexplorer[app]' or 'pip install msaexplorer[app-plus]'."
+            )
+
         css_path = files("app_src").joinpath("www/css/styles.css")
         js_path = files("app_src").joinpath("www/js/helper_functions.js")
         img_path = files("app_src").joinpath("www/img")
