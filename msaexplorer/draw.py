@@ -970,7 +970,7 @@ def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme
                             fc=config.CHAR_COLORS[aln.aln_type][color_scheme].get(letters_to_plot[row]),
                             ec='None',
                             label=letters_to_plot[row],
-                            step='pre')
+                            step='mid')
             y_values += y
 
     # adjust limits & labels

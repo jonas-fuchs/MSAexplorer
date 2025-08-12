@@ -157,7 +157,7 @@ def _upload_tab():
                         ui.input_file('alignment_file', 'Sequences or alignment:', multiple=False,
                                       accept=['.fa', '.fasta', '.aln']),
                         ui.input_file('annotation_file','Optional Annotation file:', multiple=False,
-                                      accept=['.gff', '.gff3', '.bed', '.gb']),
+                                      accept=['.gff', '.gff3', '.bed', '.gb', '.genbank']),
                 )
 
     process = ui.card(
