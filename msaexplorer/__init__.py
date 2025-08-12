@@ -139,6 +139,6 @@ plt.show()
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("bamdash")
+    __version__ = version("msaexplorer")
 except PackageNotFoundError:
     __version__ = "unknown"
