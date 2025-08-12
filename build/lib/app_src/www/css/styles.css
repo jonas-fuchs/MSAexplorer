@@ -1,0 +1,363 @@
+/* Contains CSS custom definitions for the msaexplorer shiny app */
+
+/* Define Color Variables */
+:root {
+    --primary-color: #004B83;
+    --secondary-color: #0086C1;
+    --light-bg: #ffffff;
+    --light-border: #e9ecef;
+    --dark-color: #333;
+    --alt-color: #b38143;
+    --main-size: 0.8rem;
+    --bigger-size: 0.85rem
+}
+
+/* General Styles */
+body {
+    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-size: var(--main-size);
+    background-color: var(--light-bg);
+    color: var(--dark-color);
+    line-height: 1.4;
+    margin-top: 100px;
+}
+
+h6 {
+    font-size: var(--main-size);
+    font-weight: 600;
+    color: var(--alt-color);
+    margin-bottom: 4px;
+}
+
+.control-label {
+    font-size: var(--main-size);
+}
+
+.about-card {
+    text-align: center;
+    background-color: #e8e8e8;
+    padding-top: 2rem;
+    margin-top: 2rem;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+}
+
+/* Navbar */
+.navbar {
+    width: 100%;
+    position: fixed;
+    background-color: #dadada;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: transform 0.4s ease-in-out;
+}
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    width: auto;
+}
+
+.navbar .nav-link {
+    font-size: var(--bigger-size);
+    padding: 10px 15px;
+    transition: color 0.3s ease;
+    margin-right: 6px;
+    background: transparent;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+}
+
+.navbar .nav-link:hover {
+    border-bottom: 0;
+    color: var(--secondary-color);
+}
+
+.navbar .nav-link.active {
+    border-bottom: 0;
+    color: var(--secondary-color);
+}
+/* Icon control */
+.navbar .nav-link img {
+    transition: filter 0.3s ease;
+    fill: var(--light-bg);
+}
+
+.navbar .nav-link:hover img {
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+.navbar .nav-link.active img {
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+.nav-underline .nav-link, .nav-underline .nav-tabs > li > a, .nav-underline .nav-pills > li > a, .nav-underline :where(ul.nav.navbar-nav > li) > a {
+    border-bottom: none;
+}
+
+/* Allow overflow of download options */
+#download_type {
+    position: relative; /* Ensure relative positioning for the dropdown trigger */
+}
+
+#download_type ~ .selectize-control .selectize-dropdown {
+    z-index: 1050 !important;
+    position: absolute !important;
+    overflow: visible !important;
+    margin-top: 0px; /* Prevent dropdown overlapping with the trigger */
+}
+
+.bslib-card {
+    overflow: visible !important; /* Ensure the parent card doesn't clip */
+}
+
+.bslib-gap-spacing {
+    overflow: visible !important; /* Ensure nested containers don't clip */
+}
+
+/* Upload bar */
+.shiny-file-input-progress {
+    height: 1.5rem;
+    border-radius: 5px;
+}
+
+.shiny-file-input-progress .progress-bar {
+    background-color: var(--alt-color);
+    height: 100%;
+}
+
+/* Inputs and Controls */
+input, select, button {
+    box-sizing: border-box;
+    border: 1px solid var(--light-border);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: var(--light-bg);
+    color: #333;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+button:hover {
+    background-color: var(--secondary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-button:hover img {
+    filter: brightness(1) invert(1);
+}
+
+.action-button {
+    position: relative;
+    border: none;
+    background-color: transparent;
+    margin: 0;
+    cursor: pointer;
+}
+
+#open_sidebar{
+    border: none;
+    background-color: transparent;
+    margin: 0;
+    transition: transform 0.4s ease-in-out;
+}
+
+#open_sidebar:focus {
+    border-bottom: 0;
+    color: var(--secondary-color);
+    background-color: inherit;
+    box-shadow: none;
+}
+
+#open_sidebar:hover {
+    border-bottom: 0;
+    color: var(--secondary-color);
+    background-color: inherit;
+    box-shadow: none;
+}
+
+#open_sidebar:focus img{
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+#open_sidebar:hover img{
+    filter: invert(31%) sepia(99%) saturate(558%) hue-rotate(197deg) brightness(93%) contrast(92%);
+}
+
+input:focus, select:focus, button:focus {
+    outline: none;
+    border-color: var(--alt-color);
+    box-shadow: 0 0 5px rgba(0,75,131, 0.3);
+}
+
+.input-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #495057;
+}
+
+/* Sliders */
+input[type="range"] {
+    width: 100%;
+    margin: 5px 0;
+}
+
+.shiny-input-select, .selectize-input, .shiny-input-number {
+    font-size: var(--main-size);
+}
+
+.ui-slider {
+    margin: 5px 0;
+    background-color: var(--light-border);
+    height: 5px;
+    border-radius: 3px;
+}
+
+.ui-slider-thumb {
+    background-color: var(--primary-color);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.ui-slider-thumb:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.1);
+}
+
+
+/* Download */
+.shiny-download-link:hover img {
+    filter: brightness(1) invert(1);
+}
+
+/* Sidebar */
+.bslib-sidebar-layout {
+    border: none !important;
+    box-shadow: none !important;
+    z-index: 500; /* ensure that the whole layout is below the bar */
+}
+
+.sidebar {
+    background-color: var(--light-bg);
+    padding: 15px;
+    gap: 1px;
+    border: none !important;
+    box-shadow: none !important;
+    overflow-y: auto;
+    transition: width 0.3s ease;
+}
+
+#overlay-sidebar {
+    position: fixed;
+    top: 0;
+    right: -50%; /* Start hidden */
+    width: 50%;
+    height: 100%;
+    background: white;
+    box-shadow: -2px 0px 10px rgba(0, 0, 0, 0.3);
+    transition: right 0.3s ease-in-out;
+    padding: 20px;
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+#overlay-sidebar.show {
+    right: 0;
+}
+#overlay-bg {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+/* Value Boxes */
+.value-box-grid {
+    font-size: var(--main-size);
+    text-align: center;
+}
+
+/* Plots and Visualizations */
+#msa_plot, #analysis_plot  {
+    border: 1px solid var(--light-border);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background-color: var(--light-bg);
+    padding: 5px;
+    transition: width 0.3s ease;
+}
+
+/* Responsiveness */
+@media screen and (max-width: 830px) {
+
+    .sidebar {
+        padding: 15px;
+    }
+
+    .ui-slider {
+        width: 100%;
+    }
+
+    .nav-tabs .nav-link {
+        font-size: var(--main-size);
+    }
+
+    #overlay-sidebar.show {
+        right: 0;
+    }
+    .navbar {
+        background-color: #dadada;
+        width: 100%;
+        z-index: 1050;
+    }
+
+    .navbar-nav {
+        flex-direction: column; !important
+        justify-content: space-between;
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .navbar-toggler {
+        display: block;
+    }
+    .navbar-toggler {
+        border: none;
+        padding: 0;
+        background: #9f9f9f;
+        margin: 0;
+    }
+    .navbar-toggler:focus,
+    .navbar-toggler:active,
+    .navbar-toggler:focus-visible {
+        outline: none;
+        box-shadow: none;
+        background: #9f9f9f;
+        border: none;
+    }
+
+    body {
+        padding-top: 5px;
+    }
+    .about-card {
+        position: relative !important;
+        bottom: auto !important;
+        margin-bottom: 30px;
+    }
+    .card .form-group {
+        max-width: 100%;
+        width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+}

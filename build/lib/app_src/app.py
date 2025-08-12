@@ -1,0 +1,26 @@
+"""
+This contains the code to create the MSAexplorer shiny application
+"""
+
+# build-in
+from importlib.resources import files
+
+# libs
+from shiny import App
+# app resource
+from app_src import shiny_ui
+from app_src import server
+
+css_path = files("app_src").joinpath("www/css/styles.css")
+js_path = files("app_src").joinpath("www/js/helper_functions.js")
+img_path = files("app_src").joinpath("www/img")
+
+# create the app
+app = App(
+    shiny_ui(
+        css_file=css_path,
+        js_file=js_path
+    ),
+    server,
+    static_assets={'/img': str(img_path)}
+)

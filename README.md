@@ -7,37 +7,60 @@
 
 #### MSAexplorer is a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. Want to just use MSAexplorer and generate publication ready figures? The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/app).
 
-## Requirements
+> [!WARNING]  
+> You might get in love with plotting alignments in python.
+
+## Requirements and installation
 
 `python >= python 3.11`
 
+> [!NOTE]
+> MSAexplorer can be installed via PyPi. There are three different possibilities depending on whether you want to only install the python package or the python package and front end app or the python package, front end app and additional app tools for aligning and trimming.
+
+![](readme_assets/Structure.png)
+
+### Basic installation (python library):
 Requirements:
 - `matplotlib>=3.8`
 - `numpy>=2.0`
+
+Can be installed via:
+```bash
+pip install msaexplorer 
+```
+
+### Extended requirements (python library + app):
+Requirements:
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
 - `plotly>=5.23`
 
-And optionally tools for in-app calculations (aligning and trimming):
+Can be installed via:
+```bash
+pip install msaexplorer[app] 
+```
+
+### Full requirements (python library + app + in-app calculations).
+> [!NOTE]
+> Pyfamsa and pytrimal will require that Cmake is installed.
+
+Requirements:
+- `shiny>=1.3`
+- `shinywidgets>=0.5.2`
+- `plotly>=5.23`
 - `pyfamsa>=0.5.3`
 - `pytrimal>=0.8.1`
 
-
-### Installation
-
-#### Via pip (recommended)
+Can be installed via:
 ```bash
-pip install msaexplorer # or
-# additionally installs pyfamsa and pytrimal (not required, but optional in the app)
-pip install msaexplorer[process]
+pip install msaexplorer[app-plus] 
 ```
 
-#### From this repo
+#### Installation for development
 ```bash
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
-pip install . # or
-pip install .[process]
+pip install .[app-plus]
 ```
 
 ### Features of MSAexplorer as an app
@@ -168,3 +191,9 @@ draw.identity_alignment(
 
 plt.show()
 ```
+
+# Exampel gallery
+
+![](readme_assets/full.png)
+![](readme_assets/linked.png)
+![](readme_assets/stats_only.png)
