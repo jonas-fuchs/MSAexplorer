@@ -4,3 +4,6 @@ venv/
 test.py
 test
 msaexplorer.egg-info
+__pycache__
+build/
+site/
