@@ -5,22 +5,24 @@
 [![PiPy](https://img.shields.io/pypi/v/msaexplorer?label=pypi%20version)](https://pypi.org/project/msaexplorer/)
 [![Downloads](https://static.pepy.tech/badge/msaexplorer)](https://pypi.org/project/msaexplorer/)
 
-#### MSAexplorer is a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. Want to just use MSAexplorer and generate publication ready figures? The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/app).
+#### MSAexplorer is a python package and also a standalone app to analyse multiple sequence alignments and generate publication ready figures. Want to just use the MSAexplorer app? The curently stable version of the MSAexplorer app is hosted on  [github pages](https://jonas-fuchs.github.io/MSAexplorer/app).
 
 > [!WARNING]  
 > You might get in love with plotting alignments in python.
 
 ## Requirements and installation
 
-`python >= python 3.11`
-
 > [!NOTE]
 > MSAexplorer can be installed via PyPi. There are three different possibilities depending on whether you want to only install the python package or the python package and front end app or the python package, front end app and additional app tools for aligning and trimming.
 
 ![](readme_assets/Structure.png)
 
+
+### Requirements prior installation
+`python >= python 3.11`
+
 ### Basic installation (python library):
-Requirements:
+Relies on:
 - `matplotlib>=3.8`
 - `numpy>=2.0`
 
@@ -29,8 +31,8 @@ Can be installed via:
 pip install msaexplorer 
 ```
 
-### Extended requirements (python library + app):
-Requirements:
+### Extended installation (python library + app):
+Relies on:
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
 - `plotly>=5.23`
@@ -40,11 +42,11 @@ Can be installed via:
 pip install msaexplorer[app] 
 ```
 
-### Full requirements (python library + app + in-app calculations).
+### Full installation (python library + app + in-app calculations).
 > [!NOTE]
 > Pyfamsa and pytrimal will require that Cmake is installed.
 
-Requirements:
+Relies on:
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
 - `plotly>=5.23`
@@ -56,14 +58,14 @@ Can be installed via:
 pip install msaexplorer[app-plus] 
 ```
 
-#### Installation for development
+### Installation for development
 ```bash
 git clone https://github.com/jonas-fuchs/MSAexplorer
 cd MSAexplorer
 pip install .[app-plus]
 ```
 
-### Features of MSAexplorer as an app
+## Features of MSAexplorer as an app
 
 ```
 usage:  msaexplorer --run
@@ -101,7 +103,7 @@ cd MSAexplorer
 shinylive export ./ site/  # you should now have a new 'site' folder with the app
 ```
 
-### Features of MSAexplorer as a python package ([full documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html))
+## Features of MSAexplorer as a python package ([full documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html))
 - :white_check_mark: Access MSAexplorer as a python package
 - :white_check_mark: Maximum flexibility for the plotting and analysis features while retaining minimal syntax.
 - :white_check_mark: Integrates seamlessly with matplotlib.
@@ -192,7 +194,7 @@ draw.identity_alignment(
 plt.show()
 ```
 
-# Exampel gallery
+### Exampel gallery
 
 ![](readme_assets/full.png)
 ![](readme_assets/linked.png)
