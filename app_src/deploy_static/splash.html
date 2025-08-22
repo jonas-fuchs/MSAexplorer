@@ -1,21 +1,15 @@
-<!-- Custom splash overlay (animated, random subtext) -->
 <style>
   #splash{
     position:fixed; inset:0; display:grid; place-items:center;
     background:#fff; z-index:99999; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif
   }
   #splash .box{ max-width:560px; text-align:center; padding:24px }
-  #splash .title{
-    font-size:20px; margin-bottom:6px; opacity:.9;
-    animation:fadeInOut 2.4s ease-in-out infinite; will-change:opacity
-  }
   #splash .sub{
     font-size:.875rem; /* ~14px */
     color:#6b7280;     /* gray */
     margin-top:4px;
   }
   @keyframes fadeInOut{ 0%{opacity:.2} 50%{opacity:1} 100%{opacity:.2} }
-  @media (prefers-reduced-motion: reduce){ #splash .title{ animation:none !important } }
 </style>
 
 <div id="splash">
@@ -26,8 +20,8 @@
 </div>
 
 <script>
-(function(){
-  // --- Random subtext ---
+(function () {
+  // --- rotating subtext ---
   const subs = [
       "This might take a few seconds...",
       "Never gonna give you up...",
@@ -66,38 +60,34 @@
       "Life is life. NaNaNaNaNa.",
       "Loading UI..."
   ];
-  const subEl = document.querySelector('#splash .sub');
-
-  // Rotate text every 3s until splash is hidden
-  let i = Math.floor(Math.random() * subs.length);
+  const subEl = document.querySelector("#splash .sub");
+  let rotateId = null;
   if (subEl) {
+    let i = Math.floor(Math.random() * subs.length);
     subEl.textContent = subs[i];
-    const interval = setInterval(() => {
+    rotateId = setInterval(() => {
       i = (i + 1) % subs.length;
       subEl.textContent = subs[i];
-    }, 4000);
-
-    // Stop rotating once splash removed
-    const observer = new MutationObserver(() => {
-      if (!document.body.contains(subEl)) clearInterval(interval);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    }, 5000);
   }
 
+  // fadeOut
   function fadeOut() {
     const el = document.getElementById("splash");
     if (!el) return;
-    el.style.opacity = 1;
-    (function fade() {
-      el.style.opacity -= 0.08;
-      if (el.style.opacity <= 0) el.style.display = "none";
-      else requestAnimationFrame(fade);
-    })();
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 400); // after CSS transition
   }
 
-  Shiny.addCustomMessageHandler("splash", msg => {
-  if (msg.op === "hide") fadeOut();
+  // Watch for iframe.app-frame
+  const observer = new MutationObserver(() => {
+    const iframe = document.querySelector("iframe.app-frame");
+    if (iframe) {
+      fadeOut();
+      observer.disconnect();
+    }
   });
-  //setTimeout(fadeOut, 12000);
-})();
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  })();
 </script>

@@ -51,8 +51,6 @@ def server(input, output, session):
     if not pyfamsa_check:
         ui.remove_ui(selector="div:has(> #processing_options)")
 
-    session.send_custom_message("splash", {"op": "hide"})
-
 
     def prepare_inputs():
         """
