@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - further_improvements
 
 permissions:
   contents: read
@@ -30,10 +31,12 @@ jobs:
       - name: Export Shiny App
         run: |
           shinylive export ./ site/
-          # Change title
+          # Title
           sed -i 's|<title>.*</title>|<title>MSAexplorer</title>|' site/index.html
-          # Insert favicon link right after </title>
-          sed -i '/<\/title>/a\  <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/442d069443b6324628a089bc80044e7b1b87a79f/app_src/www/img/favicon.svg">' site/index.html
+          # Favicon for the app page (app served at /app/, favicon at site root)
+          grep -q 'rel="icon"' site/index.html || \
+            sed -i '/<\/title>/a\  <link rel="icon" type="image/svg+xml" href="../favicon.svg">' site/index.html
+
       - name: Inject splash overlay from file
         shell: bash
         run: |
@@ -48,14 +51,22 @@ jobs:
 
       - name: Generate API Docs
         run: |
-          pdoc ./msaexplorer --logo 'https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/87c0ae2e2066d6e5146082c65ee8b61f23decbea/app_src/img/logo.svg' -o docs/
+          # IMPORTANT: docs live at /<repo>/docs/, logo at /<repo>/logo.svg
+          # Use a relative path from docs/ to site root: ../logo.svg
+          pdoc ./msaexplorer \
+            --logo ../logo.svg \
+            -o docs/
 
       - name: Prepare Deployment Directory
         run: |
           rm -rf public
           mkdir -p public/app public/docs
+          # App and docs
           cp -r site/* public/app/
           cp -r docs/* public/docs/
+          # Assets at site root so app/docs can reference via ../
+          cp app_src/www/img/favicon.svg public/favicon.svg
+          cp app_src/www/img/logo.svg public/logo.svg
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
