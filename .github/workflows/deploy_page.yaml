@@ -33,7 +33,7 @@ jobs:
           # Change title
           sed -i 's|<title>.*</title>|<title>MSAexplorer</title>|' site/index.html
           # Insert favicon link right after </title>
-          sed -i '/<\/title>/a\  <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/0a7065e91493912a900fe794064c5add3e7c746a/app_src/www/img/favicon.svg">' site/index.html
+          sed -i '/<\/title>/a\  <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/442d069443b6324628a089bc80044e7b1b87a79f/app_src/www/img/favicon.svg">' site/index.html
       - name: Inject splash overlay from file
         shell: bash
         run: |
