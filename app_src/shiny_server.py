@@ -57,12 +57,9 @@ def server(input, output, session):
     def _boot():
         if not started.get():
             started.set(True)
-            # Pre-import heavy libs so the first render doesn't trigger busy again
-            import numpy  # noqa: F401
-            import plotly  # noqa: F401
             # Signal the splash to hide only now:
             session.send_custom_message("splash", {"op": "hide"})
-        return ""  # nothing visible
+        return ""
 
 
     def prepare_inputs():
