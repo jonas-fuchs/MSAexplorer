@@ -27,6 +27,12 @@ def shiny_ui(css_file, js_file):
         # Custom sidebar
         ui.div(id="overlay-bg", onclick="toggleSidebar()"),
         _custom_sidebar(),
+        ui.tags.head(
+            ui.tags.title("MSAexplorer")
+        ),
+        ui.head_content(
+            ui.tags.link(rel="icon", type="image/svg+xml", href="img/favicon.svg")
+        ),
         # Main side
         ui.navset_bar(
             _upload_tab(),

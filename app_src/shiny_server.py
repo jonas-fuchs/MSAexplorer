@@ -51,7 +51,6 @@ def server(input, output, session):
     if not pyfamsa_check:
         ui.remove_ui(selector="div:has(> #processing_options)")
 
-    #### define all reactive independent functions ###
     def prepare_inputs():
         """
         Collect inputs from the UI for the plot tab, only adding the ones needed for enabled features.
