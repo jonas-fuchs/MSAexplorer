@@ -1,107 +1,102 @@
+<!-- Custom splash overlay (animated, random subtext) -->
+<style>
+  #splash{
+    position:fixed; inset:0; display:grid; place-items:center;
+    background:#fff; z-index:99999; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif
+  }
+  #splash .box{ max-width:560px; text-align:center; padding:24px }
+  #splash .title{
+    font-size:20px; margin-bottom:6px; opacity:.9;
+    animation:fadeInOut 2.4s ease-in-out infinite; will-change:opacity
+  }
+  #splash .sub{
+    font-size:.875rem; /* ~14px */
+    color:#6b7280;     /* gray */
+    margin-top:4px;
+  }
+  @keyframes fadeInOut{ 0%{opacity:.2} 50%{opacity:1} 100%{opacity:.2} }
+  @media (prefers-reduced-motion: reduce){ #splash .title{ animation:none !important } }
+</style>
+
+<div id="splash">
+  <div class="box">
+    <div class="title">Starting MSAexplorer.</div>
+    <div class="sub">This might take a few seconds.</div>
+  </div>
+</div>
+
 <script>
 (function(){
-  // Move splash to end of <body> so it's on top in DOM order too
-  document.addEventListener("DOMContentLoaded", () => {
-    const s = document.getElementById("splash");
-    if (s && s.parentNode === document.body) document.body.appendChild(s);
-  });
-
-  // --- Random subtext with rotation ---
+  // --- Random subtext ---
   const subs = [
-    "This might take a few seconds...",
-    "Never gonna give you up...",
-    "Warming up matrices...",
-    "Calibrating color maps...",
-    "Sharpening scoring functions...",
-    "Bringing the ring to Sauron...",
-    "Capturing genomic essence...",
-    "Counting available codons...",
-    "Trying to generate alien sequences...",
-    "404. Error. Motivation not found.",
-    "Testing sequence quality...",
-    "Perturbing fasta headers...",
-    "Coloring nucleotides...",
-    "Look at me. I am your new alignment viewer now.",
-    "System booting up...",
-    "Measuring amino acid properties...",
-    "Loading fonts...",
-    "Polishing nucleotides...",
-    "Shuffling amino acids...",
-    "Preparing BLOSUM matrices...",
-    "Planning world domination...",
-    "Counting gaps (carefully)...",
-    "Juggling FASTA files...",
-    "Sorting exons from introns...",
-    "Preparing the universe...",
-    "Assessing chemical properties...",
-    "Warming up matplotlib...",
-    "Taking a nap...",
-    "Calculating the answer to life, the universe, and everything...",
-    "42, the answer to life, the universe, and everything.",
-    "You are now a MSAexplorer user.",
-    "You did it. You are a wizard, Harry.",
-    "Holding my breath...",
-    "Admiring your beauty...",
-    "Life is life. NaNaNaNaNa.",
-    "Loading UI..."
+      "This might take a few seconds...",
+      "Never gonna give you up...",
+      "Warming up matrices...",
+      "Calibrating color maps...",
+      "Sharpening scoring functions...",
+      "Bringing the ring to Sauron...",
+      "Capturing genomic essence...",
+      "Counting available codons...",
+      "Trying to generate alien sequences...",
+      "404. Error. Motivation not found.",
+      "Testing sequence quality...",
+      "Perturbing fasta headers...",
+      "Coloring nucleotides...",
+      "Look at me. I am your new alignment viewer now.",
+      "System booting up...",
+      "Measuring amino acid properties...",
+      "Loading fonts...",
+      "Polishing nucleotides...",
+      "Shuffling amino acids...",
+      "Preparing BLOSSUM matrices...",
+      "Planing world domination...",
+      "Counting gaps (carefully)...",
+      "Juggling FASTA files...",
+      "Sorting exons from introns...",
+      "Preparing the universe...",
+      "Assessing chemical properties...",
+      "Warming up matplotlib...",
+      "Taking a nap...",
+      "Calculating the answer to life, the universe, and everything...",
+      "42, the answer to life, the universe, and everything.",
+      "You are now a MSAexplorer user.",
+      "You did it. You are a wizard Harry.",
+      "Holding my breath...",
+      "Admiring your beauty...",
+      "Life is life. NaNaNaNaNa.",
+      "Loading UI..."
   ];
   const subEl = document.querySelector('#splash .sub');
-  let rotateId = null;
+
+  // Rotate text every 3s until splash is hidden
+  let i = Math.floor(Math.random() * subs.length);
   if (subEl) {
-    let i = Math.floor(Math.random() * subs.length);
     subEl.textContent = subs[i];
-    rotateId = setInterval(() => {
+    const interval = setInterval(() => {
       i = (i + 1) % subs.length;
       subEl.textContent = subs[i];
     }, 3000);
-  }
 
-  function fadeOut(){
-    const el = document.getElementById("splash");
-    if (!el) return;
-    if (rotateId) { clearInterval(rotateId); rotateId = null; }
-    el.style.opacity = 1;
-    (function fade(){
-      el.style.opacity -= 0.08;
-      if (el.style.opacity <= 0) el.style.display = "none";
-      else requestAnimationFrame(fade);
-    })();
-  }
-
-  // Stable idle: only hide after ~1.2s with no busy events
-  let busyDepth = 0, hideTimer = null;
-  function scheduleHide(delayMs = 1200){
-    if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => { if (busyDepth === 0) fadeOut(); }, delayMs);
-  }
-  function cancelHide(){ if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } }
-
-  document.addEventListener("shiny:connected", () => scheduleHide(), { once:true });
-  document.addEventListener("shiny:busy", () => { busyDepth++; cancelHide(); });
-  document.addEventListener("shiny:idle", () => {
-    busyDepth = Math.max(0, busyDepth - 1);
-    if (busyDepth === 0) scheduleHide();
-  });
-
-  // Optional server-controlled hide
-  document.addEventListener("DOMContentLoaded", () => {
-    if (window.Shiny && Shiny.addCustomMessageHandler) {
-      Shiny.addCustomMessageHandler("splash", msg => {
-        if (msg && msg.op === "hide") fadeOut();
-      });
-    }
-  });
-
-  // DOM fallback: when #root first populates, schedule hide (not immediate)
-  const root = document.getElementById("root");
-  if (root && "MutationObserver" in window) {
-    const mo = new MutationObserver(() => {
-      if (root.childElementCount > 0) { mo.disconnect(); scheduleHide(1500); }
+    // Stop rotating once splash removed
+    const observer = new MutationObserver(() => {
+      if (!document.body.contains(subEl)) clearInterval(interval);
     });
-    mo.observe(root, { childList: true });
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // Safety timeout (in case of errors)
-  setTimeout(fadeOut, 30000);
+  // --- fadeOut logic as before ---
+  function fadeOut(){
+    const el=document.getElementById("splash"); if(!el) return;
+    el.style.opacity=1;
+    (function fade(){ el.style.opacity-=0.08; if(el.style.opacity<=0){el.style.display="none"} else requestAnimationFrame(fade) })();
+  }
+  document.addEventListener("shiny:connected", fadeOut, { once:true });
+  document.addEventListener("shiny:idle", fadeOut, { once:true });
+  const root=document.getElementById("root");
+  if(root && "MutationObserver" in window){
+    const mo=new MutationObserver(()=>{ if(root.childElementCount>0){ mo.disconnect(); fadeOut(); }});
+    mo.observe(root,{childList:true});
+  }
+  //setTimeout(fadeOut, 12000);
 })();
 </script>

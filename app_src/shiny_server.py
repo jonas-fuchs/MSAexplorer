@@ -52,15 +52,6 @@ def server(input, output, session):
     if not pyfamsa_check:
         ui.remove_ui(selector="div:has(> #processing_options)")
 
-    # this is only important for the static website and the custom splash screen to know when to hide it
-    @render.ui
-    def _boot():
-        if not started.get():
-            started.set(True)
-            # Signal the splash to hide only now:
-            session.send_custom_message("splash", {"op": "hide"})
-        return ""
-
 
     def prepare_inputs():
         """
