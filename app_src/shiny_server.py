@@ -45,12 +45,13 @@ def server(input, output, session):
     reactive.annotation = reactive.Value(None)
     updating_from_slider = False
     updating_from_numeric = False
-    started = reactive.Value(False)
 
     # remove ui for calculations for static websites due to lack of support
     # of pytrimal and pyfamsa from pyodoide
     if not pyfamsa_check:
         ui.remove_ui(selector="div:has(> #processing_options)")
+
+    session.send_custom_message("splash", {"op": "hide"})
 
 
     def prepare_inputs():
