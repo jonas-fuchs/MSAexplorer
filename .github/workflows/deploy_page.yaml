@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - further_improvements
 
 permissions:
   contents: read
@@ -14,7 +15,7 @@ jobs:
     steps:
       # Checkout the repository
       - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       # Set up Python
       - name: Setup Python
@@ -22,7 +23,7 @@ jobs:
         with:
           python-version: '3.13'
 
-      # Install dependencies (msaexplorer, pdoc, and shiny live)
+      # Install dependencies (msaexplorer, pdoc, and shinylive)
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
@@ -34,26 +35,84 @@ jobs:
       - name: Export Shiny App
         run: |
           shinylive export ./ site/
+          # Change title
+          sed -i.bak 's|<title>.*</title>|<title>MSAExplorer</title>|' site/index.html
+          # Insert favicon link right after </title>
+          awk '1;/<\/title>/{print "  <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\">"}' site/index.html > site/index.tmp && mv site/index.tmp site/index.html
+
+      # ⭐️ Inject custom splash overlay (replaces default spinner)
+      - name: Inject custom splash overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          INDEX=site/index.html
+
+          # Skip if already present (id="splash")
+          if grep -q 'id="splash"' "$INDEX"; then
+            echo "Splash already injected; skipping."
+            exit 0
+          fi
+
+          # Create the overlay fragment
+          cat > site/splash.html <<'HTML'
+          <style>
+            #splash{
+              position:fixed; inset:0; display:grid; place-items:center;
+              background:#fff; z-index:99999; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif
+            }
+            #splash .box{ max-width:560px; text-align:center; padding:24px }
+            #splash .title{
+              font-size:20px; margin-bottom:6px; opacity:.9;
+              animation:fadeInOut 2.4s ease-in-out infinite; will-change:opacity
+            }
+            @keyframes fadeInOut{ 0%{opacity:.2} 50%{opacity:1} 100%{opacity:.2} }
+            @media (prefers-reduced-motion: reduce){ #splash .title{ animation:none !important } }
+          </style>
+          
+          <div id="splash">
+            <div class="box">
+              <div class="title">Starting MSAexplorer…</div>
+            </div>
+          </div>
+          
+          <script>
+          (function(){
+            function fadeOut(){
+              const el=document.getElementById("splash"); if(!el) return;
+              el.style.opacity=1;
+              (function fade(){ el.style.opacity-=0.08; if(el.style.opacity<=0){el.style.display="none"} else requestAnimationFrame(fade) })();
+            }
+            document.addEventListener("shiny:connected", fadeOut, { once:true });
+            document.addEventListener("shiny:idle", fadeOut, { once:true });
+            const root=document.getElementById("root");
+            if(root && "MutationObserver" in window){
+              const mo=new MutationObserver(()=>{ if(root.childElementCount>0){ mo.disconnect(); fadeOut(); }});
+              mo.observe(root,{childList:true});
+            }
+            setTimeout(fadeOut, 12000); // last-resort fallback
+          })();
+          </script>
+          HTML
+
+          # Insert the fragment right after the opening <body> tag
+          sed -i '/<body[^>]*>/r site/splash.html' "$INDEX"
+          rm -f site/splash.html
 
       # Generate API documentation with pdoc
       - name: Generate API Docs
         run: |
-          # Adjust the command below with your package name and desired options.
           pdoc ./msaexplorer --logo 'https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/87c0ae2e2066d6e5146082c65ee8b61f23decbea/app_src/img/logo.svg' -o docs/
 
       # Prepare the deployment directory
       - name: Prepare Deployment Directory
         run: |
-          # Remove any previous deployment folder
           rm -rf public
-          mkdir public
-          # Create subdirectories for the Shiny app and the API docs.
-          mkdir -p public/app
-          mkdir -p public/docs
-          # Move the entire exported Shiny app (with its directory structure) into public/app.
+          mkdir -p public/app public/docs
           cp -r site/* public/app/
-          # Move the pdoc-generated docs into public/docs.
           cp -r docs/* public/docs/
+          # Make sure favicon is at site root (your index references /favicon.svg)
+          if [ -f favicon.svg ]; then cp favicon.svg public/; fi
+          if [ -f favicon.ico ]; then cp favicon.ico public/; fi
 
       # Upload the combined public directory as an artifact for GitHub Pages deployment
       - name: Upload Pages Artifact

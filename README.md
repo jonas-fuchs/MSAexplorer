@@ -33,6 +33,8 @@ pip install msaexplorer
 
 ### Extended installation (python library + app):
 Relies on:
+- `matplotlib>=3.8`
+- `numpy>=2.0`
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
 - `plotly>=5.23`
@@ -47,6 +49,8 @@ pip install msaexplorer[app]
 > Pyfamsa and pytrimal will require that Cmake is installed.
 
 Relies on:
+- `matplotlib>=3.8`
+- `numpy>=2.0`
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
 - `plotly>=5.23`
