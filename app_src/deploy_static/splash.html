@@ -79,15 +79,20 @@
     setTimeout(() => el.remove(), 400); // after CSS transition
   }
 
-  // Watch for iframe.app-frame
+  // Watch for iframe.app-frame and its src attribute
   const observer = new MutationObserver(() => {
-    const iframe = document.querySelector("iframe.app-frame");
-    if (iframe) {
+    const iframe = document.querySelector("iframe.app-frame[src]");
+    if (iframe && iframe.getAttribute("src")) {
       fadeOut();
       observer.disconnect();
     }
   });
 
-  observer.observe(document.body, { childList: true, subtree: true });
-  })();
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["src"]
+  });
+})();
 </script>
