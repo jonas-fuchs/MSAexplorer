@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           INDEX=site/index.html
-          SPLASH=deploy_static/splash.html
+          SPLASH=app_src/deploy_static/splash.html
           if [ ! -f "$SPLASH" ]; then
             echo "Splash file not found at $SPLASH"; exit 1
           fi
