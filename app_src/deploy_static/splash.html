@@ -1,6 +1,12 @@
 <script>
 (function(){
-  // --- Random subtext (with rotation) ---
+  // Move splash to end of <body> so it's on top in DOM order too
+  document.addEventListener("DOMContentLoaded", () => {
+    const s = document.getElementById("splash");
+    if (s && s.parentNode === document.body) document.body.appendChild(s);
+  });
+
+  // --- Random subtext with rotation ---
   const subs = [
     "This might take a few seconds...",
     "Never gonna give you up...",
@@ -41,7 +47,6 @@
   ];
   const subEl = document.querySelector('#splash .sub');
   let rotateId = null;
-
   if (subEl) {
     let i = Math.floor(Math.random() * subs.length);
     subEl.textContent = subs[i];
@@ -51,7 +56,6 @@
     }, 3000);
   }
 
-  // --- Fade out helper (also stop rotating text) ---
   function fadeOut(){
     const el = document.getElementById("splash");
     if (!el) return;
@@ -64,20 +68,14 @@
     })();
   }
 
-  // --- Stable idle logic ---
-  let busyDepth = 0;
-  let hideTimer = null;
+  // Stable idle: only hide after ~1.2s with no busy events
+  let busyDepth = 0, hideTimer = null;
   function scheduleHide(delayMs = 1200){
     if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      if (busyDepth === 0) fadeOut();
-    }, delayMs);
+    hideTimer = setTimeout(() => { if (busyDepth === 0) fadeOut(); }, delayMs);
   }
-  function cancelHide(){
-    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-  }
+  function cancelHide(){ if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } }
 
-  // Start watching once connected
   document.addEventListener("shiny:connected", () => scheduleHide(), { once:true });
   document.addEventListener("shiny:busy", () => { busyDepth++; cancelHide(); });
   document.addEventListener("shiny:idle", () => {
@@ -85,7 +83,7 @@
     if (busyDepth === 0) scheduleHide();
   });
 
-  // Optional: server can hide exactly when ready
+  // Optional server-controlled hide
   document.addEventListener("DOMContentLoaded", () => {
     if (window.Shiny && Shiny.addCustomMessageHandler) {
       Shiny.addCustomMessageHandler("splash", msg => {
@@ -94,19 +92,16 @@
     }
   });
 
-  // DOM fallback: once #root gets children, *schedule* a hide (don't force immediately)
+  // DOM fallback: when #root first populates, schedule hide (not immediate)
   const root = document.getElementById("root");
   if (root && "MutationObserver" in window) {
     const mo = new MutationObserver(() => {
-      if (root.childElementCount > 0) {
-        mo.disconnect();
-        scheduleHide();
-      }
+      if (root.childElementCount > 0) { mo.disconnect(); scheduleHide(1500); }
     });
     mo.observe(root, { childList: true });
   }
 
-  // Last-resort timeout so it never sticks forever
+  // Safety timeout (in case of errors)
   setTimeout(fadeOut, 30000);
 })();
 </script>
