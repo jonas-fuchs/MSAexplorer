@@ -238,8 +238,7 @@ def _upload_tab():
                 )
             ),
             ui.p(
-                'MSAexplorer makes use of the pyfamsa and pytrimal which is a python wrapper for FAMSA2 and trimAI, respectively.'
-                'Currently this works only on non-static websites (e.g. not on my github page). Run MSAexplorer yourself:'
+                'MSAexplorer makes use of the pyfamsa and pytrimal which is a python wrapper for FAMSA2 and trimAI, respectively. Currently this works only on non-static websites (e.g. not on my github page). Run MSAexplorer yourself:'
             ),
             ui.p('Run MSAexplorer yourself:'),
             ui.HTML("""
