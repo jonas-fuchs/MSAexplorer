@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - further_improvements
 
 permissions:
   contents: read
@@ -35,8 +34,7 @@ jobs:
           sed -i 's|<title>.*</title>|<title>MSAexplorer</title>|' site/index.html
           # Favicon for the app page (app served at /app/, favicon at site root)
           grep -q 'rel="icon"' site/index.html || \
-            sed -i '/<\/title>/a\  <link rel="icon" type="image/svg+xml" href="../favicon.svg">' site/index.html
-
+          sed -i '/<\/title>/a\  <link rel="icon" type="image/svg+xml" href="../favicon.svg">' site/index.html
       - name: Inject splash overlay from file
         shell: bash
         run: |
@@ -51,8 +49,6 @@ jobs:
 
       - name: Generate API Docs
         run: |
-          # IMPORTANT: docs live at /<repo>/docs/, logo at /<repo>/logo.svg
-          # Use a relative path from docs/ to site root: ../logo.svg
           pdoc ./msaexplorer \
             --logo ../logo.svg \
             -o docs/
