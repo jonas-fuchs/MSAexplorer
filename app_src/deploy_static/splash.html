@@ -75,7 +75,7 @@
     const interval = setInterval(() => {
       i = (i + 1) % subs.length;
       subEl.textContent = subs[i];
-    }, 3000);
+    }, 4000);
 
     // Stop rotating once splash removed
     const observer = new MutationObserver(() => {
@@ -84,7 +84,6 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // --- fadeOut logic as before ---
   function fadeOut() {
     const el = document.getElementById("splash");
     if (!el) return;
@@ -96,19 +95,9 @@
     })();
   }
 
-  // Attach the message handler and call fadeOut() when Python says so
-  function attach() {
-    if (!(window.Shiny && Shiny.addCustomMessageHandler)) return false;
-    Shiny.addCustomMessageHandler("splash", (msg) => {
-      if (msg && msg.op === "hide") fadeOut();
-    });
-    return true;
-  }
-
-  // Try now; if Shiny isn’t ready yet, attach after it connects
-  if (!attach()) {
-    document.addEventListener("shiny:connected", attach, { once: true });
-  }
+  Shiny.addCustomMessageHandler("splash", msg => {
+  if (msg.op === "hide") fadeOut();
+  });
   //setTimeout(fadeOut, 12000);
 })();
 </script>
