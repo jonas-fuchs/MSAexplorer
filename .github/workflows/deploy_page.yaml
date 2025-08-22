@@ -34,7 +34,7 @@ jobs:
       # Export the Shiny app as a static site
       - name: Export Shiny App
         run: |
-          shinylive export ./ site/
+          shinylive export ./ site/ 
           # Change title
           sed -i.bak 's|<title>.*</title>|<title>MSAExplorer</title>|' site/index.html
           # Insert favicon link right after </title>
