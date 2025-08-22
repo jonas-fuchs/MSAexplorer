@@ -29,7 +29,7 @@
 (function(){
   // --- Random subtext ---
   const subs = [
-      "This might take a few seconds.",
+      "This might take a few seconds...",
       "Never gonna give you up...",
       "Warming up matrices...",
       "Calibrating color maps...",
@@ -45,16 +45,31 @@
       "Loading UI..."
   ];
   const subEl = document.querySelector('#splash .sub');
-  if (subEl) subEl.textContent = subs[Math.floor(Math.random()*subs.length)];
 
-  // --- Hide splash when ready (plus fallbacks) ---
+  // Rotate text every 3s until splash is hidden
+  let i = Math.floor(Math.random() * subs.length);
+  if (subEl) {
+    subEl.textContent = subs[i];
+    const interval = setInterval(() => {
+      i = (i + 1) % subs.length;
+      subEl.textContent = subs[i];
+    }, 3000);
+
+    // Stop rotating once splash removed
+    const observer = new MutationObserver(() => {
+      if (!document.body.contains(subEl)) clearInterval(interval);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // --- fadeOut logic as before ---
   function fadeOut(){
     const el=document.getElementById("splash"); if(!el) return;
     el.style.opacity=1;
     (function fade(){ el.style.opacity-=0.08; if(el.style.opacity<=0){el.style.display="none"} else requestAnimationFrame(fade) })();
   }
   document.addEventListener("shiny:connected", fadeOut, { once:true });
-  document.addEventListener("shiny:idle",      fadeOut, { once:true });
+  document.addEventListener("shiny:idle", fadeOut, { once:true });
   const root=document.getElementById("root");
   if(root && "MutationObserver" in window){
     const mo=new MutationObserver(()=>{ if(root.childElementCount>0){ mo.disconnect(); fadeOut(); }});
@@ -63,4 +78,3 @@
   setTimeout(fadeOut, 12000);
 })();
 </script>
-<!-- End custom splash overlay -->
