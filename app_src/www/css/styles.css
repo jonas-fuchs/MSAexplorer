@@ -12,6 +12,14 @@
     --bigger-size: 0.85rem
 }
 
+#splash{
+  position:fixed; inset:0; display:grid; place-items:center;
+  background:#fff;
+  z-index:2147483647; /* max out so it sits above Shiny spinner */
+  font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+
+
 /* General Styles */
 body {
     font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
