@@ -1,0 +1,42 @@
+<!-- Custom splash overlay (animated) -->
+<style>
+  #splash{
+    position:fixed; inset:0; display:grid; place-items:center;
+    background:#fff; z-index:99999; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif
+  }
+  #splash .box{ max-width:560px; text-align:center; padding:24px }
+  #splash .title{
+    font-size:20px; margin-bottom:6px; opacity:.9;
+    animation:fadeInOut 2.4s ease-in-out infinite; will-change:opacity
+  }
+  @keyframes fadeInOut{ 0%{opacity:.2} 50%{opacity:1} 100%{opacity:.2} }
+  @media (prefers-reduced-motion: reduce){ #splash .title{ animation:none !important } }
+</style>
+
+<div id="splash">
+  <div class="box">
+    <div class="title">Starting MSAexplorer…</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function fadeOut(){
+    const el=document.getElementById("splash"); if(!el) return;
+    el.style.opacity=1;
+    (function fade(){ el.style.opacity-=0.08; if(el.style.opacity<=0){el.style.display="none"} else requestAnimationFrame(fade) })();
+  }
+  // Primary signals from Shiny
+  document.addEventListener("shiny:connected", fadeOut, { once:true });
+  document.addEventListener("shiny:idle",      fadeOut, { once:true });
+  // Fallback: hide once #root populates
+  const root=document.getElementById("root");
+  if(root && "MutationObserver" in window){
+    const mo=new MutationObserver(()=>{ if(root.childElementCount>0){ mo.disconnect(); fadeOut(); }});
+    mo.observe(root,{childList:true});
+  }
+  // Last resort timeout
+  setTimeout(fadeOut, 12000);
+})();
+</script>
+<!-- End custom splash overlay -->

@@ -12,17 +12,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Set up Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
-      # Install dependencies (msaexplorer, pdoc, and shiny live)
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
@@ -30,32 +27,45 @@ jobs:
           pip install pdoc
           pip install shinylive
 
-      # Export the Shiny app as a static site
       - name: Export Shiny App
         run: |
           shinylive export ./ site/
+          # Change title
+          sed -i 's|<title>.*</title>|<title>MSAExplorer</title>|' site/index.html
+          # Insert favicon link right after </title>
+          awk '1;/<\/title>/{print "  <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\">"}' site/index.html > site/index.tmp && mv site/index.tmp site/index.html
 
-      # Generate API documentation with pdoc
+      - name: Inject splash overlay from file
+        shell: bash
+        run: |
+          set -euo pipefail
+          INDEX=site/index.html
+          SPLASH=deploy/splash.html
+          if [ ! -f "$SPLASH" ]; then
+            echo "Splash file not found at $SPLASH"; exit 1
+          fi
+          # Avoid double insertion if rerun
+          if grep -q 'id="splash"' "$INDEX"; then
+            echo "Splash already present; skipping."
+          else
+            # Insert right after the opening <body> tag
+            sed -i '/<body[^>]*>/r '"$SPLASH"'' "$INDEX"
+          fi
+
       - name: Generate API Docs
         run: |
-          # Adjust the command below with your package name and desired options.
           pdoc ./msaexplorer --logo 'https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/87c0ae2e2066d6e5146082c65ee8b61f23decbea/app_src/img/logo.svg' -o docs/
 
-      # Prepare the deployment directory
       - name: Prepare Deployment Directory
         run: |
-          # Remove any previous deployment folder
           rm -rf public
-          mkdir public
-          # Create subdirectories for the Shiny app and the API docs.
-          mkdir -p public/app
-          mkdir -p public/docs
-          # Move the entire exported Shiny app (with its directory structure) into public/app.
+          mkdir -p public/app public/docs
           cp -r site/* public/app/
-          # Move the pdoc-generated docs into public/docs.
           cp -r docs/* public/docs/
+          # Ensure favicon is at site root (since index references /favicon.svg)
+          if [ -f favicon.svg ]; then cp favicon.svg public/; fi
+          if [ -f favicon.ico ]; then cp favicon.ico public/; fi
 
-      # Upload the combined public directory as an artifact for GitHub Pages deployment
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
