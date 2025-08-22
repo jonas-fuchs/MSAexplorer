@@ -33,7 +33,7 @@ jobs:
           # Change title
           sed -i 's|<title>.*</title>|<title>MSAexplorer</title>|' site/index.html
           # Insert favicon link right after </title>
-          awk '1;/<\/title>/{print "  <link rel=\"icon\" type=\"image/svg+xml\" href=\"../favicon.svg\">"}' site/index.html > site/index.tmp && mv site/index.tmp site/index.html
+          sed -i '/<\/title>/a\  <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/0a7065e91493912a900fe794064c5add3e7c746a/app_src/www/img/favicon.svg">' site/index.html
       - name: Inject splash overlay from file
         shell: bash
         run: |
@@ -56,8 +56,6 @@ jobs:
           mkdir -p public/app public/docs
           cp -r site/* public/app/
           cp -r docs/* public/docs/
-          # Ensure favicon is at site root (since index references /favicon.svg)
-          if [ -f favicon.svg ]; then cp favicon.svg public/; fi
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
