@@ -90,8 +90,21 @@
     el.style.opacity=1;
     (function fade(){ el.style.opacity-=0.08; if(el.style.opacity<=0){el.style.display="none"} else requestAnimationFrame(fade) })();
   }
-  document.addEventListener("shiny:connected", fadeOut, { once:true });
-  document.addEventListener("shiny:idle", fadeOut, { once:true });
+  document.addEventListener("shiny:connected", () => scheduleHide(), { once:true });
+  document.addEventListener("shiny:idle", () => scheduleHide());
+  document.addEventListener("shiny:busy", () => cancelHide());
+  document.addEventListener("DOMContentLoaded", () => {
+  if (window.Shiny && Shiny.addCustomMessageHandler) {
+    Shiny.addCustomMessageHandler("splash", msg => {
+      if (msg && msg.op === "hide") {
+        const el = document.getElementById("splash");
+        if (!el) return;
+        el.style.opacity = 1;
+        (function fade(){ el.style.opacity -= 0.08; if (el.style.opacity <= 0) el.style.display = "none"; else requestAnimationFrame(fade); })();
+      }
+    });
+  }
+});
   const root=document.getElementById("root");
   if(root && "MutationObserver" in window){
     const mo=new MutationObserver(()=>{ if(root.childElementCount>0){ mo.disconnect(); fadeOut(); }});

@@ -45,11 +45,25 @@ def server(input, output, session):
     reactive.annotation = reactive.Value(None)
     updating_from_slider = False
     updating_from_numeric = False
+    started = reactive.Value(False)
 
     # remove ui for calculations for static websites due to lack of support
     # of pytrimal and pyfamsa from pyodoide
     if not pyfamsa_check:
         ui.remove_ui(selector="div:has(> #processing_options)")
+
+    # this is only important for the static website and the custom splash screen to know when to hide it
+    @render.ui
+    def _boot():
+        if not started.get():
+            started.set(True)
+            # Pre-import heavy libs so the first render doesn't trigger busy again
+            import numpy  # noqa: F401
+            import plotly  # noqa: F401
+            # Signal the splash to hide only now:
+            session.send_custom_message("splash", {"op": "hide"})
+        return ""  # nothing visible
+
 
     def prepare_inputs():
         """
