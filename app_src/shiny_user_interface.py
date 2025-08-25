@@ -48,7 +48,8 @@ def shiny_ui(css_file, js_file):
             ),
             title=ui.a(
                 ui.img(src='img/logo.svg', height='50px'),
-                href='https://github.com/jonas-fuchs/MSAexplorer'
+                href='https://github.com/jonas-fuchs/MSAexplorer',
+                target="_blank"
             )
         )
     )
