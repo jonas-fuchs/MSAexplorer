@@ -110,7 +110,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 color=inputs['feature_color'],
                 direction_marker_size=inputs['strand_marker_size'],
                 show_x_label=True
-        ) if inputs['annotation'] == 'Annotation' and inputs['annotation_file'] else draw.orf_plot(
+        ) if (inputs['annotation'] == 'Annotation' and inputs['annotation_file']) or (inputs['annotation'] == 'Annotation' and inputs['example_alignment']) else draw.orf_plot(
                 aln, ax=ax,
                 cmap=inputs['color_mapping'],
                 non_overlapping_orfs=inputs['non_overlapping'],

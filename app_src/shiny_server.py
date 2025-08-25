@@ -6,6 +6,7 @@ This module creates the Server logic
 import tempfile
 from typing import Callable, Dict
 import asyncio
+import urllib.request
 
 # libs
 import numpy as np
@@ -79,6 +80,7 @@ def server(input, output, session):
         inputs['alignment_type'] = input.alignment_type()
         inputs['annotation'] = input.annotation()
         inputs['stat_type'] = input.stat_type()
+        inputs['example_alignment'] = input.example_alignment()
 
         # STATISTICS (first plot)
         if inputs['stat_type'] not in ['Off', 'sequence logo']:
@@ -184,7 +186,11 @@ def server(input, output, session):
         """
         Read in an annotation and update the ui accordingly
         """
-        ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
+        try:
+            ann = explore.Annotation(reactive.alignment.get(), annotation_file[0]['datapath'])
+        # when loading example data there is no datapath
+        except TypeError:
+            ann = explore.Annotation(reactive.alignment.get(), annotation_file)
         reactive.annotation.set(ann)
 
         # update features to display
@@ -488,6 +494,24 @@ def server(input, output, session):
             finalize_loaded_alignment(aln, annotation_file)
         except Exception as e:
             show_alignment_error(e, alignment_file)
+
+    @reactive.Effect
+    @reactive.event(input.example_alignment)
+    def load_example(alignment_file=True):
+        with urllib.request.urlopen('https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/refs/heads/master/example_alignments/DNA.fasta') as resp:
+            alignment_file = resp.read().decode("utf-8")
+        with urllib.request.urlopen('https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/refs/heads/master/example_alignments/DNA_RNA.gb') as resp:
+            annotation_file = resp.read().decode("utf-8")
+        try:
+            aln = explore.MSA(alignment_file)
+            finalize_loaded_alignment(aln, annotation_file)
+            ui.notification_show("Example alignment and annotation file loaded.")
+        except ValueError as e:
+            print(e)
+            ui.notification_show(ui.tags.div(
+                f'Error: {e}',
+                style="color: red; font-weight: bold;"
+            ), duration=10)
 
     @reactive.Effect
     @reactive.event(input.annotation_file)

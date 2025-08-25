@@ -37,6 +37,28 @@ h6 {
     margin-bottom: 4px;
 }
 
+.example-data-button {
+            background-color: var(--primary-color);   /* Bootstrap blue */
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.25s ease, transform 0.1s ease;
+        }
+
+.example-data-button:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.05);
+}
+
+.example-data-button:active {
+    background-color: var(--secondary-color);
+    transform: scale(0.97);
+}
+
 .control-label {
     font-size: var(--main-size);
 }
@@ -151,11 +173,11 @@ button:hover {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.action-button:hover img {
+.open-sidebar-button:hover img {
     filter: brightness(1) invert(1);
 }
 
-.action-button {
+.open-sidebar-button {
     position: relative;
     border: none;
     background-color: transparent;
