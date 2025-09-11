@@ -37,24 +37,24 @@ h6 {
     margin-bottom: 4px;
 }
 
-.example-data-button {
-            background-color: var(--primary-color);   /* Bootstrap blue */
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.25s ease, transform 0.1s ease;
-        }
+.example-data-button, .bslib-task-button {
+    background-color: var(--primary-color);   /* Bootstrap blue */
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.25s ease, transform 0.1s ease;
+}
 
-.example-data-button:hover {
+.example-data-button:hover, .bslib-task-button:hover {
     background-color: var(--secondary-color);
     transform: scale(1.05);
 }
 
-.example-data-button:active {
+.example-data-button:active, .bslib-task-button:active {
     background-color: var(--secondary-color);
     transform: scale(0.97);
 }
@@ -160,7 +160,7 @@ h6 {
 input, select, button {
     box-sizing: border-box;
     border: 1px solid var(--light-border);
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.9rem;
     background-color: var(--light-bg);
     color: #333;
