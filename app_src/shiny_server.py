@@ -502,11 +502,11 @@ def server(input, output, session):
     @reactive.Effect
     @reactive.event(input.example_alignment)
     def load_example(alignment_file=True):
-        with urllib.request.urlopen('https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/refs/heads/master/example_alignments/DNA.fasta') as resp:
-            alignment_file = resp.read().decode("utf-8")
-        with urllib.request.urlopen('https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/refs/heads/master/example_alignments/DNA_RNA.gb') as resp:
-            annotation_file = resp.read().decode("utf-8")
         try:
+            with urllib.request.urlopen('https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/refs/heads/master/example_alignments/DNA.fasta') as resp:
+                alignment_file = resp.read().decode("utf-8")
+            with urllib.request.urlopen('https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/refs/heads/master/example_alignments/DNA_RNA.gb') as resp:
+                annotation_file = resp.read().decode("utf-8")
             aln = explore.MSA(alignment_file)
             finalize_loaded_alignment(aln, annotation_file)
             ui.notification_show("Example alignment and annotation file loaded.")
