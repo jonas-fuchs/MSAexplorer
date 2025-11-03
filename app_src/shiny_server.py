@@ -49,8 +49,12 @@ def server(input, output, session):
 
     # remove ui for calculations for static websites due to lack of support
     # of pytrimal and pyfamsa from pyodoide
-    if not pyfamsa_check:
+    if not pyfamsa_check and pytrimal_check:
         ui.remove_ui(selector="div:has(> #processing_options)")
+    if not pytrimal_check:
+        ui.remove_ui(selector="#trim")
+    if not pyfamsa_check:
+        ui.remove_ui(selector="#align")
 
 
     def prepare_inputs():
