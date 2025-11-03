@@ -31,14 +31,16 @@ def parse_args(sysargs):
         '--host',
         type=str,
         default='127.0.0.1',
-        help='The address that the app should listen on.'
+        metavar='ip',
+        help='The address that the app should listen on. Defaults to 127.0.0.1'
     )
 
     parser.add_argument(
         '--port',
         type=int,
         default=8080,
-        help='The port that the app should listen on. Set to 0 to use a random port.'
+        metavar='port',
+        help='The port that the app should listen on. Set to 0 to use a random port. Defaults to 8080.'
     )
 
     parser.add_argument(
