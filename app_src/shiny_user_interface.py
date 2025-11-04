@@ -9,13 +9,6 @@ from shinywidgets import output_widget
 from matplotlib import colormaps
 
 
-try:
-    from pyfamsa import Aligner, Sequence
-    pyfamsa_installed = True
-except ImportError:
-    pyfamsa_installed = False
-
-
 def shiny_ui(css_file, js_file):
     """
     main UI generation
@@ -214,7 +207,7 @@ def _upload_tab():
         upload,
         process,
         download,
-    ) if pyfamsa_installed else ui.layout_columns(upload, download)
+    )
 
     return ui.nav_panel(
         ' UPLOAD/DOWNLOAD',
