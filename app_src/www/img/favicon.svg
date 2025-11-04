@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <rect width="16" height="16" rx="2" fill="#f4f4f4"/>
+  <!-- Alignment bars -->
+  <rect x="2" y="3" width="12" height="2" fill="#4a90e2" rx="1"/>
+  <rect x="2" y="7" width="9" height="2" fill="#50e3c2" rx="1"/>
+  <rect x="2" y="11" width="7" height="2" fill="#2f60e2" rx="1"/>
+  <!-- Magnifying glass (explorer) -->
+  <circle cx="11.5" cy="11.5" r="2.5" stroke="#333" stroke-width="1.2" fill="none"/>
+  <line x1="13" y1="13" x2="15" y2="15" stroke="#333" stroke-width="1.2"/>
+</svg>

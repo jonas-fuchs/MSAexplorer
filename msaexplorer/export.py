@@ -187,6 +187,7 @@ def orf(orf_dict: dict, chrom: str, path: str | None = None) -> str | ValueError
     Exports the ORF dictionary to a .bed file.
 
     :param orf_dict: Dictionary containing ORF information.
+    :param chrom: CHROM identifier for bed format.
     :param path: Path to the output .bed file.
     :param : Reference name
     """

@@ -23,6 +23,16 @@ from numpy import ndarray
 # msaexplorer
 from msaexplorer import config
 
+
+def _get_line_iterator(source):
+    """
+    allow reading in both raw string or paths
+    """
+    if isinstance(source, str) and os.path.exists(source):
+        return open(source, 'r')
+    else:
+        return io.StringIO(source)
+
 class MSA:
     """
     An alignment class that allows computation of several stats
@@ -50,15 +60,6 @@ class MSA:
         :return: dictionary with ids as keys and sequences as values
         """
 
-        def get_line_iterator(source):
-            """
-            allow reading in both raw string or paths
-            """
-            if isinstance(source, str) and os.path.exists(source):
-                return open(source, 'r')
-            else:
-                return io.StringIO(source)
-
         def add_seq(aln: dict, sequence_id: str, seq_list: list):
             """
             Add a complete sequence and check for non-allowed chars
@@ -81,7 +82,7 @@ class MSA:
         alignment, seq_lines = {}, []
         seq_id = None
 
-        with get_line_iterator(file_path) as file:
+        with _get_line_iterator(file_path) as file:
             for i, line in enumerate(file):
                 line = line.strip()
                 # initial check for fasta format
@@ -1198,7 +1199,7 @@ class Annotation:
         and the MSA have to partly match.
 
         :param aln: MSA class
-        :param annotation_path: path to annotation file (gb, bed, gff).
+        :param annotation_path: path to annotation file (gb, bed, gff) or raw string
 
         """
 
@@ -1234,7 +1235,7 @@ class Annotation:
             :raises ValueError: If the file type cannot be determined.
             """
 
-            with open(file_path, 'r') as file:
+            with _get_line_iterator(file_path) as file:
                 for line in file:
                     # skip empty lines and comments
                     if not line.strip() or line.startswith('#'):
@@ -1303,7 +1304,7 @@ class Annotation:
 
 
             records = {}
-            with open(file_path, "r") as file:
+            with _get_line_iterator(file_path) as file:
                 record = None
                 in_features = False
                 counter_dict = {}
@@ -1372,7 +1373,7 @@ class Annotation:
 
             """
             records = {}
-            with open(file_path, 'r') as file:
+            with _get_line_iterator(file_path) as file:
                 previous_id, previous_feature = None, None
                 for line in file:
                     if line.startswith('#') or not line.strip():
@@ -1419,7 +1420,7 @@ class Annotation:
 
             """
             records = {}
-            with open(file_path, 'r') as file:
+            with _get_line_iterator(file_path) as file:
                 for line in file:
                     if line.startswith('#') or not line.strip():
                         continue

@@ -9,13 +9,6 @@ from shinywidgets import output_widget
 from matplotlib import colormaps
 
 
-try:
-    from pyfamsa import Aligner, Sequence
-    pyfamsa_installed = True
-except ImportError:
-    pyfamsa_installed = False
-
-
 def shiny_ui(css_file, js_file):
     """
     main UI generation
@@ -27,6 +20,12 @@ def shiny_ui(css_file, js_file):
         # Custom sidebar
         ui.div(id="overlay-bg", onclick="toggleSidebar()"),
         _custom_sidebar(),
+        ui.tags.head(
+            ui.tags.title("MSAexplorer")
+        ),
+        ui.head_content(
+            ui.tags.link(rel="icon", type="image/svg+xml", href="img/favicon.svg")
+        ),
         # Main side
         ui.navset_bar(
             _upload_tab(),
@@ -37,11 +36,13 @@ def shiny_ui(css_file, js_file):
                 ui.input_action_button(
                 "open_sidebar", "PLOTTING SETTINGS", onclick="toggleSidebar()",
                     icon=ui.HTML('<img src="img/settings.svg" alt="Setting Icon" style="height: 1em; vertical-align: middle">'),
+                    class_='open-sidebar-button'
                 )
             ),
             title=ui.a(
                 ui.img(src='img/logo.svg', height='50px'),
-                href='https://github.com/jonas-fuchs/MSAexplorer'
+                href='https://github.com/jonas-fuchs/MSAexplorer',
+                target="_blank"
             )
         )
     )
@@ -153,60 +154,60 @@ def _upload_tab():
     """
 
     upload = ui.card(
-                    ui.card_header(ui.h6('Upload files:')),
-                        ui.input_file('alignment_file', 'Sequences or alignment:', multiple=False,
-                                      accept=['.fa', '.fasta', '.aln']),
-                        ui.input_file('annotation_file','Optional Annotation file:', multiple=False,
-                                      accept=['.gff', '.gff3', '.bed', '.gb']),
-                )
+        ui.card_header(ui.h6('Upload files:')),
+        ui.input_file('alignment_file', None, multiple=False, button_label='alignment', accept=['.fa', '.fasta', '.aln']),
+        ui.input_file('annotation_file',None, multiple=False, button_label='optional annotation', accept=['.gff', '.gff3', '.bed', '.gb', '.genbank']),
+        ui.input_action_button('example_alignment', "Example", class_='example-data-button'),
+
+    )
 
     process = ui.card(
-                    ui.card_header(
-                        ui.h6('Process files:'),
-                        ui.popover(
-                            ui.span(
-                                ui.HTML(
-                                    '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
-                            ),
-                            ui.h6('FAMSA2 options'),
-                            ui.input_numeric('n_threads', label='number of threads', min=1, value=os.cpu_count(), max=os.cpu_count()),
-                            ui.input_selectize('guide_tree', label='Guide tree', choices=['MST + Prim single linkage', 'SLINK single linkage', 'UPGMA', 'neighbour joining']),
-                            ui.input_switch('refine', 'Refine alignment?', value=False),
-                            ui.input_switch('keep_duplicates', 'Keep duplicates?', value=False),
-                            ui.h6('TrimAI options'),
-                            ui.input_selectize('trim_method', label='Trim mode', choices=['strict', 'strictplus', 'gappyout', 'nogaps', 'noallgaps', 'automated1', 'noduplicateseqs']),
-                        )
-                    ),
-                    ui.input_task_button("align", 'align with FAMSA2'),
-                    ui.input_task_button("trim", 'trim with trimAI'),
-                    ui.input_action_button("cancel", "Cancel"),
-                    id='processing_options',
-                )
+        ui.card_header(
+            ui.h6('Process files:'),
+            ui.popover(
+                ui.span(
+                    ui.HTML(
+                        '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
+                ),
+                ui.h6('FAMSA2 options'),
+                ui.input_numeric('n_threads', label='number of threads', min=1, value=os.cpu_count(), max=os.cpu_count()),
+                ui.input_selectize('guide_tree', label='Guide tree', choices=['MST + Prim single linkage', 'SLINK single linkage', 'UPGMA', 'neighbour joining']),
+                ui.input_switch('refine', 'Refine alignment?', value=False),
+                ui.input_switch('keep_duplicates', 'Keep duplicates?', value=False),
+                ui.h6('TrimAI options'),
+                ui.input_selectize('trim_method', label='Trim mode', choices=['strict', 'strictplus', 'gappyout', 'nogaps', 'noallgaps', 'automated1', 'noduplicateseqs']),
+            )
+        ),
+        ui.input_task_button("align", 'align with FAMSA2'),
+        ui.input_task_button("trim", 'trim with trimAI'),
+        ui.input_action_button("cancel", "Cancel"),
+        id='processing_options',
+    )
     download = ui.card(
-                    ui.card_header(
-                        ui.h6('Download files:'),
-                               ui.popover(
-                                   ui.span(
-                                       ui.HTML(
-                                           '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
-                                   ),
-                                   ui.input_selectize('download_format', label='Format:', choices=[]),
-                            )
-                        ),
-                    ui.input_selectize('download_type', label='Choose:', choices=['alignment', 'SNPs', 'consensus']),
-                    ui.download_button(
-                        'download_stats',
-                        'Download',
-                        icon=ui.HTML(
-                            '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
-                    )
+        ui.card_header(
+            ui.h6('Download files:'),
+                   ui.popover(
+                       ui.span(
+                           ui.HTML(
+                               '<img src="img/gear.svg" alt="settings" style="height:16px; width:16px; position:absolute; top: 10px; right: 7px;">')
+                       ),
+                       ui.input_selectize('download_format', label='Format:', choices=[]),
                 )
+            ),
+        ui.input_selectize('download_type', label='Choose:', choices=['alignment', 'SNPs', 'consensus']),
+        ui.download_button(
+            'download_stats',
+            'Download',
+            icon=ui.HTML(
+                '<img src="img/download.svg" alt="download icon" style="height:16px; width:16px;">')
+        )
+    )
 
     cols = ui.layout_columns(
         upload,
         process,
         download,
-    ) if pyfamsa_installed else ui.layout_columns(upload, download)
+    )
 
     return ui.nav_panel(
         ' UPLOAD/DOWNLOAD',
@@ -232,8 +233,7 @@ def _upload_tab():
                 )
             ),
             ui.p(
-                'MSAexplorer makes use of the pyfamsa and pytrimal which is a python wrapper for FAMSA2 and trimAI, respectively.'
-                'Currently this works only on non-static websites (e.g. not on my github page). Run MSAexplorer yourself:'
+                'MSAexplorer makes use of the pyfamsa and pytrimal which is a python wrapper for FAMSA2 and trimAI, respectively. Currently this works only on non-static websites (e.g. not on my github page).'
             ),
             ui.p('Run MSAexplorer yourself:'),
             ui.HTML("""
@@ -245,7 +245,7 @@ def _upload_tab():
                 overflow-x: auto;
                 max-width: 100%;
                 text-align: left;
-                font-family: monospace;">pip install msaexplorer[process]\nmsaexplorer --run</pre>
+                font-family: monospace;">pip install msaexplorer[app-plus]\nmsaexplorer --run</pre>
                 </div>
             """),
             ui.p(
