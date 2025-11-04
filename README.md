@@ -72,15 +72,16 @@ pip install .[app-plus]
 ## Features of MSAexplorer as an app
 
 ```
-usage:  msaexplorer --run
+usage:  msaexplorer --run --port (optional) --host (optional)
 
 The MSAexplorer app is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs).
 
 options:
-  -h, --help  show this help message and exit
-  --run       Run the MSAexplorer app
-  --version   show program version and exit
-  
+  -h, --help   show this help message and exit
+  --run        Start the MSAexplorer app
+  --host ip    The address that the app should listen on. Defaults to 127.0.0.1
+  --port port  The port that the app should listen on. Set to 0 to use a random port. Defaults to 8080.
+  --version    show program's version number and exit  
 ```
 
 - :white_check_mark: The app runs solely in your browser. No need to install anything, just might take a few seconds to load.

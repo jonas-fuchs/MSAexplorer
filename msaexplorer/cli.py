@@ -18,7 +18,7 @@ def parse_args(sysargs):
     """
     parser = argparse.ArgumentParser(
         description='The MSAexplorer app is an interactive visualization tool designed for exploring multiple sequence alignments (MSAs).',
-        usage='''\tmsaexplorer --run'''
+        usage='''\tmsaexplorer --run --port (optional) --host (optional)'''
     )
 
     parser.add_argument(
