@@ -91,7 +91,10 @@ def server(input, output, session):
         elif inputs['stat_type'] == 'sequence logo':
             inputs['plot_1_size'] = input.plot_1_size()
             inputs['logo_coloring'] = input.logo_coloring()
-            relative_msa_width = window_width / (inputs['zoom_range'][1]-inputs['zoom_range'][0])
+            try:
+                relative_msa_width = window_width / (inputs['zoom_range'][1] - inputs['zoom_range'][0])
+            except ZeroDivisionError:
+                relative_msa_width = 1
             if relative_msa_width >= 11:
                 inputs['logo_type'] = 'logo'
             else:
@@ -118,7 +121,10 @@ def server(input, output, session):
             if inputs['annotation'] != 'Off':
                 complete_size += input.plot_3_size()
             relative_msa_height = input.plot_2_size() * increase_height / complete_size * window_height / len(aln.alignment)
-            relative_msa_width = window_width / (inputs['zoom_range'][1]-inputs['zoom_range'][0])
+            try:
+                relative_msa_width = window_width / (inputs['zoom_range'][1] - inputs['zoom_range'][0])
+            except ZeroDivisionError:
+                relative_msa_width = 1
             # and then decide how to set the show sequence input
             if relative_msa_width >= 11 and relative_msa_height >= 18:
                 inputs['show_sequence'] = input.show_sequence()
