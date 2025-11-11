@@ -8,6 +8,17 @@ from shiny import ui
 from shinywidgets import output_widget
 from matplotlib import colormaps
 
+try:
+    from pyfamsa import Aligner, Sequence
+    pyfamsa_check = True
+except ImportError:
+    pyfamsa_check = False
+
+try:
+    from pytrimal import Alignment, AutomaticTrimmer
+    pytrimal_check = True
+except ImportError:
+    pytrimal_check = False
 
 def shiny_ui(css_file, js_file):
     """
@@ -203,11 +214,12 @@ def _upload_tab():
         )
     )
 
+    # generate the layout depending on the availability of pyfamsa and pytrimal
     cols = ui.layout_columns(
         upload,
         process,
         download,
-    )
+    ) if pyfamsa_check or pytrimal_check else ui.layout_columns(upload, download)
 
     return ui.nav_panel(
         ' UPLOAD/DOWNLOAD',

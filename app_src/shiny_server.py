@@ -47,11 +47,8 @@ def server(input, output, session):
     updating_from_slider = False
     updating_from_numeric = False
 
-    # remove ui for calculations for static websites due to lack of support
-    # of pytrimal and pyfamsa from pyodoide
-    if not pyfamsa_check and not pytrimal_check:
-        ui.remove_ui(selector="div:has(> #processing_options)")
-    elif not pytrimal_check:
+    # remove either pytrimal button or pyfamsa button if not installed
+    if not pytrimal_check:
         ui.remove_ui(selector="#trim")
     elif not pyfamsa_check:
         ui.remove_ui(selector="#align")
@@ -367,8 +364,8 @@ def server(input, output, session):
     @reactive.extended_task
     async def trimming(aln, method):
         """
-        Asynchronous task handler for aligning sequences. This function binds a button
-        action to a reactive extended task for sequence alignment.
+        Asynchronous task handler for trimming sequences. This function binds a button
+        action to a reactive extended task for sequence trimming.
         """
         return await asyncio.to_thread(trim_sequences, aln, method)
 
@@ -554,7 +551,10 @@ def server(input, output, session):
         Update the zoom boxes when the slider changes.
         """
         nonlocal updating_from_slider
-        if updating_from_numeric:
+        # do not update if we are already updating from a slider change or from a numeric change.
+        # importantly, this now includes updating from slider check which prohibits a too early update
+        # of when trying to update the zoom again via the slider before the previous plot was generated.
+        if updating_from_numeric or updating_from_slider:
             return
         updating_from_slider = True
         zoom_range = input.zoom_range()
@@ -568,7 +568,7 @@ def server(input, output, session):
         Update the zoom slider when the zoom input changes.
         """
         nonlocal updating_from_numeric
-        if updating_from_slider:
+        if updating_from_numeric or updating_from_slider:
             return
         updating_from_numeric = True
         start, end = input.zoom_start(), input.zoom_end()
