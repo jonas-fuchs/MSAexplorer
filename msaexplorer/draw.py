@@ -279,7 +279,7 @@ def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str, always_t
         x_text += 1
 
 
-def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
+def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_title: bool = True, show_identity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', identical_char_color: str = 'lightgrey', different_char_color: str = 'peru', mask_color: str = 'dimgrey', ambiguity_color: str = 'black', show_mask:bool = True, show_gaps:bool = True, fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False, color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int]= (1, 1)):
     """
     Generates an identity alignment overview plot.
     :param aln: alignment MSA class or path
@@ -290,12 +290,16 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
     :param show_sequence_all: whether to show all sequences - zoom in to avoid plotting issues
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
+    :param identical_char_color: color for identical nucleotides/aminoacids
+    :param different_char_color: color for different nucleotides/aminoacids
+    :param mask_color: color for masked nucleotides/aminoacids
+    :param ambiguity_color: color for ambiguous nucleotides/aminoacids
     :param show_mask: whether to show N or X chars otherwise it will be shown as match or mismatch
     :param show_gaps: whether to show gaps otherwise it will be shown as match or mismatch
     :param fancy_gaps: show gaps with a small black bar
     :param show_mismatches: whether to show mismatches otherwise it will be shown as match
     :param show_ambiguities: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
-    :param color_scheme: color mismatching chars with their unique color. Options for DNA/RNA are: standard, purine_pyrimidine, strong_weak; and for AS: standard, clustal, zappo, hydrophobicity
+    :param color_scheme: color mismatching chars with their unique color. Options for DNA/RNA are: standard, purine_pyrimidine, strong_weak; and for AS: standard, clustal, zappo, hydrophobicity. Will overwrite different_char_color.
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
@@ -320,6 +324,23 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
         elif aln.aln_type in ['DNA', 'RNA'] and color_scheme not in ['standard', 'purine_pyrimidine', 'strong_weak']:
             raise ValueError(f'{color_scheme} is not a supported coloring scheme for {aln.aln_type} alignments. Supported are: standard, purine_pyrimidine, strong_weak')
 
+    # sanity check for colors
+    for base_color in [identical_char_color, different_char_color, mask_color, ambiguity_color]:
+        if not is_color_like(base_color):
+            raise ValueError(f'{base_color} is not a color')
+
+    # basic color mapping
+    aln_colors = {
+        0: {'type': 'identical',
+            'color': identical_char_color},
+        -1: {'type': 'different',
+             'color': different_char_color},
+        -2: {'type': 'mask',
+             'color': mask_color},
+        -3: {'type': 'ambiguity',
+             'color': ambiguity_color}
+    }
+
     # Both options for gaps work hand in hand
     if fancy_gaps:
         show_gaps = True
@@ -327,9 +348,7 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
     # Determine zoom
     zoom = (0, aln.length) if aln.zoom is None else aln.zoom
 
-    # Set up color mapping and identity values
-    aln_colors = config.IDENTITY_COLORS.copy()
-    identity_values = [-1, -2, -3]  # -1 = mismatch, -2 = mask, -3 ambiguity
+    identity_values = list(aln_colors.keys())[1:]  # omit identity value - 0 (no stretch will be created)
     if color_scheme is not None:
         colors_to_extend = config.CHAR_COLORS[aln.aln_type][color_scheme]
         identity_values += [x + 1 for x in range(len(colors_to_extend))] # x+1 is needed to allow correct mapping

@@ -91,17 +91,16 @@ def _custom_sidebar():
             ui.h6('Alignment settings'),
             ui.row(
                 ui.column(
-                    4,
+                    3,
                     ui.input_switch('show_gaps', 'Gaps', value=True),
                     ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
                     ui.input_switch('show_legend', 'Legend', value=True),
                     ui.input_switch('show_mask', 'Show mask', value=True),
                     ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
-                    ui.input_switch('seq_names', 'show names', value=False),
-
+                    ui.input_switch('seq_names', 'show names', value=False)
                 ),
                 ui.column(
-                    4,
+                    3,
                 ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
                     ui.div(
                         ui.HTML(
@@ -118,11 +117,58 @@ def _custom_sidebar():
                     ui.input_switch('show_sequence_all', 'show all sequences', value=False),
                 ),
                 ui.column(
-                4,
+                3,
 
                     ui.input_selectize('matrix', 'Matrix', ['None']),
                     ui.input_selectize('matrix_color_mapping', 'Colormap Similarity', choices=list(colormaps.keys()), selected='PuBu_r'),
-                    ui.input_selectize('identity_coloring', 'Identity coloring', ['None', 'standard'], selected='None'),
+                    ui.input_selectize('char_coloring', 'Identity coloring', ['None', 'standard'], selected='None'),
+                ),
+                ui.column(
+                    3,
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="identical_char_color" style="font-size: 0.8rem; margin-bottom: 5px;">Identical sites:</label>
+                                <input type="color" id="identical_char_color" value="#d3d3d3" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="different_char_color" style="font-size: 0.8rem; margin-bottom: 5px;">Different sites:</label>
+                                <input type="color" id="different_char_color" value="#cd853f" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="mask_color" style="font-size: 0.8rem; margin-bottom: 5px;">Masked sites:</label>
+                                <input type="color" id="mask_color" value="#696969" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="ambiguity_color" style="font-size: 0.8rem; margin-bottom: 5px;">Ambiguity sites:</label>
+                                <input type="color" id="ambiguity_color" value="#000000" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
                 )
             ),
             ui.hr(),

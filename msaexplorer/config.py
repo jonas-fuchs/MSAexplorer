@@ -761,19 +761,6 @@ SUBS_MATRICES = {
         }
 }
 
-
-# basic color mapping
-IDENTITY_COLORS = {
-        0: {'type': 'identical',
-            'color': 'lightgrey'},
-        -1: {'type': 'different',
-            'color': 'peru'},
-        -2: {'type': 'mask',
-            'color': 'dimgrey'},
-        -3: {'type': 'ambiguity',
-            'color': 'black'}
-}
-
 # extended color mappings
 CHAR_COLORS = {
     'DNA': {

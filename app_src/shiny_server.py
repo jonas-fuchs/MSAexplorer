@@ -114,7 +114,14 @@ def server(input, output, session):
                 inputs['matrix'] = input.matrix()
                 inputs['matrix_color_mapping'] = input.matrix_color_mapping()
             elif inputs['alignment_type'] == 'identity':
-                inputs['identity_coloring'] = input.identity_coloring()
+                inputs['char_coloring'] = input.char_coloring()
+                if inputs['char_coloring'] == 'None':
+                    inputs['different_char_color'] = input.different_char_color()
+                else:
+                    inputs['different_char_color'] = 'peru'  # avoid unnecessary plot updates
+                inputs['identical_char_color'] = input.identical_char_color()
+                inputs['mask_color'] = input.mask_color()
+                inputs['ambiguity_color'] = input.ambiguity_color()
             # determine if it makes sense to show the sequence or sequence names
             # therefore figure out if there are enough chars/size that sequence fits in there
             complete_size = input.plot_2_size()
@@ -334,7 +341,7 @@ def server(input, output, session):
                                 choices=['alignment','SNPs', 'consensus', 'character frequencies', '% recovery', 'entropy',
                                          'coverage', 'mean identity', 'mean similarity'])
             ui.update_selectize('annotation', choices=['Off', 'SNPs'])
-            ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
+            ui.update_selectize('char_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
             ui.update_selectize('logo_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
             ui.update_selectize('snp_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
         else:
@@ -346,7 +353,7 @@ def server(input, output, session):
                                                           'entropy', 'coverage', 'mean identity', 'mean similarity',
                                                           'ts tv score'])
             ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
-            ui.update_selectize('identity_coloring',
+            ui.update_selectize('char_coloring',
                                 choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
             ui.update_selectize('logo_coloring', choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
             ui.update_selectize('snp_coloring', choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
