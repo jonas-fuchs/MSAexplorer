@@ -48,6 +48,7 @@ def server(input, output, session):
     updating_from_numeric = False
 
     # remove either pytrimal button or pyfamsa button if not installed
+    # if both are missing the column will not created -> see shiny_user_interface.py
     if not pytrimal_check:
         ui.remove_ui(selector="#trim")
     elif not pyfamsa_check:
@@ -109,10 +110,11 @@ def server(input, output, session):
             inputs['show_gaps'] = input.show_gaps()
             inputs['show_legend'] = input.show_legend()
             inputs['show_ambiguities'] = input.show_ambiguities()
-            inputs['identity_coloring'] = input.identity_coloring()
             if inputs['alignment_type'] == 'similarity':
                 inputs['matrix'] = input.matrix()
                 inputs['matrix_color_mapping'] = input.matrix_color_mapping()
+            elif inputs['alignment_type'] == 'identity':
+                inputs['identity_coloring'] = input.identity_coloring()
             # determine if it makes sense to show the sequence or sequence names
             # therefore figure out if there are enough chars/size that sequence fits in there
             complete_size = input.plot_2_size()

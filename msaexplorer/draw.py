@@ -934,7 +934,6 @@ def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme
     matrix = aln.calc_position_matrix('IC') * aln.calc_position_matrix('PPM')
     letters_to_plot = list(config.CHAR_COLORS[aln.aln_type]['standard'].keys())[:-1]
 
-    #matrix = np.clip(matrix, 0, None)  # only positive values
     # plot
     if plot_type == 'logo':
         for pos in range(matrix.shape[1]):
