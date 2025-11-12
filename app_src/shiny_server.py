@@ -459,11 +459,8 @@ def server(input, output, session):
         it automatically responds to changes in the `align_sequences_task.result` value. It also
         handles any potential errors during the alignment loading process.
         """
-        if not pyfamsa_check:
-            return None
-        alignment_file = input.alignment_file()
-        annotation_file = input.annotation_file()
         try:
+            annotation_file = input.annotation_file()
             alignment_finished = aligning.result()
             ui.notification_show(ui.tags.div(
                 'Alignment was successful.',
@@ -472,7 +469,7 @@ def server(input, output, session):
             aln = explore.MSA(alignment_finished, reference_id=None, zoom_range=None)
             finalize_loaded_alignment(aln, annotation_file)
         except Exception as e:
-            show_alignment_error(e, alignment_file)
+            show_alignment_error(e, input.alignment_file())
 
     @reactive.Effect
     @reactive.event(trimming.result)
