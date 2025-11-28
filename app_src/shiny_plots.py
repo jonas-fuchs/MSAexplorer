@@ -89,7 +89,19 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 show_seq_names=inputs['seq_names'],
                 show_x_label=True if inputs['annotation'] == 'Off' else False,
                 show_legend=inputs['show_legend']
-        ) if inputs['alignment_type'] == 'identity' else draw.similarity_alignment(
+        ) if inputs['alignment_type'] == 'identity' else draw.alignment(
+                aln, ax=ax,
+                show_sequence_all=inputs['show_sequence_all'],
+                fancy_gaps=inputs['fancy_gaps'],
+                show_mask=inputs['show_mask'],
+                show_ambiguities=inputs['show_ambiguities'],
+                color_scheme=inputs['char_coloring'] if inputs['char_coloring'] != 'None' else None,
+                mask_color=inputs['mask_color'],
+                ambiguity_color=inputs['ambiguity_color'],
+                show_seq_names=inputs['seq_names'],
+                show_x_label=True if inputs['annotation'] == 'Off' else False,
+                show_legend=inputs['show_legend']
+        ) if inputs['alignment_type'] == 'normal' else draw.similarity_alignment(
                 aln, ax=ax,
                 show_similarity_sequence=inputs['show_sequence'],
                 show_sequence_all=inputs['show_sequence_all'],

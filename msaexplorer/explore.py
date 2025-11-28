@@ -724,6 +724,36 @@ class MSA:
 
         return reverse_complement_dict
 
+    def calc_numerical_alignment(self, encode_mask:bool=False, encode_ambiguities:bool=False):
+        """
+        Transforms the alignment to numerical values. Ambiguities are encoded as -3, mask as -2 and the
+        remaining chars with the idx + 1 of config.CHAR_COLORS[self.aln_type]['standard'].
+
+        :param encode_ambiguities: encode ambiguities as -2
+        :param encode_mask: encode mask with as -3
+        :returns matrix
+        """
+
+        aln = self.alignment
+        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        # ini matrix
+        numerical_matrix = np.full(sequences.shape, np.nan, dtype=float)
+        # first encode mask
+        if encode_mask:
+            if self.aln_type == 'AA':
+                is_n_or_x = np.isin(sequences, ['X'])
+            else:
+                is_n_or_x = np.isin(sequences, ['N'])
+            numerical_matrix[is_n_or_x] = -2
+        # next encode ambig chars
+        if encode_ambiguities:
+            numerical_matrix[np.isin(sequences, [key for key in config.AMBIG_CHARS[self.aln_type] if key not in ['N', 'X', '-']])] = -3
+        # next convert each char into their respective values
+        for idx, char in enumerate(config.CHAR_COLORS[self.aln_type]['standard']):
+            numerical_matrix[np.isin(sequences, [char])] = idx + 1
+
+        return numerical_matrix
+
     def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False, encode_each_mismatch_char:bool=False) -> np.ndarray:
         """
         Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
@@ -732,7 +762,7 @@ class MSA:
         :param encode_mask: encode mask with value=-2 --> also in the reference
         :param encode_gaps: encode gaps with np.nan --> also in the reference
         :param encode_ambiguities: encode ambiguities with value=-3
-        :param encode_each_mismatch_char: for each mismatch encode characters separately - these values represent the idx+1 values of config.DNA_colors, config.RNA_colors or config.AA_colors
+        :param encode_each_mismatch_char: for each mismatch encode characters separately - these values represent the idx+1 values of config.CHAR_COLORS[self.aln_type]['standard']
         :return: identity alignment
         """
 
@@ -798,14 +828,15 @@ class MSA:
         2. **Substitution Matrix**: The similarity between residues is determined using a substitution matrix, such as
            BLOSUM65 for amino acids or BLASTN for nucleotides. The matrix is loaded based on the alignment type.
         3. **Per-Column Normalization (optional)**:
-           - For each column in the alignment:
-             - The residue in the reference sequence is treated as the baseline for that column.
-             - The substitution scores for the reference residue are extracted from the substitution matrix.
-             - The scores are normalized to the range [0, 1] using the minimum and maximum possible scores for the reference
-               residue.
-           - This ensures that identical residues (or those with high similarity to the reference) have high scores,
-             while more dissimilar residues have lower scores.
+
+        For each column in the alignment:
+            - The residue in the reference sequence is treated as the baseline for that column.
+            - The substitution scores for the reference residue are extracted from the substitution matrix.
+            - The scores are normalized to the range [0, 1] using the minimum and maximum possible scores for the reference residue.
+            - This ensures that identical residues (or those with high similarity to the reference) have high scores,
+            while more dissimilar residues have lower scores.
         4. **Output**:
+
            - The normalized similarity scores are stored in a NumPy array.
            - Gaps (if any) or residues not present in the substitution matrix are encoded as `np.nan`.
 
@@ -876,7 +907,7 @@ class MSA:
         aln = self.alignment
         if matrix_type not in ['PFM', 'PPM', 'IC', 'PWM']:
             raise ValueError('Matrix_type must be PFM, PPM, IC or PWM.')
-        possible_chars = list(config.CHAR_COLORS[self.aln_type]['standard'].keys())[:-1]
+        possible_chars = list(config.CHAR_COLORS[self.aln_type]['standard'].keys())
         sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
 
         # calc position frequency matrix

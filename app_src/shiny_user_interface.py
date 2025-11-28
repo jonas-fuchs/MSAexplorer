@@ -121,7 +121,7 @@ def _custom_sidebar():
 
                     ui.input_selectize('matrix', 'Matrix', ['None']),
                     ui.input_selectize('matrix_color_mapping', 'Colormap Similarity', choices=list(colormaps.keys()), selected='PuBu_r'),
-                    ui.input_selectize('char_coloring', 'Identity coloring', ['None', 'standard'], selected='None'),
+                    ui.input_selectize('char_coloring', 'Alignment coloring', ['standard'], selected='standard'),
                 ),
                 ui.column(
                     3,
@@ -336,7 +336,7 @@ def _plot_tab():
                 ui.input_slider('increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1),
                 ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
                 ui.input_numeric('plot_1_size', 'Plot fraction', 1, min=1, max=200),
-                ui.input_selectize('alignment_type', ui.h6('Second plot'),['Off', 'identity', 'similarity'], selected='identity'),
+                ui.input_selectize('alignment_type', ui.h6('Second plot'),['Off', 'normal', 'identity', 'similarity'], selected='identity'),
                 ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
                 ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
                 ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),

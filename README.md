@@ -174,7 +174,7 @@ fig, ax = plt.subplots(nrows=2, height_ratios=[0.2, 2], sharex=False)
 
 draw.stat_plot(
     aln,
-    ax[0],
+    ax=ax[0],
     stat_type="entropy",
     rolling_average=1,
     line_color="indigo"
@@ -182,7 +182,7 @@ draw.stat_plot(
 
 draw.identity_alignment(
     aln,
-    ax[1],
+    ax=ax[1],
     show_gaps=False,
     show_mask=True,
     show_mismatches=True,

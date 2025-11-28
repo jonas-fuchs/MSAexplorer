@@ -769,21 +769,18 @@ CHAR_COLORS = {
             'T': '#F26D6D',
             'G': '#64A87B',
             'C': '#7095D1',
-            '-': 'silver'
         },
         'purine_pyrimidine': {
             'A': '#A18C6C',
             'G': '#A18C6C',
             'C': '#7994B1',
             'T': '#7994B1',
-            '-': 'silver'
         },
         'strong_weak': {
             'G': '#6B9E88',
             'C': '#6B9E88',
             'A': '#CC9C6B',
             'T': '#CC9C6B',
-            '-': 'silver'
         }
     },
     'RNA': {
@@ -792,21 +789,18 @@ CHAR_COLORS = {
             'U': '#F26D6D',
             'G': '#64A87B',
             'C': '#7095D1',
-            '-': 'silver'
         },
         'purine_pyrimidine': {
             'A': '#A18C6C',
             'G': '#A18C6C',
             'C': '#7994B1',
             'U': '#7994B1',
-            '-': 'silver'
         },
         'strong_weak': {
             'G': '#6B9E88',
             'C': '#6B9E88',
             'A': '#CC9C6B',
             'U': '#CC9C6B',
-            '-': 'silver'
         }
     },
     'AA': {
@@ -815,7 +809,6 @@ CHAR_COLORS = {
                 'F': '#B05B61', 'W': '#805F9C', 'S': '#D98B81', 'T': '#D9A86B', 'N': '#AB6D9F',
                 'Q': '#986DB2', 'Y': '#C76F61', 'C': '#D1B758', 'D': '#D96666', 'E': '#D96F5F',
                 'K': '#5D93C4', 'R': '#5DA5A4', 'H': '#916FA7', 'G': '#6FAF99', 'P': '#77A86F',
-                '-': 'silver'
         },
         'zappo': {
                 'I': '#b89494', 'L': '#b89494', 'V': '#b89494', 'A': '#b89494', 'M': '#b89494',
@@ -825,7 +818,6 @@ CHAR_COLORS = {
                 'S': '#5cbf67', 'T': '#5cbf67', 'N': '#5cbf67', 'Q': '#5cbf67',
                 'P': '#cc85cc', 'G': '#cc85cc',
                 'C': '#e0c64a',
-                '-': 'silver'
         },
         'hydrophobicity': {
                 'I': '#cc3333',
@@ -851,7 +843,6 @@ CHAR_COLORS = {
                 'N': '#374fb5',
                 'K': '#2d52bb',
                 'R': '#2d52bb',
-                '-': 'silver'
         },
         'clustal': {
                 'A': '#6e8cc2', 'I': '#6e8cc2', 'L': '#6e8cc2',
@@ -863,7 +854,6 @@ CHAR_COLORS = {
                 'P': '#c2c24d',
                 'C': '#c9aaaa',
                 'H': '#5db3b3', 'Y': '#5db3b3',
-                '-': '#f0f0f0'
         }
     }
 }
