@@ -219,13 +219,16 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
         """
         Creates the initial patch.
         """
+
+        fc = reference_color if seq_name == aln.reference_id and reference_color is not None else identity_color
+
         if show_gaps:
             # plot a rectangle for parts that do not have gaps
             for stretch in _find_stretches(row, True):
                 col.append(
                     patches.Rectangle(
                         (stretch[0] + zoom[0] - 0.5, y_position), stretch[1] - stretch[0] + 1, 0.8,
-                        facecolor=reference_color if seq_name == aln.reference_id else identity_color
+                        facecolor=fc
                     )
                 )
         # just plot a rectangle
@@ -233,7 +236,7 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
             col.append(
                 patches.Rectangle(
                     (zoom[0] - 0.5, y_position), zoom[1] - zoom[0], 0.8,
-                    facecolor=reference_color if seq_name == aln.reference_id else identity_color
+                    facecolor=fc
                 )
             )
 
@@ -997,7 +1000,7 @@ def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme
     aln, ax = _validate_input_parameters(aln, ax)
     # calc matrix
     matrix = aln.calc_position_matrix('IC') * aln.calc_position_matrix('PPM')
-    letters_to_plot = list(config.CHAR_COLORS[aln.aln_type]['standard'].keys())[:-1]
+    letters_to_plot = list(config.CHAR_COLORS[aln.aln_type]['standard'].keys())
 
     # plot
     if plot_type == 'logo':

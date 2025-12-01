@@ -106,11 +106,11 @@ def server(input, output, session):
             inputs['plot_2_size'] = input.plot_2_size()
             inputs['fancy_gaps'] = input.fancy_gaps()
             inputs['show_mask'] = input.show_mask()
-            inputs['show_gaps'] = input.show_gaps()
             inputs['show_legend'] = input.show_legend()
             inputs['show_ambiguities'] = input.show_ambiguities()
             if inputs['alignment_type'] == 'identity' or inputs['alignment_type'] == 'similarity':
                 inputs['reference_color'] = input.reference_color()
+                inputs['show_gaps'] = input.show_gaps()
             if inputs['alignment_type'] == 'identity' or inputs['alignment_type'] == 'normal':
                 inputs['char_coloring'] = input.char_coloring()
                 inputs['mask_color'] = input.mask_color()
