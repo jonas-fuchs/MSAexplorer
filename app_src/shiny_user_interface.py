@@ -408,11 +408,11 @@ def _analysis_tab():
             ),
             ui.column(
                 5,
-                output_widget('analysis_custom_heatmap'),
+                output_widget('analysis_plot_1'),
             ),
             ui.column(
                 5,
-                output_widget('analysis_char_freq_heatmap', fillable=True, fill=True),
+                output_widget('analysis_plot_2', fillable=True, fill=True),
             ),
         ),
         icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')

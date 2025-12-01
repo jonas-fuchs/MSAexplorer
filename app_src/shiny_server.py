@@ -965,7 +965,7 @@ def server(input, output, session):
             return None
 
     @render_widget
-    def analysis_custom_heatmap():
+    def analysis_plot_1():
         """
         Create the heatmap
         """
@@ -980,12 +980,12 @@ def server(input, output, session):
             return None
 
     @render_widget
-    def analysis_char_freq_heatmap():
+    def analysis_plot_2():
         """
-        Create character frequency heatmap
+        Create character frequency heatmap or recovery plot
         """
         aln = reactive.alignment.get()
-        inputs = prepare_minimal_inputs(right_plot=True, window_size=True)
+        inputs = prepare_minimal_inputs(right_plot=True, window_size=True, ref=True)
         try:
             if inputs['analysis_plot_type_right'] == 'Recovery':
                 return create_recovery_heatmap(aln, inputs)
