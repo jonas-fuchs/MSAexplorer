@@ -328,10 +328,8 @@ def create_recovery_heatmap(aln, inputs):
         hoverinfo='text'
     ))
 
-    ref = aln.reference_id.split()[0] if aln.reference_id is not None else 'consensus'
-
     fig.update_layout(
-        title=f"Recovery compared to: {ref}",
+        title=f"Recovery compared to: {aln.reference_id.split()[0] if aln.reference_id is not None else 'consensus'}",
         xaxis=dict(showgrid=False, zeroline=False, visible=False),
         yaxis=dict(showgrid=False, zeroline=False, visible=False),
         plot_bgcolor="white",

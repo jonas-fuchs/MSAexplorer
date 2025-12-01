@@ -36,7 +36,8 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.transforms import Affine2D
 
 
-def _validate_input_parameters(aln: explore.MSA | str, ax: plt.Axes, annotation: explore.Annotation | None = None) -> tuple[explore.MSA, plt.Axes]:
+def _validate_input_parameters(aln: explore.MSA | str, ax: plt.Axes, annotation: explore.Annotation | str | None = None) \
+        -> tuple[explore.MSA, plt.Axes, explore.Annotation] | tuple[explore.MSA, plt.Axes]:
     """
     Validate MSA class and axis.
     """
@@ -57,11 +58,21 @@ def _validate_input_parameters(aln: explore.MSA | str, ax: plt.Axes, annotation:
             raise ValueError('ax has to be an matplotlib axis')
     # check if annotation is correct type
     if annotation is not None:
+        if type(annotation) is str and os.path.exists(annotation):
+            # reset zoom so the annotation is correctly parsed
+            msa_temp = deepcopy(aln)
+            msa_temp.zoom = None
+            annotation = explore.Annotation(msa_temp, annotation)
+        else:
+            raise FileNotFoundError()
+
         if not isinstance(annotation, explore.Annotation):
             raise ValueError('annotation has to be an annotation class. use explore.Annotation() to read in annotation')
 
-
-    return aln, ax
+    if annotation is None:
+        return aln, ax
+    else:
+        return aln, ax, annotation
 
 
 def _validate_color(c):
@@ -83,7 +94,8 @@ def _validate_color_scheme(scheme: str | None, aln: explore.MSA):
 
 def _create_color_dictionary(aln: explore.MSA, color_scheme: str, identical_char_color: str | None = None, different_char_color: str | None = None, mask_color: str | None = None, ambiguity_color: str | None = None):
     """
-    create the colorscheme dictionary
+    create the colorscheme dictionary -> this functions adds the respective colors to a dictionary. Some have fixed values and colors of defined
+    schemes are always the idx + 1
     """
     # basic color mapping
     aln_colors = {}
@@ -141,73 +153,6 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
             ax.set_yticklabels(names)
     else:
         ax.set_yticks([])
-
-
-def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
-    """
-    Plot annotation rectangles
-    """
-    for annotation in annotation_dict:
-        for locations in annotation_dict[annotation]['location']:
-            x_value = locations[0]
-            length = locations[1] - locations[0]
-            ax.add_patch(
-                patches.FancyBboxPatch(
-                    (x_value, annotation_dict[annotation]['track'] + 1),
-                    length,
-                    0.8,
-                    boxstyle="Round, pad=0",
-                    ec="black",
-                    fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
-                )
-            )
-            if direction_marker_size is not None:
-                if annotation_dict[annotation]['strand'] == '-':
-                    marker = '<'
-                else:
-                    marker = '>'
-                ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
-
-        # plot linked annotations (such as splicing)
-        if len(annotation_dict[annotation]['location']) > 1:
-            y_value = annotation_dict[annotation]['track'] + 1.4
-            start = None
-            for locations in annotation_dict[annotation]['location']:
-                if start is None:
-                    start = locations[1]
-                    continue
-                ax.plot([start, locations[0]], [y_value, y_value], '--', linewidth=2, color='black')
-                start = locations[1]
-
-
-def _add_track_positions(annotation_dic):
-    """
-    define the position for annotations square so that overlapping annotations do not overlap in the plot
-    """
-    # create a dict and sort
-    annotation_dic = dict(sorted(annotation_dic.items(), key=lambda x: x[1]['location'][0][0]))
-
-    # remember for each track the largest stop
-    track_stops = [0]
-
-    for ann in annotation_dic:
-        flattened_locations = list(chain.from_iterable(annotation_dic[ann]['location']))  # flatten list
-        track = 0
-        # check if a start of a gene is smaller than the stop of the current track
-        # -> move to new track
-        while flattened_locations[0] < track_stops[track]:
-            track += 1
-            # if all prior tracks are potentially causing an overlap
-            # create a new track and break
-            if len(track_stops) <= track:
-                track_stops.append(0)
-                break
-        # in the current track remember the stop of the current gene
-        track_stops[track] = flattened_locations[-1]
-        # and indicate the track in the dict
-        annotation_dic[ann]['track'] = track
-
-    return annotation_dic
 
 
 def _create_legend(color_scheme: str, aln_colors: dict, aln: explore.MSA, detected_identity_values: set, ax: plt.Axes, bbox_to_anchor: tuple | list):
@@ -449,7 +394,7 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
 def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_all: bool = False, show_seq_names: bool = False,
               custom_seq_names: tuple | list = (), mask_color: str = 'dimgrey', ambiguity_color: str = 'black', show_mask:bool = True,
               fancy_gaps:bool = False, show_ambiguities: bool = False, color_scheme: str | None = 'standard', show_x_label: bool = True,
-              show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1)):
+              show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1)) -> plt.Axes:
     """
 
     Plot an alignment with each character colored as defined in the scheme. This is computationally more intensive as 
@@ -469,6 +414,7 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
+    :return  matplotlib axis
     """
     # Validate aln, ax inputs
     aln, ax = _validate_input_parameters(aln=aln, ax=ax)
@@ -513,7 +459,7 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
                        mask_color: str = 'dimgrey', ambiguity_color: str = 'black', show_mask:bool = True, show_gaps:bool = True,
                        fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False,
                        color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False,
-                       bbox_to_anchor: tuple[float|int, float|int] | list = (1, 1)):
+                       bbox_to_anchor: tuple[float|int, float|int] | list = (1, 1)) -> plt.Axes:
     """
     Generates an identity alignment plot.
     :param aln: alignment MSA class or path
@@ -537,6 +483,7 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
+    :return  matplotlib axis
     """
 
     # Both options for gaps work hand in hand
@@ -585,7 +532,7 @@ def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, mat
                          show_similarity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False,
                          custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r',
                          show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False,
-                         cbar_fraction: float = 0.1):
+                         cbar_fraction: float = 0.1)  -> plt.Axes:
     """
     Generates a similarity alignment plot. Importantly the similarity values are normalized!
     :param aln: alignment MSA class or path
@@ -603,6 +550,7 @@ def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, mat
     :param show_x_label: whether to show x label
     :param show_cbar: whether to show the legend - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
     :param cbar_fraction: fraction of the original ax reserved for the legend
+    :return  matplotlib axis
     """
     # Both options for gaps work hand in hand
     if fancy_gaps:
@@ -675,7 +623,8 @@ def _moving_average(arr: ndarray, window_size: int, zoom: tuple | None, aln_leng
         return arr, np.arange(zoom[0], zoom[1]) if zoom is not None else np.arange(aln_length)
 
 
-def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None, line_color: str = 'burlywood', line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True):
+def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None, line_color: str = 'burlywood',
+              line_width: int | float = 2, rolling_average: int = 20, show_x_label: bool = False, show_title: bool = True) -> plt.Axes:
     """
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class or path
@@ -686,7 +635,11 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
     :param show_x_label: whether to show the x-axis label
     :param show_title: whether to show the title
+    :return matplotlib axes
     """
+
+    # input check
+    aln, ax = _validate_input_parameters(aln, ax)
 
     # define possible functions to calc here
     stat_functions: Dict[str, Callable[[], list | ndarray]] = {
@@ -701,19 +654,7 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
     if stat_type not in stat_functions:
         raise ValueError('stat_type must be one of {}'.format(list(stat_functions.keys())))
 
-    # input check
-    if type(aln) is str:
-        if os.path.exists(aln):
-            aln = explore.MSA(aln)
-        else:
-            raise FileNotFoundError(f'File {aln} does not exist')
-    _validate_input_parameters(aln, ax)
-    if ax is None:
-        ax = plt.gca()
-    if not is_color_like(line_color):
-        raise ValueError('line color is not a color')
-
-    # validate rolling average
+    _validate_color(line_color)
     if rolling_average < 1 or rolling_average > aln.length:
         raise ValueError('rolling_average must be between 1 and length of sequence')
 
@@ -769,7 +710,9 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
     return ax
 
 
-def variant_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, lollisize: tuple[int, int] | list[int, int] = (1, 3), color_scheme: str = 'standard', show_x_label: bool = False, show_legend: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list[float|int, float|int] = (1, 1)):
+def variant_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, lollisize: tuple[int, int] | list = (1, 3),
+                 color_scheme: str = 'standard', show_x_label: bool = False, show_legend: bool = True,
+                 bbox_to_anchor: tuple[float|int, float|int] | list = (1, 1)) -> plt.Axes:
     """
     Plots variants.
     :param aln: alignment MSA class or path
@@ -779,17 +722,12 @@ def variant_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, lollisize: 
     :param show_x_label:  whether to show the x-axis label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
+    :return matplotlib axes
     """
 
     # validate input
-    if type(aln) is str:
-        if os.path.exists(aln):
-            aln = explore.MSA(aln)
-        else:
-            raise FileNotFoundError(f'File {aln} does not exist')
-    _validate_input_parameters(aln, ax)
-    if ax is None:
-        ax = plt.gca()
+    aln, ax = _validate_input_parameters(aln, ax)
+    _validate_color_scheme(color_scheme, aln)
     if not isinstance(lollisize, tuple) or len(lollisize) != 2:
         raise ValueError('lollisize must be tuple of length 2 (stem, head)')
     for _size in lollisize:
@@ -876,7 +814,77 @@ def variant_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, lollisize: 
     return ax
 
 
-def orf_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, min_length: int = 500, non_overlapping_orfs: bool = True, cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False, cbar_fraction: float = 0.1):
+
+def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
+    """
+    Plot annotation rectangles
+    """
+    for annotation in annotation_dict:
+        for locations in annotation_dict[annotation]['location']:
+            x_value = locations[0]
+            length = locations[1] - locations[0]
+            ax.add_patch(
+                patches.FancyBboxPatch(
+                    (x_value, annotation_dict[annotation]['track'] + 1),
+                    length,
+                    0.8,
+                    boxstyle="Round, pad=0",
+                    ec="black",
+                    fc=color.to_rgba(annotation_dict[annotation]['conservation']) if isinstance(color, ScalarMappable) else color,
+                )
+            )
+            if direction_marker_size is not None:
+                if annotation_dict[annotation]['strand'] == '-':
+                    marker = '<'
+                else:
+                    marker = '>'
+                ax.plot(x_value + length/2, annotation_dict[annotation]['track'] + 1.4, marker=marker, markersize=direction_marker_size, color='white', markeredgecolor='black')
+
+        # plot linked annotations (such as splicing)
+        if len(annotation_dict[annotation]['location']) > 1:
+            y_value = annotation_dict[annotation]['track'] + 1.4
+            start = None
+            for locations in annotation_dict[annotation]['location']:
+                if start is None:
+                    start = locations[1]
+                    continue
+                ax.plot([start, locations[0]], [y_value, y_value], '--', linewidth=2, color='black')
+                start = locations[1]
+
+
+def _add_track_positions(annotation_dic):
+    """
+    define the position for annotations square so that overlapping annotations do not overlap in the plot
+    """
+    # create a dict and sort
+    annotation_dic = dict(sorted(annotation_dic.items(), key=lambda x: x[1]['location'][0][0]))
+
+    # remember for each track the largest stop
+    track_stops = [0]
+
+    for ann in annotation_dic:
+        flattened_locations = list(chain.from_iterable(annotation_dic[ann]['location']))  # flatten list
+        track = 0
+        # check if a start of a gene is smaller than the stop of the current track
+        # -> move to new track
+        while flattened_locations[0] < track_stops[track]:
+            track += 1
+            # if all prior tracks are potentially causing an overlap
+            # create a new track and break
+            if len(track_stops) <= track:
+                track_stops.append(0)
+                break
+        # in the current track remember the stop of the current gene
+        track_stops[track] = flattened_locations[-1]
+        # and indicate the track in the dict
+        annotation_dic[ann]['track'] = track
+
+    return annotation_dic
+
+
+def orf_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, min_length: int = 500, non_overlapping_orfs: bool = True,
+             cmap: str = 'Blues', direction_marker_size: int | None = 5, show_x_label: bool = False, show_cbar: bool = False,
+             cbar_fraction: float = 0.1) -> plt.Axes:
     """
     Plot conserved ORFs.
     :param aln: alignment MSA class or path
@@ -888,21 +896,13 @@ def orf_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, min_length: int
     :param show_x_label: whether to show the x-axis label
     :param show_cbar: whether to show the colorbar - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
     :param cbar_fraction: fraction of the original ax reserved for the colorbar
+    :return matplotlib axes
     """
 
     # normalize colorbar
     cmap = ScalarMappable(norm=Normalize(0, 100), cmap=plt.get_cmap(cmap))
-
     # validate input
-    if type(aln) is str:
-        if os.path.exists(aln):
-            aln = explore.MSA(aln)
-        else:
-            raise FileNotFoundError(f'File {aln} does not exist')
-    _validate_input_parameters(aln, ax)
-    _validate_input_parameters(aln, ax)
-    if ax is None:
-        ax = plt.gca()
+    aln, ax = _validate_input_parameters(aln, ax)
 
     # get orfs --> first deepcopy and reset zoom that the orfs are also zoomed in (by default, the orfs are only
     # searched within the zoomed region)
@@ -912,14 +912,11 @@ def orf_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, min_length: int
         annotation_dict = aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length)
     else:
         annotation_dict = aln_temp.get_conserved_orfs(min_length=min_length)
-
     # filter dict for zoom
     if aln.zoom is not None:
         annotation_dict = {key:val for key, val in annotation_dict.items() if max(val['location'][0][0], aln.zoom[0]) <= min(val['location'][0][1], aln.zoom[1])}
-
     # add track for plotting
     _add_track_positions(annotation_dict)
-
     # plot
     _plot_annotation(annotation_dict, ax, direction_marker_size=direction_marker_size, color=cmap)
 
@@ -939,7 +936,8 @@ def orf_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, min_length: int
     return ax
 
 
-def annotation_plot(aln: explore.MSA | str, annotation: explore.Annotation | str, feature_to_plot: str, ax: plt.Axes | None = None, color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False):
+def annotation_plot(aln: explore.MSA | str, annotation: explore.Annotation | str, feature_to_plot: str, ax: plt.Axes | None = None,
+                    color: str = 'wheat', direction_marker_size: int | None = 5, show_x_label: bool = False) -> plt.Axes:
     """
     Plot annotations from bed, gff or gb files. Are automatically mapped to alignment.
     :param aln: alignment MSA class
@@ -949,36 +947,11 @@ def annotation_plot(aln: explore.MSA | str, annotation: explore.Annotation | str
     :param color: color for the annotation
     :param direction_marker_size: marker size for direction marker, only relevant if show_direction is True
     :param show_x_label: whether to show the x-axis label
+    :return matplotlib axes
     """
-    # helper function
-    def parse_annotation_from_string(path: str, msa: explore.MSA) -> explore.Annotation:
-        """
-        Parse annotation.
-        :param path: path to annotation
-        :param msa: msa object
-        :return: parsed annotation
-        """
-        if os.path.exists(path):
-            # reset zoom so the annotation is correctly parsed
-            msa_temp = deepcopy(msa)
-            msa_temp.zoom = None
-            return explore.Annotation(msa_temp, path)
-        else:
-            raise FileNotFoundError()
-
     # validate input
-    if type(aln) is str:
-        if os.path.exists(aln):
-            aln = explore.MSA(aln)
-        else:
-            raise FileNotFoundError(f'File {aln} does not exist')
-    if type(annotation) is str:
-        annotation = parse_annotation_from_string(annotation, aln)
-    _validate_input_parameters(aln, ax, annotation)
-    if ax is None:
-        ax = plt.gca()
-    if not is_color_like(color):
-        raise ValueError(f'{color} for reference is not a color')
+    aln, ax, annotation = _validate_input_parameters(aln, ax, annotation)
+    _validate_color(color)
 
     # ignore features to plot for bed files (here it is written into one feature)
     if annotation.ann_type == 'bed':
@@ -1003,7 +976,8 @@ def annotation_plot(aln: explore.MSA | str, annotation: explore.Annotation | str
     return ax
 
 
-def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme: str = 'standard', plot_type: str = 'stacked', show_x_label:bool = False):
+def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme: str = 'standard', plot_type: str = 'stacked',
+                  show_x_label:bool = False) -> plt.Axes:
     """
     Plot sequence logo or stacked area plot (use the first one with appropriate zoom levels). The
     logo visualizes the relative frequency of nt or aa characters in the alignment. The char frequency
@@ -1014,16 +988,10 @@ def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme
     :param color_scheme: color scheme for characters. see config.CHAR_COLORS for available options
     :param plot_type: 'logo' for sequence logo, 'stacked' for stacked area plot
     :param show_x_label: whether to show the x-axis label
+    :return matplotlib axes
     """
 
-    if type(aln) is str:
-        if os.path.exists(aln):
-            aln = explore.MSA(aln)
-        else:
-            raise FileNotFoundError(f'File {aln} does not exist')
-    _validate_input_parameters(aln, ax)
-    if ax is None:
-        ax = plt.gca()
+    aln, ax = _validate_input_parameters(aln, ax)
     # calc matrix
     matrix = aln.calc_position_matrix('IC') * aln.calc_position_matrix('PPM')
     letters_to_plot = list(config.CHAR_COLORS[aln.aln_type]['standard'].keys())[:-1]
