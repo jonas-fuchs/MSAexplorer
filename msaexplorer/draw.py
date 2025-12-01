@@ -58,14 +58,14 @@ def _validate_input_parameters(aln: explore.MSA | str, ax: plt.Axes, annotation:
             raise ValueError('ax has to be an matplotlib axis')
     # check if annotation is correct type
     if annotation is not None:
-        if type(annotation) is str and os.path.exists(annotation):
-            # reset zoom so the annotation is correctly parsed
-            msa_temp = deepcopy(aln)
-            msa_temp.zoom = None
-            annotation = explore.Annotation(msa_temp, annotation)
-        else:
-            raise FileNotFoundError()
-
+        if type(annotation) is str:
+            if os.path.exists(annotation):
+                # reset zoom so the annotation is correctly parsed
+                msa_temp = deepcopy(aln)
+                msa_temp.zoom = None
+                annotation = explore.Annotation(msa_temp, annotation)
+            else:
+                raise FileNotFoundError()
         if not isinstance(annotation, explore.Annotation):
             raise ValueError('annotation has to be an annotation class. use explore.Annotation() to read in annotation')
 
@@ -337,7 +337,7 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
                     fontweight='bold' if different_cols[idx] else 'normal',
                     ha='center',
                     va='center_baseline',
-                    c=text_color if value != value_to_skip or seq_name == ref_name else 'dimgrey'
+                    c=text_color if value != value_to_skip or seq_name == ref_name and ref_color is not None else 'dimgrey'
                 )
             x_text += 1
 
@@ -392,9 +392,9 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
 
 
 def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_all: bool = False, show_seq_names: bool = False,
-              custom_seq_names: tuple | list = (), mask_color: str = 'dimgrey', ambiguity_color: str = 'black', show_mask:bool = True,
-              fancy_gaps:bool = False, show_ambiguities: bool = False, color_scheme: str | None = 'standard', show_x_label: bool = True,
-              show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1)) -> plt.Axes:
+              custom_seq_names: tuple | list = (), mask_color: str = 'dimgrey', ambiguity_color: str = 'black', base_color: str = 'lightgrey',
+              show_mask:bool = True, fancy_gaps:bool = False, show_ambiguities: bool = False, color_scheme: str | None = 'standard',
+              show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1)) -> plt.Axes:
     """
 
     Plot an alignment with each character colored as defined in the scheme. This is computationally more intensive as 
@@ -407,6 +407,7 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
     :param custom_seq_names: custom seq names
     :param mask_color: color for masked nucleotides/aminoacids
     :param ambiguity_color: color for ambiguous nucleotides/aminoacids
+    :param base_color: color that will be used for all normal chars if the colorscheme is None
     :param show_mask: whether to show N or X chars otherwise it will be shown as match or mismatch
     :param fancy_gaps: show gaps with a small black bar
     :param show_ambiguities: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
@@ -419,26 +420,28 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
     # Validate aln, ax inputs
     aln, ax = _validate_input_parameters(aln=aln, ax=ax)
     # Validate colors
-    for c in [mask_color, ambiguity_color]:
+    for c in [mask_color, ambiguity_color, base_color]:
         _validate_color(c)
     # Validate color scheme
     _validate_color_scheme(scheme=color_scheme, aln=aln)
     # create color mapping
     aln_colors = _create_color_dictionary(
-        aln=aln, color_scheme=color_scheme, identical_char_color=None,
-        different_char_color=None,
-        mask_color=mask_color, ambiguity_color=ambiguity_color
+        aln=aln, color_scheme=color_scheme, identical_char_color=base_color,
+        different_char_color=None, mask_color=mask_color, ambiguity_color=ambiguity_color
     )
     # Compute identity alignment
     numerical_alignment = aln.calc_numerical_alignment(encode_ambiguities=show_ambiguities, encode_mask=show_mask)
+    if color_scheme is None:
+        numerical_alignment[np.where(numerical_alignment > 0)] = 0
     # create the alignment
     detected_identity_values = _create_alignment(
-        aln=aln, ax=ax, matrix=numerical_alignment, fancy_gaps=fancy_gaps, create_identity_patch=False, show_gaps=True,
+        aln=aln, ax=ax, matrix=numerical_alignment, fancy_gaps=fancy_gaps, create_identity_patch=True if color_scheme is None else False, show_gaps=True,
         show_different_sequence=False, show_sequence_all=show_sequence_all, reference_color=None, aln_colors=aln_colors,
         values_to_plot = list(aln_colors.keys())
     )
     # custom legend
     if show_legend:
+        aln_colors.pop(0)  # otherwise legend is wrong (here there is no check if a position is identical or not)
         _create_legend(
             color_scheme=color_scheme, aln_colors=aln_colors, aln=aln,
             detected_identity_values=detected_identity_values,

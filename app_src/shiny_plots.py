@@ -98,6 +98,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 color_scheme=inputs['char_coloring'] if inputs['char_coloring'] != 'None' else None,
                 mask_color=inputs['mask_color'],
                 ambiguity_color=inputs['ambiguity_color'],
+                base_color=inputs['identical_char_color'],
                 show_seq_names=inputs['seq_names'],
                 show_x_label=True if inputs['annotation'] == 'Off' else False,
                 show_legend=inputs['show_legend']
