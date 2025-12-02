@@ -97,7 +97,8 @@ def _custom_sidebar():
                     ui.input_switch('show_legend', 'Legend', value=True),
                     ui.input_switch('show_mask', 'Show mask', value=True),
                     ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
-                    ui.input_switch('seq_names', 'show names', value=False)
+                    ui.input_switch('seq_names', 'show names', value=False),
+                    ui.input_switch('show_consensus', 'show consensus', value=False)
                 ),
                 ui.column(
                     3,
@@ -118,24 +119,22 @@ def _custom_sidebar():
                 ),
                 ui.column(
                 3,
-
-                    ui.input_selectize('matrix', 'Matrix', ['None']),
-                    ui.input_selectize('matrix_color_mapping', 'Colormap Similarity', choices=list(colormaps.keys()), selected='PuBu_r'),
-                    ui.input_selectize('char_coloring', 'Alignment coloring', ['standard'], selected='standard'),
-                ),
-                ui.column(
-                    3,
                     ui.div(
                         ui.HTML(
                             """
                             <div style="display: flex; flex-direction: column; align-items: flex-start;">
-                                <label for="identical_char_color" style="font-size: 0.8rem; margin-bottom: 5px;">Identical sites:</label>
-                                <input type="color" id="identical_char_color" value="#d3d3d3" onchange="updateColor(this.value)" 
+                                <label for="basic_color" style="font-size: 0.8rem; margin-bottom: 5px;">Basic color:</label>
+                                <input type="color" id="basic_color" value="#d3d3d3" onchange="updateColor(this.value)" 
                                        style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
                             </div>
                             """
                         )
                     ),
+                    ui.input_selectize('matrix', 'Matrix', ['None']),
+                    ui.input_selectize('char_coloring', 'Alignment coloring', ['standard'], selected='standard'),
+                ),
+                ui.column(
+                    3,
                     ui.div(
                         ui.HTML(
                             """

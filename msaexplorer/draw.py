@@ -28,7 +28,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import is_color_like, Normalize, to_rgba
+from matplotlib.colors import is_color_like, Normalize, to_rgba, LinearSegmentedColormap
 from matplotlib.collections import PatchCollection, PolyCollection
 from matplotlib.text import TextPath
 from matplotlib.patches import PathPatch
@@ -133,7 +133,7 @@ def _format_x_axis(aln: explore.MSA, ax: plt.Axes, show_x_label: bool, show_left
         ax.spines['left'].set_visible(False)
 
 
-def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq_names: bool):
+def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq_names: bool, include_consensus: bool = False):
     """
     Validate custom names and set show names to True. Format axis accordingly.
     """
@@ -147,10 +147,16 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
         ax.yaxis.set_ticks_position('none')
         ax.set_yticks(np.arange(len(aln.alignment)))
         if custom_seq_names:
-            ax.set_yticklabels(custom_seq_names[::-1])
+            names = custom_seq_names[::-1]
         else:
             names = [x.split(' ')[0] for x in list(aln.alignment.keys())[::-1]]
-            ax.set_yticklabels(names)
+        if include_consensus:
+            names = names + ['consensus']
+            y_ticks = np.arange(len(aln.alignment) + 1)
+        else:
+            y_ticks = np.arange(len(aln.alignment))
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(names)
     else:
         ax.set_yticks([])
 
@@ -203,6 +209,16 @@ def _create_legend(color_scheme: str, aln_colors: dict, aln: explore.MSA, detect
         ncols=ncols,
         frameon=False
     )
+
+
+def _get_contrast_text_color(rgba_color):
+        """
+        compute the brightness of a color
+        """
+        r, g, b, a = rgba_color
+        brightness = (r * 299 + g * 587 + b * 114) / 1000
+
+        return 'white' if brightness < 0.5 else 'black'
 
 
 def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_colors: dict | ScalarMappable, fancy_gaps: bool, create_identity_patch: bool,
@@ -303,15 +319,6 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
 
         return detected_identity_values, polygons, polygon_colors
 
-    def _get_contrast_text_color(rgba_color):
-        """
-        compute the brightness of a color
-        """
-        r, g, b, a = rgba_color
-        brightness = (r * 299 + g * 587 + b * 114) / 1000
-
-        return 'white' if brightness < 0.5 else 'black'
-
     def _plot_sequence_text(aln: explore.MSA, seq_name: str, ref_name: str | None, always_text: bool, values: ndarray,
                             matrix: ndarray, ax: plt.Axes, zoom: tuple, y_position: int | float, value_to_skip: int | None,
                             ref_color: str, show_gaps: bool, aln_colors: dict | ScalarMappable = None):
@@ -395,9 +402,10 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
 
 
 def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_all: bool = False, show_seq_names: bool = False,
-              custom_seq_names: tuple | list = (), mask_color: str = 'dimgrey', ambiguity_color: str = 'black', base_color: str = 'lightgrey',
+              custom_seq_names: tuple | list = (), mask_color: str = 'dimgrey', ambiguity_color: str = 'black', basic_color: str = 'lightgrey',
               show_mask:bool = True, fancy_gaps:bool = False, show_ambiguities: bool = False, color_scheme: str | None = 'standard',
-              show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1)) -> plt.Axes:
+              show_x_label: bool = True, show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1),
+              show_consensus: bool = False) -> plt.Axes:
     """
 
     Plot an alignment with each character colored as defined in the scheme. This is computationally more intensive as 
@@ -410,7 +418,7 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
     :param custom_seq_names: custom seq names
     :param mask_color: color for masked nucleotides/aminoacids
     :param ambiguity_color: color for ambiguous nucleotides/aminoacids
-    :param base_color: color that will be used for all normal chars if the colorscheme is None
+    :param basic_color: color that will be used for all normal chars if the colorscheme is None
     :param show_mask: whether to show N or X chars otherwise it will be shown as match or mismatch
     :param fancy_gaps: show gaps with a small black bar
     :param show_ambiguities: whether to show non-N ambiguities -> only relevant for RNA/DNA sequences
@@ -418,18 +426,19 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
+    :param show_consensus: whether to show the majority consensus sequence (standard-color scheme)
     :return  matplotlib axis
     """
     # Validate aln, ax inputs
     aln, ax = _validate_input_parameters(aln=aln, ax=ax)
     # Validate colors
-    for c in [mask_color, ambiguity_color, base_color]:
+    for c in [mask_color, ambiguity_color, basic_color]:
         _validate_color(c)
     # Validate color scheme
     _validate_color_scheme(scheme=color_scheme, aln=aln)
     # create color mapping
     aln_colors = _create_color_dictionary(
-        aln=aln, color_scheme=color_scheme, identical_char_color=base_color,
+        aln=aln, color_scheme=color_scheme, identical_char_color=basic_color,
         different_char_color=None, mask_color=mask_color, ambiguity_color=ambiguity_color
     )
     # Compute identity alignment
@@ -450,9 +459,16 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
             detected_identity_values=detected_identity_values,
             ax=ax, bbox_to_anchor=bbox_to_anchor
         )
-    _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names)
+    if show_consensus:
+        consensus_plot(aln=aln, ax=ax, show_x_label=show_x_label, show_name=False, show_sequence=show_sequence_all,
+            color_scheme='standard', basic_color=basic_color, mask_color=mask_color, ambiguity_color=ambiguity_color
+        )
+        ax.set_ylim(-0.5, len(aln.alignment) + 1)
+    else:
+        ax.set_ylim(-0.5, len(aln.alignment))
+
+    _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names, include_consensus=show_consensus)
     # configure axis
-    ax.set_ylim(-0.5, len(aln.alignment))
     _format_x_axis(aln=aln, ax=ax, show_x_label=show_x_label, show_left=False)
 
     return ax
@@ -461,11 +477,11 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
 
 def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_title: bool = True, show_identity_sequence: bool = False,
                        show_sequence_all: bool = False, show_seq_names: bool = False, custom_seq_names: tuple | list = (),
-                       reference_color: str = 'lightsteelblue', identical_char_color: str = 'lightgrey', different_char_color: str = 'peru',
+                       reference_color: str = 'lightsteelblue', basic_color: str = 'lightgrey', different_char_color: str = 'peru',
                        mask_color: str = 'dimgrey', ambiguity_color: str = 'black', show_mask:bool = True, show_gaps:bool = True,
                        fancy_gaps:bool = False, show_mismatches: bool = True, show_ambiguities: bool = False,
                        color_scheme: str | None = None, show_x_label: bool = True, show_legend: bool = False,
-                       bbox_to_anchor: tuple[float|int, float|int] | list = (1, 1)) -> plt.Axes:
+                       bbox_to_anchor: tuple[float|int, float|int] | list = (1, 1), show_consensus: bool = False) -> plt.Axes:
     """
     Generates an identity alignment plot.
     :param aln: alignment MSA class or path
@@ -476,7 +492,7 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
     :param show_sequence_all: whether to show all sequences - zoom in to avoid plotting issues
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
-    :param identical_char_color: color for identical nucleotides/aminoacids
+    :param basic_color: color for identical nucleotides/aminoacids
     :param different_char_color: color for different nucleotides/aminoacids
     :param mask_color: color for masked nucleotides/aminoacids
     :param ambiguity_color: color for ambiguous nucleotides/aminoacids
@@ -489,6 +505,8 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
     :param show_x_label: whether to show x label
     :param show_legend: whether to show the legend
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
+    :param show_consensus: whether to show the majority consensus sequence (standard-color scheme)
+
     :return  matplotlib axis
     """
 
@@ -498,13 +516,13 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
     # Validate aln, ax inputs
     aln, ax = _validate_input_parameters(aln=aln, ax=ax)
     # Validate colors
-    for c in [reference_color, identical_char_color, different_char_color, mask_color, ambiguity_color]:
+    for c in [reference_color, basic_color, different_char_color, mask_color, ambiguity_color]:
         _validate_color(c)
     # Validate color scheme
     _validate_color_scheme(scheme=color_scheme, aln=aln)
     # create color mapping
     aln_colors = _create_color_dictionary(
-        aln=aln, color_scheme=color_scheme, identical_char_color=identical_char_color, different_char_color=different_char_color,
+        aln=aln, color_scheme=color_scheme, identical_char_color=basic_color, different_char_color=different_char_color,
         mask_color=mask_color, ambiguity_color=ambiguity_color
     )
     # Compute identity alignment
@@ -526,7 +544,17 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
         )
     _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names)
     # configure axis
-    ax.set_ylim(-0.5, len(aln.alignment))
+    if show_consensus:
+        consensus_plot(aln=aln, ax=ax, show_x_label=show_x_label, show_name=False, show_sequence=any([show_sequence_all, show_identity_sequence]),
+                       color_scheme='standard', basic_color=basic_color, mask_color=mask_color,
+                       ambiguity_color=ambiguity_color
+                       )
+        ax.set_ylim(-0.5, len(aln.alignment) + 1)
+    else:
+        ax.set_ylim(-0.5, len(aln.alignment))
+
+    _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names,
+               include_consensus=show_consensus)
     if show_title:
         ax.set_title('identity', loc='left')
     _format_x_axis(aln=aln, ax=ax, show_x_label=show_x_label, show_left=False)
@@ -536,9 +564,9 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
 
 def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, matrix_type: str | None = None, show_title: bool = True,
                          show_similarity_sequence: bool = False, show_sequence_all: bool = False, show_seq_names: bool = False,
-                         custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', cmap: str = 'twilight_r',
+                         custom_seq_names: tuple | list = (), reference_color: str = 'lightsteelblue', different_char_color: str = 'peru', basic_color: str = 'lightgrey',
                          show_gaps:bool = True, fancy_gaps:bool = False, show_x_label: bool = True, show_cbar: bool = False,
-                         cbar_fraction: float = 0.1)  -> plt.Axes:
+                         cbar_fraction: float = 0.1, show_consensus: bool = False)  -> plt.Axes:
     """
     Generates a similarity alignment plot. Importantly the similarity values are normalized!
     :param aln: alignment MSA class or path
@@ -550,12 +578,14 @@ def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, mat
     :param show_seq_names: whether to show seq names
     :param custom_seq_names: custom seq names
     :param reference_color: color of reference sequence
-    :param cmap: color mapping for % identity - see https://matplotlib.org/stable/users/explain/colors/colormaps.html
+    :param different_char_color: color for the lowest similarity
+    :param basic_color: basic color for the highest similarity
     :param show_gaps: whether to show gaps otherwise it will be ignored
     :param fancy_gaps: show gaps with a small black bar
     :param show_x_label: whether to show x label
     :param show_cbar: whether to show the legend - see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.colorbar.html
     :param cbar_fraction: fraction of the original ax reserved for the legend
+    :param show_consensus: whether to show the majority consensus sequence (standard color scheme, no specical handling for special characters)
     :return  matplotlib axis
     """
     # Both options for gaps work hand in hand
@@ -564,18 +594,20 @@ def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, mat
     # Validate aln, ax inputs
     aln, ax = _validate_input_parameters(aln=aln, ax=ax)
     # Validate colors
-    _validate_color(reference_color)
+    for c in [reference_color, different_char_color, basic_color]:
+        _validate_color(c)
     # Compute similarity alignment
     similarity_aln = aln.calc_similarity_alignment(matrix_type=matrix_type)  # use normalized values here
     similarity_aln = similarity_aln.round(2)  # round data for good color mapping
-    # determine min max values of the underlying matrix and create cmap
-    cmap = ScalarMappable(
-        norm=Normalize(
-            vmin=0,
-            vmax=1
-        ),
-        cmap=plt.get_cmap(cmap)
+    # create cmap
+    cmap = LinearSegmentedColormap.from_list(
+        "extended",
+        [
+            (0.0, different_char_color),
+            (1.0, basic_color)
+        ],
     )
+    cmap = ScalarMappable(norm=Normalize(vmin=0, vmax=1), cmap=cmap)
     # create similarity values
     similarity_values = np.arange(start=0, stop=1, step=0.01)
     # round it to be absolutely sure that values match with rounded sim alignment
@@ -596,7 +628,15 @@ def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, mat
     _seq_names(aln, ax, custom_seq_names, show_seq_names)
 
     # configure axis
-    ax.set_ylim(-0.5, len(aln.alignment))
+    if show_consensus:
+        consensus_plot(aln=aln, ax=ax, show_x_label=show_x_label, show_name=False, show_sequence=any([show_sequence_all, show_similarity_sequence]),
+                       color_scheme='standard', basic_color=basic_color)
+        ax.set_ylim(-0.5, len(aln.alignment) + 1)
+    else:
+        ax.set_ylim(-0.5, len(aln.alignment))
+
+    _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names,
+               include_consensus=show_consensus)
     if show_title:
         ax.set_title('similarity', loc='left')
     _format_x_axis(aln, ax, show_x_label, show_left=False)
@@ -635,7 +675,7 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class or path
     :param ax: matplotlib axes
-    :param stat_type: 'entropy', 'gc', 'coverage', 'ts/tv', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
+    :param stat_type: 'entropy', 'gc', 'coverage', 'ts tv score', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
     :param line_color: color of the line
     :param line_width: width of the line
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
@@ -1038,7 +1078,6 @@ def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme
                             ec='None',
                             label=letters_to_plot[row],
                             step='mid')
-            y_values += y
 
     # adjust limits & labels
     _format_x_axis(aln, ax, show_x_label, show_left=True)
@@ -1049,5 +1088,106 @@ def sequence_logo(aln:explore.MSA | str, ax:plt.Axes | None = None, color_scheme
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.set_ylabel('bits')
+
+    return ax
+
+
+def consensus_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, threshold: float | None = None, use_ambig_nt: bool = False,
+                   color_scheme: str | None = 'standard', mask_color: str = 'dimgrey', ambiguity_color: str = 'black', basic_color: str = 'lightgrey',
+                   show_x_label: bool = False, show_name: bool = True, show_sequence: bool = False) -> plt.Axes:
+    """
+    Plot a consensus sequence as a single-row colored sequence.
+
+    :param aln: alignment MSA class or path
+    :param ax: matplotlib axes
+    :param threshold: consensus threshold (0-1) or None for majority rule
+    :param use_ambig_nt: whether to use ambiguous nucleotide codes when building consensus
+    :param color_scheme: color scheme for characters. see config.CHAR_COLORS for available options or None
+    :param mask_color: color used for mask characters (N/X)
+    :param ambiguity_color: color used for ambiguous characters
+    :param show_x_label: whether to show the x-axis label
+    :param show_name: whether to show the 'consensus' label at y-axis
+    :param show_sequence: whether to show the sequence at the y-axis
+
+    :return: matplotlib axes
+    """
+
+    # validate input
+    aln, ax = _validate_input_parameters(aln, ax)
+    # validate colors
+    for c in [mask_color, ambiguity_color]:
+        _validate_color(c)
+    # validate color scheme
+    _validate_color_scheme(scheme=color_scheme, aln=aln)
+
+    # get consensus
+    consensus = aln.get_consensus(threshold=threshold, use_ambig_nt=use_ambig_nt)
+
+    # prepare color mapping
+    if color_scheme is not None:
+        # get mapping from config
+        char_colors = config.CHAR_COLORS[aln.aln_type][color_scheme]
+    else:
+        char_colors = None
+
+    # Build polygons and colors for a single PolyCollection
+    polygons = []
+    poly_colors = []
+    text_positions = []
+    text_chars = []
+    text_colors = []
+
+    zoom_offset = aln.zoom[0] if aln.zoom is not None else 0
+
+    y_position = len(aln.alignment) - 0.4
+
+    for pos, char in enumerate(consensus):
+        x = pos + zoom_offset
+        # determine color
+        if char_colors is not None and char in char_colors:
+            color = char_colors[char]
+        else:
+            # ambiguous nucleotide/aminoacid codes
+            if char in config.AMBIG_CHARS[aln.aln_type]:
+                color = ambiguity_color
+            elif char in ['N', 'X']:
+                color = mask_color
+            else:
+                color = basic_color
+
+        rect = [
+            (x - 0.5, y_position),
+            (x + 0.5, y_position),
+            (x + 0.5, y_position+0.8),
+            (x - 0.5, y_position+0.8),
+        ]
+        polygons.append(rect)
+        poly_colors.append(color)
+
+        if show_sequence:
+            text_positions.append(x)
+            text_chars.append(char)
+            # determine readable text color
+            text_colors.append(_get_contrast_text_color(to_rgba(color)))
+
+    # add single PolyCollection
+    if polygons:
+        pc = PolyCollection(polygons, facecolors=poly_colors, edgecolors=poly_colors, linewidths=0)
+        ax.add_collection(pc)
+
+    # add texts if requested
+    if show_sequence:
+        for x, ch, tc in zip(text_positions, text_chars, text_colors):
+            ax.text(x, y_position+0.4, ch, ha='center', va='center_baseline', c=tc)
+
+    # format axis
+    _format_x_axis(aln=aln, ax=ax, show_x_label=show_x_label, show_left=False)
+    ax.set_ylim(y_position-0.1, y_position + 0.9)
+    if show_name:
+        ax.yaxis.set_ticks_position('none')
+        ax.set_yticks([y_position + 0.4])
+        ax.set_yticklabels(['consensus'])
+    else:
+        ax.set_yticks([])
 
     return ax

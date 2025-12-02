@@ -81,14 +81,15 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 show_mismatches=True,
                 show_ambiguities=inputs['show_ambiguities'],
                 color_scheme=inputs['char_coloring'] if inputs['char_coloring'] != 'None' else None,
-                identical_char_color=inputs['identical_char_color'],
+                basic_color=inputs['basic_color'],
                 different_char_color=inputs['different_char_color'],
                 mask_color=inputs['mask_color'],
                 ambiguity_color=inputs['ambiguity_color'],
                 reference_color=inputs['reference_color'],
                 show_seq_names=inputs['seq_names'],
                 show_x_label=True if inputs['annotation'] == 'Off' else False,
-                show_legend=inputs['show_legend']
+                show_legend=inputs['show_legend'],
+                show_consensus=inputs['show_consensus']
         ) if inputs['alignment_type'] == 'identity' else draw.alignment(
                 aln, ax=ax,
                 show_sequence_all=inputs['show_sequence_all'],
@@ -98,10 +99,11 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 color_scheme=inputs['char_coloring'] if inputs['char_coloring'] != 'None' else None,
                 mask_color=inputs['mask_color'],
                 ambiguity_color=inputs['ambiguity_color'],
-                base_color=inputs['identical_char_color'],
+                basic_color=inputs['basic_color'],
                 show_seq_names=inputs['seq_names'],
                 show_x_label=True if inputs['annotation'] == 'Off' else False,
-                show_legend=inputs['show_legend']
+                show_legend=inputs['show_legend'],
+                show_consensus=inputs['show_consensus']
         ) if inputs['alignment_type'] == 'normal' else draw.similarity_alignment(
                 aln, ax=ax,
                 show_similarity_sequence=inputs['show_sequence'],
@@ -111,11 +113,14 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 reference_color=inputs['reference_color'],
                 matrix_type=inputs['matrix'],
                 show_seq_names=inputs['seq_names'],
-                cmap=inputs['matrix_color_mapping'],
+                different_char_color=inputs['different_char_color'],
                 show_cbar=inputs['show_legend'],
                 cbar_fraction=0.02,
-                show_x_label=True if inputs['annotation'] == 'Off' else False)
-    )
+                basic_color=inputs['basic_color'],
+                show_x_label=True if inputs['annotation'] == 'Off' else False,
+                show_consensus=inputs['show_consensus']
+            )
+        )
 
     # Third Plot
     if inputs['annotation'] != 'Off':
