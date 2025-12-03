@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = 'msaexplorer'
-version = '0.4.3'
+version = '0.4.4'
 description = 'A tool for exploring multiple sequence alignments.'
 keywords = ['msa, multiple sequence alignments, plotting, shiny app, alignment analysis']
 dependencies = ['numpy>=2.0', 'matplotlib>=3.8']

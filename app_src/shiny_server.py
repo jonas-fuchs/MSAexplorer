@@ -47,11 +47,9 @@ def server(input, output, session):
     updating_from_slider = False
     updating_from_numeric = False
 
-    # remove ui for calculations for static websites due to lack of support
-    # of pytrimal and pyfamsa from pyodoide
-    if not pyfamsa_check and not pytrimal_check:
-        ui.remove_ui(selector="div:has(> #processing_options)")
-    elif not pytrimal_check:
+    # remove either pytrimal button or pyfamsa button if not installed
+    # if both are missing the column will not created -> see shiny_user_interface.py
+    if not pytrimal_check:
         ui.remove_ui(selector="#trim")
     elif not pyfamsa_check:
         ui.remove_ui(selector="#align")
@@ -94,7 +92,10 @@ def server(input, output, session):
         elif inputs['stat_type'] == 'sequence logo':
             inputs['plot_1_size'] = input.plot_1_size()
             inputs['logo_coloring'] = input.logo_coloring()
-            relative_msa_width = window_width / (inputs['zoom_range'][1]-inputs['zoom_range'][0])
+            try:
+                relative_msa_width = window_width / (inputs['zoom_range'][1] - inputs['zoom_range'][0])
+            except ZeroDivisionError:
+                relative_msa_width = 1
             if relative_msa_width >= 11:
                 inputs['logo_type'] = 'logo'
             else:
@@ -102,17 +103,23 @@ def server(input, output, session):
 
         # ALIGNMENT (second plot)
         if inputs['alignment_type'] != 'Off':
-            inputs['reference_color'] = input.reference_color()
             inputs['plot_2_size'] = input.plot_2_size()
             inputs['fancy_gaps'] = input.fancy_gaps()
             inputs['show_mask'] = input.show_mask()
-            inputs['show_gaps'] = input.show_gaps()
             inputs['show_legend'] = input.show_legend()
             inputs['show_ambiguities'] = input.show_ambiguities()
-            inputs['identity_coloring'] = input.identity_coloring()
+            inputs['basic_color'] = input.basic_color()
+            inputs['different_char_color'] = input.different_char_color()
+            inputs['show_consensus'] = input.show_consensus()
+            if inputs['alignment_type'] == 'identity' or inputs['alignment_type'] == 'similarity':
+                inputs['reference_color'] = input.reference_color()
+                inputs['show_gaps'] = input.show_gaps()
+            if inputs['alignment_type'] == 'identity' or inputs['alignment_type'] == 'normal':
+                inputs['char_coloring'] = input.char_coloring()
+                inputs['mask_color'] = input.mask_color()
+                inputs['ambiguity_color'] = input.ambiguity_color()
             if inputs['alignment_type'] == 'similarity':
                 inputs['matrix'] = input.matrix()
-                inputs['matrix_color_mapping'] = input.matrix_color_mapping()
             # determine if it makes sense to show the sequence or sequence names
             # therefore figure out if there are enough chars/size that sequence fits in there
             complete_size = input.plot_2_size()
@@ -121,7 +128,10 @@ def server(input, output, session):
             if inputs['annotation'] != 'Off':
                 complete_size += input.plot_3_size()
             relative_msa_height = input.plot_2_size() * increase_height / complete_size * window_height / len(aln.alignment)
-            relative_msa_width = window_width / (inputs['zoom_range'][1]-inputs['zoom_range'][0])
+            try:
+                relative_msa_width = window_width / (inputs['zoom_range'][1] - inputs['zoom_range'][0])
+            except ZeroDivisionError:
+                relative_msa_width = 1
             # and then decide how to set the show sequence input
             if relative_msa_width >= 11 and relative_msa_height >= 18:
                 inputs['show_sequence'] = input.show_sequence()
@@ -329,7 +339,7 @@ def server(input, output, session):
                                 choices=['alignment','SNPs', 'consensus', 'character frequencies', '% recovery', 'entropy',
                                          'coverage', 'mean identity', 'mean similarity'])
             ui.update_selectize('annotation', choices=['Off', 'SNPs'])
-            ui.update_selectize('identity_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
+            ui.update_selectize('char_coloring', choices=['None', 'standard', 'clustal', 'zappo', 'hydrophobicity'])
             ui.update_selectize('logo_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
             ui.update_selectize('snp_coloring', choices=['standard', 'clustal', 'zappo', 'hydrophobicity'])
         else:
@@ -341,8 +351,7 @@ def server(input, output, session):
                                                           'entropy', 'coverage', 'mean identity', 'mean similarity',
                                                           'ts tv score'])
             ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
-            ui.update_selectize('identity_coloring',
-                                choices=['None', 'standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
+            ui.update_selectize('char_coloring',choices=['None', 'standard', 'purine_pyrimidine', 'strong_weak'])
             ui.update_selectize('logo_coloring', choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
             ui.update_selectize('snp_coloring', choices=['standard', 'standard', 'purine_pyrimidine', 'strong_weak'])
 
@@ -367,8 +376,8 @@ def server(input, output, session):
     @reactive.extended_task
     async def trimming(aln, method):
         """
-        Asynchronous task handler for aligning sequences. This function binds a button
-        action to a reactive extended task for sequence alignment.
+        Asynchronous task handler for trimming sequences. This function binds a button
+        action to a reactive extended task for sequence trimming.
         """
         return await asyncio.to_thread(trim_sequences, aln, method)
 
@@ -447,11 +456,8 @@ def server(input, output, session):
         it automatically responds to changes in the `align_sequences_task.result` value. It also
         handles any potential errors during the alignment loading process.
         """
-        if not pyfamsa_check:
-            return None
-        alignment_file = input.alignment_file()
-        annotation_file = input.annotation_file()
         try:
+            annotation_file = input.annotation_file()
             alignment_finished = aligning.result()
             ui.notification_show(ui.tags.div(
                 'Alignment was successful.',
@@ -460,7 +466,7 @@ def server(input, output, session):
             aln = explore.MSA(alignment_finished, reference_id=None, zoom_range=None)
             finalize_loaded_alignment(aln, annotation_file)
         except Exception as e:
-            show_alignment_error(e, alignment_file)
+            show_alignment_error(e, input.alignment_file())
 
     @reactive.Effect
     @reactive.event(trimming.result)
@@ -510,10 +516,9 @@ def server(input, output, session):
             aln = explore.MSA(alignment_file)
             finalize_loaded_alignment(aln, annotation_file)
             ui.notification_show("Example alignment and annotation file loaded.")
-        except ValueError as e:
-            print(e)
+        except:
             ui.notification_show(ui.tags.div(
-                f'Error: {e}',
+                f'Error: Example alignment and annotation file not loaded. Check your internet connection and try again.',
                 style="color: red; font-weight: bold;"
             ), duration=10)
 
@@ -554,7 +559,10 @@ def server(input, output, session):
         Update the zoom boxes when the slider changes.
         """
         nonlocal updating_from_slider
-        if updating_from_numeric:
+        # do not update if we are already updating from a slider change or from a numeric change.
+        # importantly, this now includes updating from slider check which prohibits a too early update
+        # of when trying to update the zoom again via the slider before the previous plot was generated.
+        if updating_from_numeric or updating_from_slider:
             return
         updating_from_slider = True
         zoom_range = input.zoom_range()
@@ -568,7 +576,7 @@ def server(input, output, session):
         Update the zoom slider when the zoom input changes.
         """
         nonlocal updating_from_numeric
-        if updating_from_slider:
+        if updating_from_numeric or updating_from_slider:
             return
         updating_from_numeric = True
         start, end = input.zoom_start(), input.zoom_end()
@@ -588,9 +596,9 @@ def server(input, output, session):
         """
         aln = reactive.alignment.get()
         ann = reactive.annotation.get()
+        inputs = prepare_inputs()
 
-        return create_msa_plot(aln, ann, prepare_inputs())
-
+        return create_msa_plot(aln, ann, inputs)
 
     #### Handle everything download related ###
     @reactive.Effect
@@ -954,7 +962,7 @@ def server(input, output, session):
             return None
 
     @render_widget
-    def analysis_custom_heatmap():
+    def analysis_plot_1():
         """
         Create the heatmap
         """
@@ -969,12 +977,12 @@ def server(input, output, session):
             return None
 
     @render_widget
-    def analysis_char_freq_heatmap():
+    def analysis_plot_2():
         """
-        Create character frequency heatmap
+        Create character frequency heatmap or recovery plot
         """
         aln = reactive.alignment.get()
-        inputs = prepare_minimal_inputs(right_plot=True, window_size=True)
+        inputs = prepare_minimal_inputs(right_plot=True, window_size=True, ref=True)
         try:
             if inputs['analysis_plot_type_right'] == 'Recovery':
                 return create_recovery_heatmap(aln, inputs)

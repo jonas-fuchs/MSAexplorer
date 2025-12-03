@@ -8,6 +8,17 @@ from shiny import ui
 from shinywidgets import output_widget
 from matplotlib import colormaps
 
+try:
+    from pyfamsa import Aligner, Sequence
+    pyfamsa_check = True
+except ImportError:
+    pyfamsa_check = False
+
+try:
+    from pytrimal import Alignment, AutomaticTrimmer
+    pytrimal_check = True
+except ImportError:
+    pytrimal_check = False
 
 def shiny_ui(css_file, js_file):
     """
@@ -80,17 +91,17 @@ def _custom_sidebar():
             ui.h6('Alignment settings'),
             ui.row(
                 ui.column(
-                    4,
+                    3,
                     ui.input_switch('show_gaps', 'Gaps', value=True),
                     ui.input_switch('fancy_gaps', 'Fancy gaps', value=False),
                     ui.input_switch('show_legend', 'Legend', value=True),
                     ui.input_switch('show_mask', 'Show mask', value=True),
                     ui.input_switch('show_ambiguities', 'Show ambiguities', value=True),
                     ui.input_switch('seq_names', 'show names', value=False),
-
+                    ui.input_switch('show_consensus', 'show consensus', value=False)
                 ),
                 ui.column(
-                    4,
+                    3,
                 ui.input_selectize('reference', 'Reference', ['first', 'consensus'], selected='first'),
                     ui.div(
                         ui.HTML(
@@ -107,11 +118,56 @@ def _custom_sidebar():
                     ui.input_switch('show_sequence_all', 'show all sequences', value=False),
                 ),
                 ui.column(
-                4,
-
+                3,
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="basic_color" style="font-size: 0.8rem; margin-bottom: 5px;">Basic color:</label>
+                                <input type="color" id="basic_color" value="#d3d3d3" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
                     ui.input_selectize('matrix', 'Matrix', ['None']),
-                    ui.input_selectize('matrix_color_mapping', 'Colormap Similarity', choices=list(colormaps.keys()), selected='PuBu_r'),
-                    ui.input_selectize('identity_coloring', 'Identity coloring', ['None', 'standard'], selected='None'),
+                    ui.input_selectize('char_coloring', 'Alignment coloring', ['standard'], selected='standard'),
+                ),
+                ui.column(
+                    3,
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="different_char_color" style="font-size: 0.8rem; margin-bottom: 5px;">Different sites:</label>
+                                <input type="color" id="different_char_color" value="#cd853f" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="mask_color" style="font-size: 0.8rem; margin-bottom: 5px;">Masked sites:</label>
+                                <input type="color" id="mask_color" value="#696969" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
+                    ui.div(
+                        ui.HTML(
+                            """
+                            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                                <label for="ambiguity_color" style="font-size: 0.8rem; margin-bottom: 5px;">Ambiguity sites:</label>
+                                <input type="color" id="ambiguity_color" value="#000000" onchange="updateColor(this.value)" 
+                                       style="width: 35px; height: 35px; padding: 0; border: 1px; margin-bottom: 15px;">
+                            </div>
+                            """
+                        )
+                    ),
                 )
             ),
             ui.hr(),
@@ -203,11 +259,12 @@ def _upload_tab():
         )
     )
 
+    # generate the layout depending on the availability of pyfamsa and pytrimal
     cols = ui.layout_columns(
         upload,
         process,
         download,
-    )
+    ) if pyfamsa_check or pytrimal_check else ui.layout_columns(upload, download)
 
     return ui.nav_panel(
         ' UPLOAD/DOWNLOAD',
@@ -278,7 +335,7 @@ def _plot_tab():
                 ui.input_slider('increase_height', 'Plot height', min=0.5, max=10, step=0.5, value=1),
                 ui.input_selectize('stat_type', ui.h6('First plot'), ['Off'], selected='Off'),
                 ui.input_numeric('plot_1_size', 'Plot fraction', 1, min=1, max=200),
-                ui.input_selectize('alignment_type', ui.h6('Second plot'),['Off', 'identity', 'similarity'], selected='identity'),
+                ui.input_selectize('alignment_type', ui.h6('Second plot'),['Off', 'normal', 'identity', 'similarity'], selected='identity'),
                 ui.input_numeric('plot_2_size', 'Plot fraction', 1, min=1, max=200),
                 ui.input_selectize('annotation', ui.h6('Third plot'), ['Off'], selected='Off'),
                 ui.input_numeric('plot_3_size', 'Plot fraction', 1, min=1, max=200),
@@ -350,11 +407,11 @@ def _analysis_tab():
             ),
             ui.column(
                 5,
-                output_widget('analysis_custom_heatmap'),
+                output_widget('analysis_plot_1'),
             ),
             ui.column(
                 5,
-                output_widget('analysis_char_freq_heatmap', fillable=True, fill=True),
+                output_widget('analysis_plot_2', fillable=True, fill=True),
             ),
         ),
         icon=ui.HTML('<img src="img/analyse.svg" alt="Chart Icon" style="height: 1em; vertical-align: middle;">')
