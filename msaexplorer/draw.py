@@ -233,10 +233,10 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
                                reference_color: str | None, seq_name: str, identity_color: str | ndarray,
                                show_gaps: bool):
         """
-        Creates the initial patch.
+        Creates the initial patch and adds it to the collection.
         """
 
-        fc = reference_color if seq_name == aln.reference_id and reference_color is not None else identity_color
+        color = reference_color if seq_name == aln.reference_id and reference_color is not None else identity_color
 
         if show_gaps:
             # plot a rectangle for parts that do not have gaps
@@ -244,7 +244,9 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
                 col.append(
                     patches.Rectangle(
                         (stretch[0] + zoom[0] - 0.5, y_position), stretch[1] - stretch[0] + 1, 0.8,
-                        facecolor=fc
+                        facecolor=color,
+                        edgecolor=color,
+                        linewidth=0.5
                     )
                 )
         # just plot a rectangle
@@ -252,9 +254,13 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
             col.append(
                 patches.Rectangle(
                     (zoom[0] - 0.5, y_position), zoom[1] - zoom[0], 0.8,
-                    facecolor=fc
+                    facecolor=color,
+                    edgecolor=color,
+                    linewidth=0.5
                 )
             )
+
+        return col
 
     def _find_stretches(row, non_nan_only=False) -> list[tuple[int, int, int]] | list[tuple[int, int]]:
         """
@@ -378,7 +384,7 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
                 identity_color = aln_colors[0]['color']
             else:
                 identity_color = aln_colors.to_rgba(1)  # for similarity alignment
-            _create_identity_patch(row, aln, patch_list, zoom, y_position, reference_color, seq_name, identity_color, show_gaps)
+            patch_list = _create_identity_patch(row, aln, patch_list, zoom, y_position, reference_color, seq_name, identity_color, show_gaps)
         # find consecutive stretches
         stretches = _find_stretches(row)
         # create polygons per stretch
@@ -395,7 +401,8 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
             )
     # Create the LineCollection: each segment is drawn in a single call.
     ax.add_collection(PatchCollection(patch_list, match_original=True, linewidths='none', joinstyle='miter', capstyle='butt'))
-    ax.add_collection(PolyCollection(polygons, facecolors=polygon_colors, linewidths=0, edgecolors=polygon_colors))
+    # NOTE: linewidth are important so in large overview plot the differences are still visible
+    ax.add_collection(PolyCollection(polygons, facecolors=polygon_colors, linewidths=0.5, edgecolors=polygon_colors))
 
 
     return detected_identity_values
@@ -1172,7 +1179,7 @@ def consensus_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, threshold
 
     # add single PolyCollection
     if polygons:
-        pc = PolyCollection(polygons, facecolors=poly_colors, edgecolors=poly_colors, linewidths=0)
+        pc = PolyCollection(polygons, facecolors=poly_colors, edgecolors=poly_colors, linewidths=0.5)
         ax.add_collection(pc)
 
     # add texts if requested
