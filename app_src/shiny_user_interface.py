@@ -211,7 +211,7 @@ def _upload_tab():
 
     upload = ui.card(
         ui.card_header(ui.h6('Upload files:')),
-        ui.input_file('alignment_file', None, multiple=False, button_label='alignment', accept=['.fa', '.fasta', '.aln']),
+        ui.input_file('alignment_file', None, multiple=False, button_label='alignment', accept=['.fa', '.fasta', '.aln', '.clustal', '.phy', '.phylip', '.nex', '.nexus', '.sto', '.stockholm']),
         ui.input_file('annotation_file',None, multiple=False, button_label='optional annotation', accept=['.gff', '.gff3', '.bed', '.gb', '.genbank']),
         ui.input_action_button('example_alignment', "Example", class_='example-data-button'),
 

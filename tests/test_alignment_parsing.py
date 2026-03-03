@@ -1,5 +1,9 @@
 import pathlib
 import pytest
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.Align import MultipleSeqAlignment
+
 from msaexplorer.explore import MSA
 
 DATA_DIR = pathlib.Path(__file__).parent / "data"
@@ -30,8 +34,22 @@ def test_read_alignment_parses_multiple_formats_from_string(format_name: str):
     assert parsed_alignment == EXPECTED_ALIGNMENT
 
 
+def test_msa_initializes_with_bio_alignment_object():
+    """Test that MSA can be initialized with a Bio.Align.MultipleSeqAlignment object."""
+    # Create a Bio alignment object
+    records = [
+        SeqRecord(Seq(sequence), id=seq_id, description="")
+        for seq_id, sequence in EXPECTED_ALIGNMENT.items()
+    ]
+    bio_alignment = MultipleSeqAlignment(records)
+
+    # Initialize MSA with Bio alignment object
+    msa = MSA(bio_alignment)
+
+    assert msa.alignment == EXPECTED_ALIGNMENT
+
+
 def test_read_alignment_raises_for_unparseable_content() -> None:
     """Test that MSA raises ValueError when given unparseable content."""
     with pytest.raises(ValueError, match="could not be parsed"):
         MSA._read_alignment("this is not an alignment")
-

@@ -20,6 +20,7 @@ from typing import Callable, Dict
 import numpy as np
 from numpy import ndarray
 from Bio import AlignIO
+from Bio.Align import MultipleSeqAlignment
 
 # msaexplorer
 from msaexplorer import config
@@ -36,7 +37,9 @@ def _get_line_iterator(source):
 
 class MSA:
     """
-    An alignment class that allows computation of several stats. Supported are "fasta", "clustal", "phylip", "stockholm" and, "nexus".
+    An alignment class that allows computation of several stats. Supported inputs are file paths to alignments in "fasta",
+    "clustal", "phylip", "stockholm", "nexus" formats, raw alignment strings, or Bio.Align.MultipleSeqAlignment for
+    compatibility with Biopython.
     """
 
     def __init__(self, alignment_string: str, reference_id: str = None, zoom_range: tuple | int = None):
@@ -53,51 +56,57 @@ class MSA:
 
     # Static methods
     @staticmethod
-    def _read_alignment(source: str) -> dict:
+    def _read_alignment(source: str | MultipleSeqAlignment) -> dict:
         """
         Parse MSA alignment using Biopython with automatic format detection.
-        :param source: Path to alignment file or raw alignment string
+        :param source: Path to alignment file, raw alignment string, or Bio.Align.MultipleSeqAlignment object
         :return: dictionary with ids as keys and sequences as values
         """
-        # Try multiple formats in order of likelihood
-        formats_to_try = ["fasta", "clustal", "phylip", "stockholm", "nexus"]
+        # Handle Bio.Align.MultipleSeqAlignment objects
+        if isinstance(source, MultipleSeqAlignment):
+            aln_dict = {record.id: str(record.seq).upper() for record in source}
+        else:
+            # Try multiple formats in order of likelihood
+            formats_to_try = ["fasta", "clustal", "phylip", "stockholm", "nexus"]
 
-        for fmt in formats_to_try:
-            try:
-                with _get_line_iterator(source) as handle:
-                    alignment = AlignIO.read(handle, fmt)
-                    aln_dict = {record.id: str(record.seq).upper() for record in alignment}
-
-                # Validate alignment
-                if not aln_dict:
+            aln_dict = None
+            for fmt in formats_to_try:
+                try:
+                    with _get_line_iterator(source) as handle:
+                        alignment = AlignIO.read(handle, fmt)
+                        aln_dict = {record.id: str(record.seq).upper() for record in alignment}
+                        break
+                except Exception:
                     continue
 
-                if len(aln_dict) < 2:
-                    raise ValueError("Alignment must contain more than one sequence.")
+            if aln_dict is None:
+                # If no format worked, raise an error
+                raise ValueError(f"Alignment file could not be parsed. Supported formats: {', '.join(formats_to_try)}")
 
-                # Check for non-allowed characters
-                for sequence_id, seq in aln_dict.items():
-                    invalid_chars = set(seq) - set(config.POSSIBLE_CHARS)
-                    if invalid_chars:
-                        raise ValueError(
-                            f"{sequence_id} contains invalid characters: {', '.join(invalid_chars)}. Allowed chars are: {config.POSSIBLE_CHARS}"
-                        )
+        # Validate alignment
+        if not aln_dict:
+            raise ValueError(f"Alignment does not contain any sequences.")
 
-                # Validate all sequences have same length
-                first_seq_len = len(next(iter(aln_dict.values())))
-                for sequence_id, seq in aln_dict.items():
-                    if len(seq) != first_seq_len:
-                        raise ValueError(
-                            f"All alignment sequences must have the same length. Sequence '{sequence_id}' has length {len(seq)}, expected {first_seq_len}."
-                        )
+        if len(aln_dict) < 2:
+            raise ValueError("Alignment must contain more than one sequence.")
 
-                return aln_dict
+        # Check for non-allowed characters
+        for sequence_id, seq in aln_dict.items():
+            invalid_chars = set(seq) - set(config.POSSIBLE_CHARS)
+            if invalid_chars:
+                raise ValueError(
+                    f"{sequence_id} contains invalid characters: {', '.join(invalid_chars)}. Allowed chars are: {config.POSSIBLE_CHARS}"
+                )
 
-            except Exception:
-                continue
+        # Validate all sequences have same length
+        first_seq_len = len(next(iter(aln_dict.values())))
+        for sequence_id, seq in aln_dict.items():
+            if len(seq) != first_seq_len:
+                raise ValueError(
+                    f"All alignment sequences must have the same length. Sequence '{sequence_id}' has length {len(seq)}, expected {first_seq_len}."
+                )
 
-        # If no format worked, raise an error
-        raise ValueError(f"Alignment file could not be parsed. Supported formats: {', '.join(formats_to_try)}")
+        return aln_dict
 
     @staticmethod
     def _validate_ref(reference: str | None, alignment: dict) -> str | None | ValueError:
