@@ -1,0 +1,8 @@
+##gff-version 3
+AB032031.1	.	region	1	1200	.	+	.	ID=seq1;Name=AB032031.1
+AB032031.1	.	gene	55	1167	.	+	.	ID=gene_n;Name=n
+AB032031.1	.	CDS	55	1167	.	+	0	ID=cds_n;Name=n;product=nucleoprotein
+
+
+
+

@@ -20,7 +20,9 @@ from typing import Callable, Dict
 import numpy as np
 from numpy import ndarray
 from Bio import AlignIO
+from Bio import SeqIO
 from Bio.Align import MultipleSeqAlignment
+from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
@@ -1248,19 +1250,23 @@ class Annotation:
     @staticmethod
     def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[str, str, str, Dict]:
 
-        def detect_annotation_type(file_path: str) -> str:
+        def detect_annotation_type(handle) -> str:
             """
             Detect the type of annotation file (GenBank, GFF, or BED) based
-            on the first relevant line (excluding empty and #)
+            on the first relevant line (excluding empty and #). Also recognizes
+            Bio.SeqIO iterators as GenBank format.
 
-            :param file_path: Path to the annotation file.
+            :param file_path: Path to the annotation file or Bio.SeqIO iterator for genbank records read with biopython.
             :return: The detected file type ('gb', 'gff', or 'bed').
 
             :raises ValueError: If the file type cannot be determined.
             """
+            # Check if input is a SeqIO iterator
+            if isinstance(handle, GenBankIterator):
+                return 'gb'
 
-            with _get_line_iterator(file_path) as file:
-                for line in file:
+            with _get_line_iterator(handle) as h:
+                for line in h:
                     # skip empty lines and comments
                     if not line.strip() or line.startswith('#'):
                         continue
@@ -1285,106 +1291,66 @@ class Annotation:
 
         def parse_gb(file_path) -> dict:
             """
-            parse a genebank file to dictionary - primarily retained are the informations
-            for qualifiers as these will be used for plotting.
+            Parse a GenBank file into the same dictionary structure used by the annotation pipeline.
 
-            :param file_path: path to genebank file
+            :param file_path: path to genbank file, raw string, or Bio.SeqIO iterator
             :return: nested dictionary
-
             """
-
-            def sanitize_gb_location(string: str) -> tuple[list, str]:
-                """
-                see: https://www.insdc.org/submitting-standards/feature-table/
-                """
-                strand = '+'
-                locations = []
-                # check the direction of the annotation
-                if 'complement' in string:
-                    strand = '-'
-                # sanitize operators
-                for operator in ['complement(', 'join(', 'order(']:
-                    string = string.replace(operator, '')
-                # sanitize possible chars for splitting start stop -
-                # however in the future might not simply do this
-                # as some useful information is retained
-                for char in ['>', '<', ')']:
-                    string = string.replace(char, '')
-                # check if we have multiple location e.g. due to splicing
-                if ',' in string:
-                    raw_locations = string.split(',')
-                else:
-                    raw_locations = [string]
-                # try to split start and stop
-                for location in raw_locations:
-                    for sep in ['..', '.', '^']:
-                        if sep in location:
-                            sanitized_locations = [int(x) for x in location.split(sep)]
-                            sanitized_locations[0] = sanitized_locations[0] - 1  # enforce 0-based starts
-                            locations.append(sanitized_locations)
-                            break
-
-                return locations, strand
-
-
             records = {}
-            with _get_line_iterator(file_path) as file:
-                record = None
-                in_features = False
-                counter_dict = {}
-                for line in file:
-                    line = line.rstrip()
-                    parts = line.split()
-                    # extract the locus id
-                    if line.startswith('LOCUS'):
-                        if record:
-                            records[record['locus']] = record
-                        record = {
-                            'locus': parts[1],
-                            'features': {}
-                        }
 
-                    elif line.startswith('FEATURES'):
-                        in_features = True
+            # Check if input is a GenBankIterator
+            if isinstance(file_path, GenBankIterator):
+                # Direct GenBankIterator input
+                seq_records = list(file_path)
+            else:
+                # File path or string input
+                with _get_line_iterator(file_path) as handle:
+                    seq_records = list(SeqIO.parse(handle, "genbank"))
 
-                    # ignore the sequence info
-                    elif line.startswith('ORIGIN'):
-                        in_features = False
+            for seq_record in seq_records:
+                locus = seq_record.name if seq_record.name else seq_record.id
+                feature_container = {}
+                feature_counter = {}
 
-                    # now write useful feature information to dictionary
-                    elif in_features:
-                        if not line.strip():
+                for feature in seq_record.features:
+                    feature_type = feature.type
+                    if feature_type not in feature_container:
+                        feature_container[feature_type] = {}
+                        feature_counter[feature_type] = 0
+
+                    current_idx = feature_counter[feature_type]
+                    feature_counter[feature_type] += 1
+
+                    # Support simple and compound feature locations uniformly.
+                    parts = feature.location.parts if hasattr(feature.location, "parts") else [feature.location]
+                    locations = []
+                    for part in parts:
+                        try:
+                            locations.append([int(part.start), int(part.end)])
+                        except (TypeError, ValueError):
                             continue
-                        if line[5] != ' ':
-                            location_line = True  # remember that we are in a location for multi-line locations
-                            feature_type, qualifier = parts[0], parts[1]
-                            if feature_type not in record['features']:
-                                record['features'][feature_type] = {}
-                                counter_dict[feature_type] = 0
-                            locations, strand = sanitize_gb_location(qualifier)
-                            record['features'][feature_type][counter_dict[feature_type]] = {
-                                'location': locations,
-                                'strand': strand
-                            }
-                            counter_dict[feature_type] += 1
+
+                    strand = '-' if feature.location.strand == -1 else '+'
+                    parsed_feature = {
+                        'location': locations,
+                        'strand': strand,
+                    }
+
+                    # Keep qualifier keys unchanged and flatten values to strings.
+                    for qualifier_type, qualifier_values in feature.qualifiers.items():
+                        if not qualifier_values:
+                            continue
+                        if isinstance(qualifier_values, list):
+                            parsed_feature[qualifier_type] = qualifier_values[0] if len(qualifier_values) == 1 else ' '.join(str(x) for x in qualifier_values)
                         else:
-                            # edge case for multi-line locations
-                            if location_line and not line.strip().startswith('/'):
-                                locations, strand = sanitize_gb_location(parts[0])
-                                for loc in locations:
-                                    record['features'][feature_type][counter_dict[feature_type]]['location'].append(loc)
-                            else:
-                                location_line = False
-                                try:
-                                    qualifier_type, qualifier = parts[0].split('=')
-                                except ValueError:  # we are in the coding sequence
-                                    qualifier = qualifier + parts[0]
+                            parsed_feature[qualifier_type] = str(qualifier_values)
 
-                                qualifier_type, qualifier = qualifier_type.lstrip('/'), qualifier.strip('"')
-                                last_index = counter_dict[feature_type] - 1
-                                record['features'][feature_type][last_index][qualifier_type] = qualifier
+                    feature_container[feature_type][current_idx] = parsed_feature
 
-            records[record['locus']] = record
+                records[locus] = {
+                    'locus': locus,
+                    'features': feature_container,
+                }
 
             return records
 
