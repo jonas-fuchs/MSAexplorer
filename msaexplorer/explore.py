@@ -36,7 +36,7 @@ def _get_line_iterator(source):
 
 class MSA:
     """
-    An alignment class that allows computation of several stats
+    An alignment class that allows computation of several stats. Supported are "fasta", "clustal", "phylip", "stockholm" and, "nexus".
     """
 
     def __init__(self, alignment_string: str, reference_id: str = None, zoom_range: tuple | int = None):

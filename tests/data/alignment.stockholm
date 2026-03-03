@@ -1,0 +1,10 @@
+# STOCKHOLM 1.0
+#=GF ID test_alignment
+#=GF DE Test alignment
+
+seq1                       ATGCATGC
+seq2                       ATG-ATGC
+seq3                       ATGCAT-T
+
+//
+
