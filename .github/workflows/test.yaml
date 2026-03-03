@@ -1,4 +1,4 @@
-name: Tests and Python Version Check
+name: Deploy Test Suite
 
 on:
   push:

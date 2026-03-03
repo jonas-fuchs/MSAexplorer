@@ -345,10 +345,10 @@ def server(input, output, session):
         else:
             ui.update_selectize('stat_type',
                                 choices=['Off', 'sequence logo', 'gc', 'entropy', 'coverage', 'identity', 'similarity',
-                                         'ts tv score'], selected='Off')
+                                         'ts tv score', 'gap frequency'], selected='Off')
             ui.update_selectize('download_type', choices=['alignment', 'SNPs', 'consensus', 'character frequencies', '% recovery',
                                                           'reverse complement alignment', 'conserved orfs', 'gc',
-                                                          'entropy', 'coverage', 'mean identity', 'mean similarity',
+                                                          'entropy', 'gap frequency', 'coverage', 'mean identity', 'mean similarity',
                                                           'ts tv score'])
             ui.update_selectize('annotation', choices=['Off', 'SNPs', 'Conserved ORFs'])
             ui.update_selectize('char_coloring',choices=['None', 'standard', 'purine_pyrimidine', 'strong_weak'])
@@ -650,7 +650,7 @@ def server(input, output, session):
                 selector='#download_format-label',
                 where='beforeBegin'
             )
-        elif input.download_type() in ['entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score', 'gc']:
+        elif input.download_type() in ['entropy', 'coverage', 'mean identity', 'mean similarity', 'ts tv score', 'gap frequency', 'gc']:
             ui.update_selectize('download_format', choices=['csv', 'tabular'])
             ui.insert_ui(
                 ui.input_numeric('download_type_options_1', label='Rolling average', value=1, min=1, step=1),
@@ -721,7 +721,8 @@ def server(input, output, session):
                 'coverage': aln.calc_coverage,
                 'mean identity': aln.calc_identity_alignment,
                 'mean similarity': aln.calc_similarity_alignment,
-                'ts tv score': aln.calc_transition_transversion_score
+                'gap frequency': aln.calc_gap_frequency,
+                'ts tv score': aln.calc_transition_transversion_score,
             }
             # raise error for rolling average
             if input.download_type_options_1() < 1 or input.download_type_options_1() > aln.length:
@@ -797,7 +798,7 @@ def server(input, output, session):
             elif input.download_type() == 'consensus':
                 export_data = _consensus_option()
             # Create download data for stats
-            elif input.download_type() in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
+            elif input.download_type() in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gap frequency', 'gc']:
                 export_data = _stat_option()
             elif input.download_type() == 'conserved orfs':
                 export_data = _orf_option()

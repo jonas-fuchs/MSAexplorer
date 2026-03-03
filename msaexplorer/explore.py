@@ -703,6 +703,14 @@ class MSA:
 
         return coverage
 
+    def calc_gap_frequency(self) -> list:
+        """
+        Determine the gap frequency for every position in an alignment. This is the inverted coverage.
+        """
+        coverage = self.calc_coverage()
+
+        return [1 - x for x in coverage]
+
     def calc_reverse_complement_alignment(self) -> dict | TypeError:
         """
         Reverse complement the alignment.
