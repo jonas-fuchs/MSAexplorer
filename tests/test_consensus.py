@@ -3,16 +3,8 @@ Tests for consensus sequence generation.
 """
 
 import pytest
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-from Bio.Align import MultipleSeqAlignment
 from msaexplorer.explore import MSA
-
-
-def create_alignment(sequences_dict):
-    """Helper function to create a MultipleSeqAlignment from a dictionary."""
-    records = [SeqRecord(Seq(seq), id=seq_id) for seq_id, seq in sequences_dict.items()]
-    return MultipleSeqAlignment(records)
+from conftest import create_alignment
 
 
 class TestGetConsensus:

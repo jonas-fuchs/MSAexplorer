@@ -555,10 +555,10 @@ class MSA:
         for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
             previous_stop = -1 if strand == '+' else self.length + 1
             for orf in orf_list:
-                if strand == '+' and orf[1][0] > previous_stop:
+                if strand == '+' and orf[1][0] >= previous_stop:
                     non_overlapping_orfs.append(orf[0])
                     previous_stop = orf[1][1]
-                elif strand == '-' and orf[1][1] < previous_stop:
+                elif strand == '-' and orf[1][1] <= previous_stop:
                     non_overlapping_orfs.append(orf[0])
                     previous_stop = orf[1][0]
 
