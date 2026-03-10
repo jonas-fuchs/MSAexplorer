@@ -44,7 +44,7 @@ class MSA:
     compatibility with Biopython.
     """
 
-    def __init__(self, alignment_string: str, reference_id: str = None, zoom_range: tuple | int = None):
+    def __init__(self, alignment_string: str | MultipleSeqAlignment, reference_id: str = None, zoom_range: tuple | int = None):
         """
         Initialise an Alignment object.
         :param alignment_string: Path to alignment file or raw alignment string

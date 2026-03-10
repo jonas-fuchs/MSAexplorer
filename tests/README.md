@@ -1,6 +1,6 @@
 # Tests
 
-This test suite validates alignment and annotation parsing in the `msaexplorer.explore` module.
+This test suite validates the `msaexplorer.explore` module.
 
 Run with:
 
