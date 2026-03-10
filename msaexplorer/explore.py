@@ -19,6 +19,10 @@ from typing import Callable, Dict
 # installed
 import numpy as np
 from numpy import ndarray
+from Bio import AlignIO
+from Bio import SeqIO
+from Bio.Align import MultipleSeqAlignment
+from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
@@ -35,10 +39,12 @@ def _get_line_iterator(source):
 
 class MSA:
     """
-    An alignment class that allows computation of several stats
+    An alignment class that allows computation of several stats. Supported inputs are file paths to alignments in "fasta",
+    "clustal", "phylip", "stockholm", "nexus" formats, raw alignment strings, or Bio.Align.MultipleSeqAlignment for
+    compatibility with Biopython.
     """
 
-    def __init__(self, alignment_string: str, reference_id: str = None, zoom_range: tuple | int = None):
+    def __init__(self, alignment_string: str | MultipleSeqAlignment, reference_id: str = None, zoom_range: tuple | int = None):
         """
         Initialise an Alignment object.
         :param alignment_string: Path to alignment file or raw alignment string
@@ -50,70 +56,59 @@ class MSA:
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
 
-    # TODO: read in different alignment types
     # Static methods
     @staticmethod
-    def _read_alignment(file_path: str) -> dict:
+    def _read_alignment(source: str | MultipleSeqAlignment) -> dict:
         """
-        Parse MSA alignment file.
-        :param file_path: path to alignment file
+        Parse MSA alignment using Biopython with automatic format detection.
+        :param source: Path to alignment file, raw alignment string, or Bio.Align.MultipleSeqAlignment object
         :return: dictionary with ids as keys and sequences as values
         """
+        # Handle Bio.Align.MultipleSeqAlignment objects
+        if isinstance(source, MultipleSeqAlignment):
+            aln_dict = {record.id: str(record.seq).upper() for record in source}
+        else:
+            # Try multiple formats in order of likelihood
+            formats_to_try = ["fasta", "clustal", "phylip", "stockholm", "nexus"]
 
-        def add_seq(aln: dict, sequence_id: str, seq_list: list):
-            """
-            Add a complete sequence and check for non-allowed chars
-            :param aln: alignment dictionary to build
-            :param sequence_id: sequence id to add
-            :param seq_list: sequences to add
-            :return: alignment with added sequences
-            """
-            final_seq = ''.join(seq_list).upper()
-            # Check for non-allowed characters
-            invalid_chars = set(final_seq) - set(config.POSSIBLE_CHARS)
+            aln_dict = None
+            for fmt in formats_to_try:
+                try:
+                    with _get_line_iterator(source) as handle:
+                        alignment = AlignIO.read(handle, fmt)
+                        aln_dict = {record.id: str(record.seq).upper() for record in alignment}
+                        break
+                except Exception:
+                    continue
+
+            if aln_dict is None:
+                # If no format worked, raise an error
+                raise ValueError(f"Alignment file could not be parsed. Supported formats: {', '.join(formats_to_try)}")
+
+        # Validate alignment
+        if not aln_dict:
+            raise ValueError(f"Alignment does not contain any sequences.")
+
+        if len(aln_dict) < 2:
+            raise ValueError("Alignment must contain more than one sequence.")
+
+        # Check for non-allowed characters
+        for sequence_id, seq in aln_dict.items():
+            invalid_chars = set(seq) - set(config.POSSIBLE_CHARS)
             if invalid_chars:
                 raise ValueError(
                     f"{sequence_id} contains invalid characters: {', '.join(invalid_chars)}. Allowed chars are: {config.POSSIBLE_CHARS}"
                 )
-            aln[sequence_id] = final_seq
 
-            return aln
+        # Validate all sequences have same length
+        first_seq_len = len(next(iter(aln_dict.values())))
+        for sequence_id, seq in aln_dict.items():
+            if len(seq) != first_seq_len:
+                raise ValueError(
+                    f"All alignment sequences must have the same length. Sequence '{sequence_id}' has length {len(seq)}, expected {first_seq_len}."
+                )
 
-        alignment, seq_lines = {}, []
-        seq_id = None
-
-        with _get_line_iterator(file_path) as file:
-            for i, line in enumerate(file):
-                line = line.strip()
-                # initial check for fasta format
-                if i == 0 and not line.startswith(">"):
-                    raise ValueError('Alignment has to be in fasta format starting with >SeqID.')
-                if line.startswith(">"):
-                    if seq_id:
-                        alignment = add_seq(alignment, seq_id, seq_lines)
-                    # initialize a new sequence
-                    seq_id, seq_lines = line[1:], []
-                else:
-                    seq_lines.append(line)
-            # handle last sequence
-            if seq_id:
-                alignment = add_seq(alignment, seq_id, seq_lines)
-        # final sanity checks
-        if alignment:
-            # alignment contains only one sequence:
-            if len(alignment) < 2:
-                raise ValueError("Alignment must contain more than one sequence.")
-            # alignment sequences are not same length
-            first_seq_len = len(next(iter(alignment.values())))
-            for sequence_id, sequence in alignment.items():
-                if len(sequence) != first_seq_len:
-                    raise ValueError(
-                        f"All alignment sequences must have the same length. Sequence '{sequence_id}' has length {len(sequence)}, expected {first_seq_len}."
-                    )
-            # all checks passed
-            return alignment
-        else:
-            raise ValueError(f"Alignment file {file_path} does not contain any sequences in fasta format.")
+        return aln_dict
 
     @staticmethod
     def _validate_ref(reference: str | None, alignment: dict) -> str | None | ValueError:
@@ -560,10 +555,10 @@ class MSA:
         for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
             previous_stop = -1 if strand == '+' else self.length + 1
             for orf in orf_list:
-                if strand == '+' and orf[1][0] > previous_stop:
+                if strand == '+' and orf[1][0] >= previous_stop:
                     non_overlapping_orfs.append(orf[0])
                     previous_stop = orf[1][1]
-                elif strand == '-' and orf[1][1] < previous_stop:
+                elif strand == '-' and orf[1][1] <= previous_stop:
                     non_overlapping_orfs.append(orf[0])
                     previous_stop = orf[1][0]
 
@@ -707,6 +702,14 @@ class MSA:
             coverage.append(1 - pos.count('-') / len(pos))
 
         return coverage
+
+    def calc_gap_frequency(self) -> list:
+        """
+        Determine the gap frequency for every position in an alignment. This is the inverted coverage.
+        """
+        coverage = self.calc_coverage()
+
+        return [1 - x for x in coverage]
 
     def calc_reverse_complement_alignment(self) -> dict | TypeError:
         """
@@ -1255,19 +1258,23 @@ class Annotation:
     @staticmethod
     def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[str, str, str, Dict]:
 
-        def detect_annotation_type(file_path: str) -> str:
+        def detect_annotation_type(handle) -> str:
             """
             Detect the type of annotation file (GenBank, GFF, or BED) based
-            on the first relevant line (excluding empty and #)
+            on the first relevant line (excluding empty and #). Also recognizes
+            Bio.SeqIO iterators as GenBank format.
 
-            :param file_path: Path to the annotation file.
+            :param file_path: Path to the annotation file or Bio.SeqIO iterator for genbank records read with biopython.
             :return: The detected file type ('gb', 'gff', or 'bed').
 
             :raises ValueError: If the file type cannot be determined.
             """
+            # Check if input is a SeqIO iterator
+            if isinstance(handle, GenBankIterator):
+                return 'gb'
 
-            with _get_line_iterator(file_path) as file:
-                for line in file:
+            with _get_line_iterator(handle) as h:
+                for line in h:
                     # skip empty lines and comments
                     if not line.strip() or line.startswith('#'):
                         continue
@@ -1292,106 +1299,66 @@ class Annotation:
 
         def parse_gb(file_path) -> dict:
             """
-            parse a genebank file to dictionary - primarily retained are the informations
-            for qualifiers as these will be used for plotting.
+            Parse a GenBank file into the same dictionary structure used by the annotation pipeline.
 
-            :param file_path: path to genebank file
+            :param file_path: path to genbank file, raw string, or Bio.SeqIO iterator
             :return: nested dictionary
-
             """
-
-            def sanitize_gb_location(string: str) -> tuple[list, str]:
-                """
-                see: https://www.insdc.org/submitting-standards/feature-table/
-                """
-                strand = '+'
-                locations = []
-                # check the direction of the annotation
-                if 'complement' in string:
-                    strand = '-'
-                # sanitize operators
-                for operator in ['complement(', 'join(', 'order(']:
-                    string = string.replace(operator, '')
-                # sanitize possible chars for splitting start stop -
-                # however in the future might not simply do this
-                # as some useful information is retained
-                for char in ['>', '<', ')']:
-                    string = string.replace(char, '')
-                # check if we have multiple location e.g. due to splicing
-                if ',' in string:
-                    raw_locations = string.split(',')
-                else:
-                    raw_locations = [string]
-                # try to split start and stop
-                for location in raw_locations:
-                    for sep in ['..', '.', '^']:
-                        if sep in location:
-                            sanitized_locations = [int(x) for x in location.split(sep)]
-                            sanitized_locations[0] = sanitized_locations[0] - 1  # enforce 0-based starts
-                            locations.append(sanitized_locations)
-                            break
-
-                return locations, strand
-
-
             records = {}
-            with _get_line_iterator(file_path) as file:
-                record = None
-                in_features = False
-                counter_dict = {}
-                for line in file:
-                    line = line.rstrip()
-                    parts = line.split()
-                    # extract the locus id
-                    if line.startswith('LOCUS'):
-                        if record:
-                            records[record['locus']] = record
-                        record = {
-                            'locus': parts[1],
-                            'features': {}
-                        }
 
-                    elif line.startswith('FEATURES'):
-                        in_features = True
+            # Check if input is a GenBankIterator
+            if isinstance(file_path, GenBankIterator):
+                # Direct GenBankIterator input
+                seq_records = list(file_path)
+            else:
+                # File path or string input
+                with _get_line_iterator(file_path) as handle:
+                    seq_records = list(SeqIO.parse(handle, "genbank"))
 
-                    # ignore the sequence info
-                    elif line.startswith('ORIGIN'):
-                        in_features = False
+            for seq_record in seq_records:
+                locus = seq_record.name if seq_record.name else seq_record.id
+                feature_container = {}
+                feature_counter = {}
 
-                    # now write useful feature information to dictionary
-                    elif in_features:
-                        if not line.strip():
+                for feature in seq_record.features:
+                    feature_type = feature.type
+                    if feature_type not in feature_container:
+                        feature_container[feature_type] = {}
+                        feature_counter[feature_type] = 0
+
+                    current_idx = feature_counter[feature_type]
+                    feature_counter[feature_type] += 1
+
+                    # Support simple and compound feature locations uniformly.
+                    parts = feature.location.parts if hasattr(feature.location, "parts") else [feature.location]
+                    locations = []
+                    for part in parts:
+                        try:
+                            locations.append([int(part.start), int(part.end)])
+                        except (TypeError, ValueError):
                             continue
-                        if line[5] != ' ':
-                            location_line = True  # remember that we are in a location for multi-line locations
-                            feature_type, qualifier = parts[0], parts[1]
-                            if feature_type not in record['features']:
-                                record['features'][feature_type] = {}
-                                counter_dict[feature_type] = 0
-                            locations, strand = sanitize_gb_location(qualifier)
-                            record['features'][feature_type][counter_dict[feature_type]] = {
-                                'location': locations,
-                                'strand': strand
-                            }
-                            counter_dict[feature_type] += 1
+
+                    strand = '-' if feature.location.strand == -1 else '+'
+                    parsed_feature = {
+                        'location': locations,
+                        'strand': strand,
+                    }
+
+                    # Keep qualifier keys unchanged and flatten values to strings.
+                    for qualifier_type, qualifier_values in feature.qualifiers.items():
+                        if not qualifier_values:
+                            continue
+                        if isinstance(qualifier_values, list):
+                            parsed_feature[qualifier_type] = qualifier_values[0] if len(qualifier_values) == 1 else ' '.join(str(x) for x in qualifier_values)
                         else:
-                            # edge case for multi-line locations
-                            if location_line and not line.strip().startswith('/'):
-                                locations, strand = sanitize_gb_location(parts[0])
-                                for loc in locations:
-                                    record['features'][feature_type][counter_dict[feature_type]]['location'].append(loc)
-                            else:
-                                location_line = False
-                                try:
-                                    qualifier_type, qualifier = parts[0].split('=')
-                                except ValueError:  # we are in the coding sequence
-                                    qualifier = qualifier + parts[0]
+                            parsed_feature[qualifier_type] = str(qualifier_values)
 
-                                qualifier_type, qualifier = qualifier_type.lstrip('/'), qualifier.strip('"')
-                                last_index = counter_dict[feature_type] - 1
-                                record['features'][feature_type][last_index][qualifier_type] = qualifier
+                    feature_container[feature_type][current_idx] = parsed_feature
 
-            records[record['locus']] = record
+                records[locus] = {
+                    'locus': locus,
+                    'features': feature_container,
+                }
 
             return records
 

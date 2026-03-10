@@ -682,7 +682,7 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
     Generate a plot for the various alignment stats.
     :param aln: alignment MSA class or path
     :param ax: matplotlib axes
-    :param stat_type: 'entropy', 'gc', 'coverage', 'ts tv score', 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
+    :param stat_type: 'entropy', 'gc', 'coverage', 'ts tv score', gap frequency, 'identity' or 'similarity' -> (here default matrices are used NT - TRANS, AA - BLOSUM65)
     :param line_color: color of the line
     :param line_width: width of the line
     :param rolling_average: average rolling window size left and right of a position in nucleotides or amino acids
@@ -701,7 +701,8 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
         'coverage': aln.calc_coverage,
         'identity': aln.calc_identity_alignment,
         'similarity': aln.calc_similarity_alignment,
-        'ts tv score': aln.calc_transition_transversion_score
+        'ts tv score': aln.calc_transition_transversion_score,
+        'gap frequency': aln.calc_gap_frequency
     }
 
     if stat_type not in stat_functions:

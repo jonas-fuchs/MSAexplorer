@@ -24,6 +24,7 @@
 ### Basic installation (python library):
 Relies on:
 - `matplotlib>=3.8`
+- `biopython>=1.81`
 - `numpy>=2.0`
 
 Can be installed via:
@@ -34,6 +35,7 @@ pip install msaexplorer
 ### Extended installation (python library + app):
 Relies on:
 - `matplotlib>=3.8`
+- `biopython>=1.81`
 - `numpy>=2.0`
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
@@ -50,6 +52,7 @@ pip install msaexplorer[app]
 
 Relies on:
 - `matplotlib>=3.8`
+- `biopython>=1.81`
 - `numpy>=2.0`
 - `shiny>=1.3`
 - `shinywidgets>=0.5.2`
@@ -110,6 +113,7 @@ shinylive export ./ site/  # you should now have a new 'site' folder with the ap
 
 ## Features of MSAexplorer as a python package ([full documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html))
 - :white_check_mark: Access MSAexplorer as a python package
+- :white_check_mark: Seamlessly integrates with Biopython.
 - :white_check_mark: Maximum flexibility for the plotting and analysis features while retaining minimal syntax.
 - :white_check_mark: Integrates seamlessly with matplotlib.
 - :white_check_mark: Minimal requirements.

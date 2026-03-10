@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = 'msaexplorer'
-version = '0.4.5'
+version = '0.4.6'
 description = 'A tool for exploring multiple sequence alignments.'
 keywords = ['msa, multiple sequence alignments, plotting, shiny app, alignment analysis']
-dependencies = ['numpy>=2.0', 'matplotlib>=3.8']
+dependencies = ['numpy>=2.0', 'matplotlib>=3.8', 'biopython>=1.81']
 requires-python = '>=3.11'
 authors = [{name = 'Jonas Fuchs', email = 'jonas.fuchs@uniklinik-freiburg.de'}]
 maintainers = [{name = 'Jonas Fuchs', email = 'jonas.fuchs@uniklinik-freiburg.de'}]
@@ -19,6 +19,10 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# install dependencies for running tests
+test = [
+    'pytest>=8.0'
+]
 # install dependencies for the app
 app = [
     'shinywidgets>=0.5.2',

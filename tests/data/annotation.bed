@@ -1,0 +1,7 @@
+# SIMPLE BED FILE (3-column format)
+# chrom start end
+AB032031.1	0	100
+AB032031.1	200	300
+AB032031.1	500	600
+
+
