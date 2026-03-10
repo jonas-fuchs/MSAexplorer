@@ -20,4 +20,3 @@ def create_alignment(sequences_dict):
     """
     records = [SeqRecord(Seq(seq), id=seq_id) for seq_id, seq in sequences_dict.items()]
     return MultipleSeqAlignment(records)
-

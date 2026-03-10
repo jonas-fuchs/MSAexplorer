@@ -1,4 +1,4 @@
-name: Deploy Test Suite
+name: Tests and Python Version Check
 
 on:
   push:
@@ -86,8 +86,8 @@ jobs:
           
           # Test basic MSA creation
           aln = explore.MSA('example_alignments/DNA.fasta')
-          assert len(aln.alignment) > 0, 'Alignment dictionary is empty'
-          print(f'✓ Successfully loaded alignment with {len(aln.alignment)} sequences')
+          assert len(aln.alignment_dict) > 0, 'Alignment dictionary is empty'
+          print(f'✓ Successfully loaded alignment with {len(aln.alignment_dict)} sequences')
           
           print(f'✓ Python {sys.version_info.major}.{sys.version_info.minor} compatibility verified')
           "

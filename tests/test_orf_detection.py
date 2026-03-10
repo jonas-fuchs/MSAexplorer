@@ -27,7 +27,7 @@ class TestGetConservedOrfs:
         assert orfs[orf_key]['location'][0][0] == 0  # Start at position 0
         assert orfs[orf_key]['location'][0][1] == 12  # End at position 9
 
-    def test_orf_with_gaps(self):
+    def test_with_gaps(self):
         """Test ORF detection handles gaps correctly."""
         alignment_dict = {
             'seq1': 'ATG---GGGAAATAA',
@@ -51,7 +51,7 @@ class TestGetConservedOrfs:
 
         assert len(orfs) == 0
 
-    def test_orf_with_internal_stop(self):
+    def test_with_internal_stop(self):
         """Test that ORFs with internal stop codons are rejected."""
         alignment_dict = {
             'seq1': 'ATGTAAATGTAA',
@@ -63,7 +63,7 @@ class TestGetConservedOrfs:
 
         assert len(orfs) == 0  # Should not find ORF because of internal stop at position 3-5
 
-    def test_orf_multiple_frames(self):
+    def test_multiple_frames(self):
         """Test ORF detection across different reading frames."""
         # One ORF in frame 1
         alignment_dict = {
@@ -78,7 +78,7 @@ class TestGetConservedOrfs:
         frames = [orf['frame'] for orf in orfs.values()]
         assert 1 in frames
 
-    def test_orf_reverse_strand(self):
+    def test_reverse_strand(self):
         """Test ORF detection on reverse complement strand."""
         # Should find ORF in both strands
         alignment_dict = {
@@ -92,7 +92,7 @@ class TestGetConservedOrfs:
 
         assert strands == ['+', '-']
 
-    def test_orf_non_conserved_start(self):
+    def test_non_conserved_start(self):
         """Test that non-conserved start codons are rejected."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',  # Has ATG
@@ -104,7 +104,7 @@ class TestGetConservedOrfs:
 
         assert len(orfs) == 0
 
-    def test_orf_non_conserved_stop(self):
+    def test_non_conserved_stop(self):
         """Test that non-conserved stop codons are rejected."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',  # Has TAA stop
@@ -116,7 +116,7 @@ class TestGetConservedOrfs:
 
         assert len(orfs) == 0
 
-    def test_orf_identity_cutoff(self):
+    def test_identity_cutoff(self):
         """Test ORF filtering by identity/conservation cutoff."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',
@@ -133,7 +133,7 @@ class TestGetConservedOrfs:
         orfs_high = aln.get_conserved_orfs(min_length=9, identity_cutoff=99.0)
         assert len(orfs_high) == 0
 
-    def test_orf_internal_orfs_detected(self):
+    def test_internal_orfs_detected(self):
         """Test that internal ORFs are properly marked."""
         # Two start codons to same stop --> one internal
         alignment_dict = {
@@ -147,7 +147,7 @@ class TestGetConservedOrfs:
         assert len(orfs['ORF_0']['internal']) == 1
 
 
-    def test_orf_rna_alignment(self):
+    def test_rna_alignment(self):
         """Test ORF detection works with RNA alignments (U instead of T)."""
         alignment_dict = {
             'seq1': 'AUGAAAUAA',
@@ -159,7 +159,7 @@ class TestGetConservedOrfs:
 
         assert len(orfs) == 1
 
-    def test_orf_amino_acid_raises_error(self):
+    def test_amino_acid_raises_error(self):
         """Test that amino acid alignments raise TypeError."""
         alignment_dict = {
             'seq1': 'ARNDCQEGHILKMFPSTWYV',
@@ -171,7 +171,7 @@ class TestGetConservedOrfs:
         with pytest.raises(TypeError, match='ORF search only for RNA/DNA alignments'):
             aln.get_conserved_orfs(min_length=9)
 
-    def test_orf_invalid_min_length(self):
+    def test_invalid_min_length(self):
         """Test that invalid min_length values raise ValueError."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',
@@ -188,7 +188,7 @@ class TestGetConservedOrfs:
         with pytest.raises(ValueError, match='min_length must be between 6 and'):
             aln.get_conserved_orfs(min_length=1000)
 
-    def test_orf_invalid_identity_cutoff(self):
+    def test_invalid_identity_cutoff(self):
         """Test that invalid identity_cutoff values raise ValueError."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',
@@ -205,7 +205,7 @@ class TestGetConservedOrfs:
         with pytest.raises(ValueError, match='conservation cutoff must be between 0 and 100'):
             aln.get_conserved_orfs(min_length=9, identity_cutoff=101.0)
 
-    def test_orf_return_structure(self):
+    def test_return_structure(self):
         """Test that returned ORF dictionary has correct structure."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',
@@ -238,7 +238,7 @@ class TestGetConservedOrfs:
 class TestGetNonOverlappingConservedOrfs:
     """Test the get_non_overlapping_conserved_orfs method."""
 
-    def test_non_overlapping_basic(self):
+    def test_basic(self):
         """Test basic non-overlapping ORF selection."""
         # Two non-overlapping ORFs (first and second frame) but one internal in the first
         alignment_dict = {
@@ -266,7 +266,7 @@ class TestGetNonOverlappingConservedOrfs:
             orfs = aln.get_non_overlapping_conserved_orfs(min_length=9)
             assert len(orfs) == 2
 
-    def test_non_overlapping_preserves_structure(self):
+    def test_preserves_structure(self):
         """Test that non-overlapping ORFs preserve the same data structure."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',
@@ -285,7 +285,7 @@ class TestGetNonOverlappingConservedOrfs:
         assert 'conservation' in orf
         assert 'internal' in orf
 
-    def test_non_overlapping_with_identity_cutoff(self):
+    def test_with_identity_cutoff(self):
         """Test non-overlapping ORFs with identity cutoff."""
         alignment_dict = {
             'seq1': 'ATGAAATAAATGCCCTAG',
