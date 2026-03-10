@@ -1,6 +1,5 @@
 import pathlib
 import pytest
-from Bio import AlignIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
