@@ -92,3 +92,26 @@ jobs:
           print(f'✓ Python {sys.version_info.major}.{sys.version_info.minor} compatibility verified')
           "
 
+      - name: Smoke test CLI app startup (msaexplorer --run)
+        run: |
+          msaexplorer --run --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+          PID=$!
+          # Give the app a few seconds to boot
+          sleep 8
+
+          # Process must still be alive if startup succeeded
+          if ! kill -0 "$PID" 2>/dev/null; then
+            echo "Server process exited unexpectedly"
+            cat server.log
+            exit 1
+          fi
+
+          # Verify local HTTP endpoint responds
+          python - <<'PY'
+          import urllib.request
+          urllib.request.urlopen('http://127.0.0.1:8000', timeout=5)
+          print('✓ msaexplorer --run is reachable on http://127.0.0.1:8000')
+          PY
+
+          kill "$PID"
+          wait "$PID" || true

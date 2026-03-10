@@ -3,6 +3,7 @@
 import pytest
 from conftest import create_alignment
 from msaexplorer.explore import MSA
+import numpy as np
 
 
 class TestCalcEntropy:
@@ -264,3 +265,54 @@ class TestGetSnps:
         assert snps["#CHROM"] == "ref"
         assert set(snps["POS"][1]["ALT"]["C"]["SEQ_ID"]) == {"q1"}
         assert set(snps["POS"][1]["ALT"]["G"]["SEQ_ID"]) == {"q2"}
+
+
+class TestCalcPairwiseIdentityMatrix:
+    """Tests for calc_pairwise_identity_matrix."""
+
+    @pytest.mark.parametrize(
+        "distance_type, expected_offdiag",
+        [
+            ("ghd", 57.14285714285714),
+            ("lhd", 75.0),
+            ("ged", 100.0),
+            ("gcd", 50.0),
+        ],
+    )
+    def test_distance_types(self, distance_type, expected_offdiag):
+        msa = MSA(create_alignment({"s1": "-A-CGT-", "s2": "TAACG--"}))
+        matrix = msa.calc_pairwise_identity_matrix(distance_type=distance_type)
+
+        assert matrix.shape == (2, 2)
+        assert matrix[0, 0] == 100.0
+        assert matrix[1, 1] == 100.0
+        assert matrix[0, 1] == pytest.approx(expected_offdiag)
+        assert matrix[1, 0] == pytest.approx(expected_offdiag)
+
+    def test_invalid_distance_type_raises(self):
+        msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
+        with pytest.raises(ValueError, match="Invalid distance type"):
+            msa.calc_pairwise_identity_matrix(distance_type="invalid")
+
+
+class TestCalcPositionMatrix:
+    """Tests for calc_position_matrix."""
+
+    expected = np.array([[2, 0, 0, 0], # A
+                         [0, 0, 1, 2], # T
+                         [0, 0, 1, 0], # G
+                         [0, 2, 0, 0]]) # C
+
+    def test_pfm_has_expected_counts(self):
+        """Test if frequency counts in PFM are correct."""
+        msa = MSA(create_alignment({"s1": "ACTT", "s2": "ACGT"}))
+        pfm = msa.calc_position_matrix("PFM")
+
+        assert (pfm == self.expected).all()
+
+    def test_invalid_matrix_type_raises(self):
+        """Test that invalid matrix type raises ValueError."""
+        msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
+        with pytest.raises(ValueError, match="Matrix_type must be PFM, PPM, IC or PWM"):
+            msa.calc_position_matrix("INVALID")
+
