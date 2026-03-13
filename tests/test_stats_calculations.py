@@ -2,7 +2,7 @@
 
 import pytest
 from conftest import create_alignment
-from msaexplorer.explore import MSA
+from msaexplorer.explore import MSA, PairwiseDistanceToReferenceResult
 import numpy as np
 
 
@@ -293,6 +293,43 @@ class TestCalcPairwiseIdentityMatrix:
         msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
         with pytest.raises(ValueError, match="Invalid distance type"):
             msa.calc_pairwise_identity_matrix(distance_type="invalid")
+
+
+class TestCalcPairwiseDistanceToReference:
+    """Tests for calc_pairwise_distance_to_reference."""
+
+    @pytest.mark.parametrize(
+        "sequences",
+        [
+            {"ref": "AAAA", "q1": "AAAT", "q2": "AATT"},
+            {"q1": "AAAT", "ref": "AAAA", "q2": "AATT"},
+            {"q1": "AAAT", "q2": "AATT", "ref": "AAAA"},
+        ],
+    )
+    def test_returns_dataclass_for_all_reference_positions(self, sequences):
+        msa = MSA(create_alignment(sequences), reference_id="ref")
+
+        result = msa.calc_pairwise_distance_to_reference(distance_type="ghd")
+
+        assert isinstance(result, PairwiseDistanceToReferenceResult)
+        assert result.reference_label == "ref"
+        assert result.sequence_ids == ["q1", "q2"]
+        assert np.allclose(result.distances, np.array([75.0, 50.0]))
+
+    def test_uses_consensus_when_reference_id_is_not_set(self):
+        msa = MSA(create_alignment({"q1": "AAAA", "q2": "AAAT", "q3": "AATT"}))
+
+        result = msa.calc_pairwise_distance_to_reference(distance_type="ghd")
+
+        assert result.reference_label == "consensus"
+        assert result.sequence_ids == ["q1", "q2", "q3"]
+        assert np.allclose(result.distances, np.array([75.0, 100.0, 75.0]))
+
+    def test_invalid_distance_type_raises(self):
+        msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
+
+        with pytest.raises(ValueError, match="Invalid distance type"):
+            msa.calc_pairwise_distance_to_reference(distance_type="invalid")
 
 
 class TestCalcPositionMatrix:

@@ -1199,3 +1199,24 @@ def consensus_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, threshold
         ax.set_yticks([])
 
     return ax
+
+def simplot(aln: explore.MSA | str, ref: str | None, colors: str | list,  window_size: int = 50,
+            ax: plt.Axes | None = None, show_x_label: bool = False) -> plt.Axes:
+    """
+    Calculate binned pairwise distances (similarity) between sequences and a reference sequence
+    over a sliding window in the zoomed region of the alignment. Multiple distance
+    calculation options are supported. Each sequence is plotted as a line displaying the similarity
+    to the reference. The reference sequence can be either set to None (here it will be calculated to a
+    consensus) or to a specific reference id.
+    a majority consensus.
+
+    :param aln: alignment MSA class or path
+    :param ref: reference sequence id or None
+    :param colors: color for each sequence. can be a single color or a list of colors
+    :param window_size: window size for sliding window
+    :param ax: matplotlib axes
+    :param show_x_label: whether to show the x-axis label
+    :return:
+    """
+
+    pass

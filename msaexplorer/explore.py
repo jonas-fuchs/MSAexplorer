@@ -14,6 +14,7 @@ import io
 import math
 import collections
 import re
+from dataclasses import dataclass
 from typing import Callable, Dict
 
 # installed
@@ -36,6 +37,26 @@ def _get_line_iterator(source):
         return open(source, 'r')
     else:
         return io.StringIO(source)
+
+
+@dataclass(frozen=True)
+class PairwiseDistanceToReferenceResult:
+    """
+    Result container for pairwise identity values between a reference/consensus
+    sequence and each sequence in the alignment.
+
+    The object remains iterable so it can be unpacked as a tuple:
+    ``reference_label, sequence_ids, distances = result``.
+    """
+
+    reference_label: str
+    sequence_ids: list[str]
+    distances: ndarray
+
+    def __iter__(self):
+        yield self.reference_label
+        yield self.sequence_ids
+        yield self.distances
 
 class MSA:
     """
@@ -1161,7 +1182,7 @@ class MSA:
 
         return distance_matrix
 
-    def calc_pairwise_distance_to_reference(self, distance_type:str='ghd') -> tuple[str, list, ndarray]:
+    def calc_pairwise_distance_to_reference(self, distance_type:str='ghd') -> PairwiseDistanceToReferenceResult:
         """
         Calculate pairwise identities between reference and all sequences in the alignment. Same computation as calc_pairwise_identity_matrix but compared to a single sequence. Supported distance computation methods.
 
@@ -1178,7 +1199,7 @@ class MSA:
         \ndistance = matches / gap_compressed_alignment_length * 100
 
         :param distance_type: type of distance computation technique
-        :return: tuple with reference id, sequence ids and pairwise distances.
+        :return: dataclass with reference label, sequence ids and pairwise distances.
         """
 
         distance_functions = self._create_distance_calculation_function_mapping()
@@ -1200,8 +1221,11 @@ class MSA:
             distance_names.append(seq_id)
             distances.append(distance_func(ref_seq, aln[seq_id], self.length))
 
-        return ref_id if ref_id is not None else 'consensus', distance_names, np.array(distances)
-
+        return PairwiseDistanceToReferenceResult(
+            reference_label=ref_id if ref_id is not None else 'consensus',
+            sequence_ids=distance_names,
+            distances=np.array(distances)
+        )
 
     def get_snps(self, include_ambig:bool=False) -> dict:
         """
