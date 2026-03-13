@@ -173,9 +173,92 @@ class MSA:
         else:
             return 'AA'
 
+    @staticmethod
+    def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, str, int], float]]:
+        """
+        create a mapping of distance types to distance calculation functions
+        :return: dictionary of mappings
+        """
+
+        def ghd(seq1: str, seq2: str, aln_length: int) -> float:
+            """
+            global hamming distance - defined as percentage of total number of matches
+            """
+            return sum(c1 == c2 for c1, c2 in zip(seq1, seq2)) / aln_length * 100
+
+        def lhd(seq1: str, seq2: str, aln_length: int) -> float:
+            """
+            local hamming distance - defined as total number of matches excluding terminal gaps
+            """
+            # Trim gaps from both sides
+            i, j = 0, aln_length - 1
+            while i < aln_length and (seq1[i] == '-' or seq2[i] == '-'):
+                i += 1
+            while j >= 0 and (seq1[j] == '-' or seq2[j] == '-'):
+                j -= 1
+            if i > j:
+                return 0.0
+
+            seq1_, seq2_ = seq1[i:j + 1], seq2[i:j + 1]
+            matches = sum(c1 == c2 for c1, c2 in zip(seq1_, seq2_))
+            length = j - i + 1
+
+            return (matches / length) * 100 if length > 0 else 0.0
+
+        def ged(seq1: str, seq2: str, aln_length: int = None) -> float:
+            """
+            gap excluded distance - defined as percentage of total number of matches excluding all gaps
+            """
+
+            matches, mismatches = 0, 0
+
+            for c1, c2 in zip(seq1, seq2):
+                if c1 != '-' and c2 != '-':
+                    if c1 == c2:
+                        matches += 1
+                    else:
+                        mismatches += 1
+            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
+
+        def gcd(seq1: str, seq2: str, aln_length: int = None) -> float:
+            """
+            gap compressed distance - defined as percentage of total number of matches with sequential gap mismatches
+            counting as a single mismatch
+            """
+            matches = 0
+            mismatches = 0
+            in_gap = False
+
+            for char1, char2 in zip(seq1, seq2):
+                if char1 == '-' and char2 == '-':  # Shared gap: do nothing
+                    continue
+                elif char1 == '-' or char2 == '-':  # Gap in only one sequence
+                    if not in_gap:  # Start of a new gap stretch
+                        mismatches += 1
+                        in_gap = True
+                else:  # No gaps
+                    in_gap = False
+                    if char1 == char2:  # Matching characters
+                        matches += 1
+                    else:  # Mismatched characters
+                        mismatches += 1
+
+            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
+
+
+        # Map distance type to corresponding function
+        distance_functions: Dict[str, Callable[[str, str, int], float]] = {
+            'ghd': ghd,
+            'lhd': lhd,
+            'ged': ged,
+            'gcd': gcd
+        }
+
+        return distance_functions
+
     # Properties with setters
     @property
-    def reference_id(self):
+    def reference_id(self) -> str:
         return self._reference_id
 
     @reference_id.setter
@@ -1052,71 +1135,11 @@ class MSA:
         **4) gcd (gap compressed distance)**: All consecutive gaps are compressed to one mismatch.
         \ndistance = matches / gap_compressed_alignment_length * 100
 
+        :param distance_type: type of distance computation technique
         :return: array with pairwise distances.
         """
 
-        def hamming_distance(seq1: str, seq2: str) -> int:
-            return sum(c1 == c2 for c1, c2 in zip(seq1, seq2))
-
-        def ghd(seq1: str, seq2: str) -> float:
-            return hamming_distance(seq1, seq2) / self.length * 100
-
-        def lhd(seq1, seq2):
-            # Trim gaps from both sides
-            i, j = 0, self.length - 1
-            while i < self.length and (seq1[i] == '-' or seq2[i] == '-'):
-                i += 1
-            while j >= 0 and (seq1[j] == '-' or seq2[j] == '-'):
-                j -= 1
-            if i > j:
-                return 0.0
-
-            seq1_, seq2_ = seq1[i:j + 1], seq2[i:j + 1]
-            matches = sum(c1 == c2 for c1, c2 in zip(seq1_, seq2_))
-            length = j - i + 1
-            return (matches / length) * 100 if length > 0 else 0.0
-
-        def ged(seq1: str, seq2: str) -> float:
-
-            matches, mismatches = 0, 0
-
-            for c1, c2 in zip(seq1, seq2):
-                if c1 != '-' and c2 != '-':
-                    if c1 == c2:
-                        matches += 1
-                    else:
-                        mismatches += 1
-            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
-
-        def gcd(seq1: str, seq2: str) -> float:
-            matches = 0
-            mismatches = 0
-            in_gap = False
-
-            for char1, char2 in zip(seq1, seq2):
-                if char1 == '-' and char2 == '-':  # Shared gap: do nothing
-                    continue
-                elif char1 == '-' or char2 == '-':  # Gap in only one sequence
-                    if not in_gap:  # Start of a new gap stretch
-                        mismatches += 1
-                        in_gap = True
-                else:  # No gaps
-                    in_gap = False
-                    if char1 == char2:  # Matching characters
-                        matches += 1
-                    else:  # Mismatched characters
-                        mismatches += 1
-
-            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
-
-
-        # Map distance type to corresponding function
-        distance_functions: Dict[str, Callable[[str, str], float]] = {
-            'ghd': ghd,
-            'lhd': lhd,
-            'ged': ged,
-            'gcd': gcd
-        }
+        distance_functions = self._create_distance_calculation_function_mapping()
 
         if distance_type not in distance_functions:
             raise ValueError(f"Invalid distance type '{distance_type}'. Choose from {list(distance_functions.keys())}.")
@@ -1132,11 +1155,53 @@ class MSA:
             seq1 = sequences[i]
             for j in range(i, n):
                 seq2 = sequences[j]
-                dist = distance_func(seq1, seq2)
+                dist = distance_func(seq1, seq2, self.length)
                 distance_matrix[i, j] = dist
                 distance_matrix[j, i] = dist
 
         return distance_matrix
+
+    def calc_pairwise_distance_to_reference(self, distance_type:str='ghd') -> tuple[str, list, ndarray]:
+        """
+        Calculate pairwise identities between reference and all sequences in the alignment. Same computation as calc_pairwise_identity_matrix but compared to a single sequence. Supported distance computation methods.
+
+        **1) ghd (global hamming distance)**: At each alignment position, check if characters match:
+        \ndistance = matches / alignment_length * 100
+
+        **2) lhd (local hamming distance)**: Restrict the alignment to the region in both sequences that do not start and end with gaps:
+        \ndistance = matches / min(5'3' ungapped seq1, 5'3' ungapped seq2) * 100
+
+        **3) ged (gap excluded distance)**: All gaps are excluded from the alignment
+        \ndistance = matches / (matches + mismatches) * 100
+
+        **4) gcd (gap compressed distance)**: All consecutive gaps are compressed to one mismatch.
+        \ndistance = matches / gap_compressed_alignment_length * 100
+
+        :param distance_type: type of distance computation technique
+        :return: tuple with reference id, sequence ids and pairwise distances.
+        """
+
+        distance_functions = self._create_distance_calculation_function_mapping()
+
+        if distance_type not in distance_functions:
+            raise ValueError(f"Invalid distance type '{distance_type}'. Choose from {list(distance_functions.keys())}.")
+
+        distance_func = distance_functions[distance_type]
+        aln = self.alignment
+        ref_id = self.reference_id
+
+        ref_seq = aln[ref_id] if ref_id is not None else self.get_consensus()
+        distances = []
+        distance_names = []
+
+        for seq_id in aln:
+            if seq_id == ref_id:
+                continue
+            distance_names.append(seq_id)
+            distances.append(distance_func(ref_seq, aln[seq_id], self.length))
+
+        return ref_id if ref_id is not None else 'consensus', distance_names, np.array(distances)
+
 
     def get_snps(self, include_ambig:bool=False) -> dict:
         """
