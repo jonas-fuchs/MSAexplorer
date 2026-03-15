@@ -2,7 +2,7 @@
 
 import pytest
 from conftest import create_alignment
-from msaexplorer.explore import MSA, PairwiseDistanceToReferenceResult
+from msaexplorer.explore import MSA
 import numpy as np
 
 
@@ -311,8 +311,8 @@ class TestCalcPairwiseDistanceToReference:
 
         result = msa.calc_pairwise_distance_to_reference(distance_type="ghd")
 
-        assert isinstance(result, PairwiseDistanceToReferenceResult)
-        assert result.reference_label == "ref"
+        assert isinstance(result, MSA.PairwiseDistanceResult)
+        assert result.reference_id == "ref"
         assert result.sequence_ids == ["q1", "q2"]
         assert np.allclose(result.distances, np.array([75.0, 50.0]))
 
@@ -321,7 +321,7 @@ class TestCalcPairwiseDistanceToReference:
 
         result = msa.calc_pairwise_distance_to_reference(distance_type="ghd")
 
-        assert result.reference_label == "consensus"
+        assert result.reference_id == "consensus"
         assert result.sequence_ids == ["q1", "q2", "q3"]
         assert np.allclose(result.distances, np.array([75.0, 100.0, 75.0]))
 

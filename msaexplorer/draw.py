@@ -10,21 +10,18 @@ The functions will raise the appropriate exception in such a case.
 ## Functions
 
 """
-import pathlib
 # built-in
 from itertools import chain
 from typing import Callable, Dict
 from copy import deepcopy
 import os
 
-import matplotlib
-from numpy import ndarray
-
 # MSAexplorer
 from msaexplorer import explore, config
 
 # libs
 import numpy as np
+from numpy import ndarray
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
@@ -1200,23 +1197,122 @@ def consensus_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, threshold
 
     return ax
 
-def simplot(aln: explore.MSA | str, ref: str | None, colors: str | list,  window_size: int = 50,
-            ax: plt.Axes | None = None, show_x_label: bool = False) -> plt.Axes:
+def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None, colors: str | list | None = None,
+            window_size: int = 200, step_size: int = 20, distance_calculation: str = 'ghd', line_width: int | float = 0.5,
+            show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1), show_x_label: bool = False) -> plt.Axes:
     """
     Calculate binned pairwise distances (similarity) between sequences and a reference sequence
-    over a sliding window in the zoomed region of the alignment. Multiple distance
-    calculation options are supported. Each sequence is plotted as a line displaying the similarity
-    to the reference. The reference sequence can be either set to None (here it will be calculated to a
-    consensus) or to a specific reference id.
-    a majority consensus.
+    over a stepwise sliding window in the zoomed region of the alignment. This is inspired by simplot that helps to identify
+    recombination sites. For proper recombination analyses use simplot or simplot++ (https://github.com/Stephane-S/Simplot_PlusPlus).
+    Each sequence is plotted as a line displaying the similarity to the reference. The reference sequence can be either
+    set to None (compared to consensus) or to a specific reference id.
 
     :param aln: alignment MSA class or path
-    :param ref: reference sequence id or None
-    :param colors: color for each sequence. can be a single color or a list of colors
-    :param window_size: window size for sliding window
     :param ax: matplotlib axes
+    :param ref: reference sequence id or None. For None all computations are compared to a majority consensus
+    :param colors: color for each sequence. can be a single named color or a list of named colors or a plt.colormap or None (auto coloring)
+    :param window_size: window size for sliding window
+    :param step_size: step size for sliding window
+    :param distance_calculation: distance calculation method. Supported: ghd (global hamming distance), ged (gap excluded distance) and for nt: jc69(Jukes-Cantor 1969) and k2p (Kimura 2-Parameter / K80). For more information see: explore.MSA.calc_pairwise_identity_matrix()
+    :param line_width: width of the plotted lines
+    :param show_legend: whether to show the legend
+    :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
     :param show_x_label: whether to show the x-axis label
-    :return:
+
+    :return: matplotlib axes
     """
 
-    pass
+    # validate inputs
+    aln, ax = _validate_input_parameters(aln=aln, ax=ax)
+    if not isinstance(window_size, int) or window_size <= 0:
+        raise ValueError('window_size has to be a positive integer')
+    if window_size > aln.length:
+        raise ValueError('window_size can not be larger than the (zoomed) alignment length')
+    if ref is not None and ref not in aln.alignment:
+        raise ValueError(f'Reference {ref} not in alignment')
+    if distance_calculation not in ['ghd', 'ged', 'jc69', 'k2p']:
+        raise ValueError(f'Distance calculation method {distance_calculation} not supported. Supported: ghd, ged, jc69, k2p')
+    if distance_calculation in ['jc69', 'k2p'] and aln.aln_type == 'AA':
+        raise ValueError(f'Distance calculation method {distance_calculation} only supported for nucleotide alignments')
+
+    # get the sequence ids to plot
+    sequence_ids = [key for key in aln.alignment.keys() if key != ref]
+
+    # validate colors
+    if colors is not None:
+        # named color or colormap
+        if isinstance(colors, str):
+            # first try potential colormap
+            try:
+                cmap = plt.get_cmap(colors)
+                cmap_colors = cmap(np.linspace(0, 1, len(sequence_ids)))
+                color_map = {seq_id: color for seq_id, color in zip(sequence_ids, cmap_colors)}
+            # single color
+            except ValueError:
+                _validate_color(colors)
+                color_map = {seq_id: colors for seq_id in sequence_ids}
+        # list of colors
+        elif isinstance(colors, list):
+            if len(colors) != len(sequence_ids):
+                raise ValueError('colors list length has to match the number of plotted sequences')
+            for color in colors:
+                _validate_color(color)
+            color_map = {seq_id: color for seq_id, color in zip(sequence_ids, colors)}
+        else:
+            raise ValueError('colors has to be either a single named color, a list of named colors, a plt colormap or None (auto)')
+    else:
+        color_map = None
+
+    # define region and window
+    region_start = aln.zoom[0] if aln.zoom is not None else 0
+    half_window_size = window_size // 2
+
+    # copy alignment and set reference
+    aln_tmp = deepcopy(aln)
+    aln_tmp.reference_id = ref
+    # reset zoom (later the alignment dictionary will be replaced for a slice of the alignment)
+    aln_tmp._zoom = None
+
+    # remember x positions and distances
+    x_positions = []
+    distance_traces = {seq_id: [] for seq_id in sequence_ids}
+
+    for point_to_plot in range(0, aln.length + 1, step_size):
+        # define windows
+        left_side = point_to_plot - half_window_size if point_to_plot - half_window_size > 0 else 0
+        right_side = point_to_plot + half_window_size if point_to_plot + half_window_size < aln.length else aln.length
+        # slice alignment and replace the original alignment
+        aln_tmp._alignment = {
+            seq_id: seq[left_side:right_side]
+            for seq_id, seq in aln.alignment.items()
+        }
+        window_result = aln_tmp.calc_pairwise_distance_to_reference(distance_type=distance_calculation)
+        value_map = {seq_id: value for seq_id, value in zip(window_result.sequence_ids, window_result.distances)}
+
+        x_positions.append(region_start + point_to_plot)
+        for seq_id in sequence_ids:
+            distance_traces[seq_id].append(value_map[seq_id])
+
+    for seq_id in sequence_ids:
+        if color_map is not None:
+            ax.plot(x_positions, distance_traces[seq_id],
+                    color=color_map[seq_id],
+                    linewidth=line_width, label=seq_id)
+        else:
+            ax.plot(x_positions, distance_traces[seq_id],
+                    linewidth=line_width, label=seq_id)
+    # Format axis
+    ax.set_ylabel('similarity (%)')
+    ax.set_ylim(0, 102)
+    _format_x_axis(aln=aln, ax=ax, show_x_label=show_x_label, show_left=True)
+    # add legend for all sequences on top
+    if show_legend:
+        leg1 = ax.legend(frameon=False, loc='lower right', bbox_to_anchor=bbox_to_anchor, ncols=3)
+        ax.add_artist(leg1)
+    # add legend for query
+    ref_label = ref if ref is not None else 'consensus'
+    ref_handle = plt.Line2D([0], [0], linewidth=0, label=f'query sequence: {ref_label}')
+    leg2 = ax.legend(handles=[ref_handle], frameon=False, bbox_to_anchor=(1, 0), loc='lower right')
+    ax.add_artist(leg2)
+
+    return ax
