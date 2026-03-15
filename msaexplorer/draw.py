@@ -1199,7 +1199,8 @@ def consensus_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, threshold
 
 def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None, colors: str | list | None = None,
             window_size: int = 200, step_size: int = 20, distance_calculation: str = 'ghd', line_width: int | float = 0.5,
-            show_legend: bool = False, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1), show_x_label: bool = False) -> plt.Axes:
+            show_legend: bool = False, show_reference: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1),
+            show_x_label: bool = False) -> plt.Axes:
     """
     Calculate binned pairwise distances (similarity) between sequences and a reference sequence
     over a stepwise sliding window in the zoomed region of the alignment. This is inspired by simplot that helps to identify
@@ -1216,6 +1217,7 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
     :param distance_calculation: distance calculation method. Supported: ghd (global hamming distance), ged (gap excluded distance) and for nt: jc69(Jukes-Cantor 1969) and k2p (Kimura 2-Parameter / K80). For more information see: explore.MSA.calc_pairwise_identity_matrix()
     :param line_width: width of the plotted lines
     :param show_legend: whether to show the legend
+    :param show_reference: whether to show the reference id in the right lower corner
     :param bbox_to_anchor: bounding box coordinates for the legend - see: https://matplotlib.org/stable/api/legend_api.html
     :param show_x_label: whether to show the x-axis label
 
@@ -1310,9 +1312,10 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
         leg1 = ax.legend(frameon=False, loc='lower right', bbox_to_anchor=bbox_to_anchor, ncols=3)
         ax.add_artist(leg1)
     # add legend for query
-    ref_label = ref if ref is not None else 'consensus'
-    ref_handle = plt.Line2D([0], [0], linewidth=0, label=f'query sequence: {ref_label}')
-    leg2 = ax.legend(handles=[ref_handle], frameon=False, bbox_to_anchor=(1, 0), loc='lower right')
-    ax.add_artist(leg2)
+    if show_reference:
+        ref_label = ref if ref is not None else 'consensus'
+        ref_handle = plt.Line2D([0], [0], linewidth=0, label=f'reference: {ref_label}')
+        leg2 = ax.legend(handles=[ref_handle], frameon=False, bbox_to_anchor=(1, 0), loc='lower right')
+        ax.add_artist(leg2)
 
     return ax
