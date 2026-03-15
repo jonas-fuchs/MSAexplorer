@@ -9,12 +9,9 @@ and can be used to compute several statistics or be used as the input for the `d
 """
 
 # built-in
-import os
-import io
 import math
 import collections
 import re
-from dataclasses import dataclass
 from typing import Callable, Dict
 
 # installed
@@ -27,16 +24,8 @@ from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
-
-
-def _get_line_iterator(source):
-    """
-    allow reading in both raw string or paths
-    """
-    if isinstance(source, str) and os.path.exists(source):
-        return open(source, 'r')
-    else:
-        return io.StringIO(source)
+from msaexplorer._msa_data_classes import PairwiseDistanceResult
+from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping
 
 
 class MSA:
@@ -57,25 +46,6 @@ class MSA:
         self._reference_id = self._validate_ref(reference_id, self._alignment)
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
-
-    @dataclass(frozen=True)
-    class PairwiseDistanceResult:
-        """
-        Result container for pairwise identity values between a reference/consensus
-        sequence and each sequence in the alignment.
-
-        The object remains iterable so it can be unpacked as a tuple:
-        ``reference_label, sequence_ids, distances = result``.
-        """
-
-        reference_id: str
-        sequence_ids: list[str]
-        distances: ndarray
-
-        def __iter__(self):
-            yield self.reference_id
-            yield self.sequence_ids
-            yield self.distances
 
     # Static methods
     @staticmethod
@@ -193,151 +163,6 @@ class MSA:
             return 'DNA'
         else:
             return 'AA'
-
-    @staticmethod
-    def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, str, int], float]]:
-        """
-        create a mapping of distance types to distance calculation functions
-        :return: dictionary of mappings
-        """
-
-        def ghd(seq1: str, seq2: str, aln_length: int) -> float:
-            """
-            global hamming distance - defined as percentage of total number of matches
-            """
-            return sum(c1 == c2 for c1, c2 in zip(seq1, seq2)) / aln_length * 100
-
-        def lhd(seq1: str, seq2: str, aln_length: int) -> float:
-            """
-            local hamming distance - defined as total number of matches excluding terminal gaps
-            """
-            # Trim gaps from both sides
-            i, j = 0, aln_length - 1
-            while i < aln_length and (seq1[i] == '-' or seq2[i] == '-'):
-                i += 1
-            while j >= 0 and (seq1[j] == '-' or seq2[j] == '-'):
-                j -= 1
-            if i > j:
-                return 0.0
-
-            seq1_, seq2_ = seq1[i:j + 1], seq2[i:j + 1]
-            matches = sum(c1 == c2 for c1, c2 in zip(seq1_, seq2_))
-            length = j - i + 1
-
-            return (matches / length) * 100 if length > 0 else 0.0
-
-        def ged(seq1: str, seq2: str, aln_length: int = None) -> float:
-            """
-            gap excluded distance - defined as percentage of total number of matches excluding all gaps
-            """
-
-            diff, total = 0, 0
-
-            for c1, c2 in zip(seq1, seq2):
-                if c1 != '-' and c2 != '-':
-                    total += 1
-                    if c1 != c2:
-                        diff += 1
-
-            return (1 - diff / total) * 100 if total > 0 else 0
-
-        def gcd(seq1: str, seq2: str, aln_length: int = None) -> float:
-            """
-            gap compressed distance - defined as percentage of total number of matches with sequential gap mismatches
-            counting as a single mismatch
-            """
-            matches = 0
-            mismatches = 0
-            in_gap = False
-
-            for char1, char2 in zip(seq1, seq2):
-                if char1 == '-' and char2 == '-':  # Shared gap: do nothing
-                    continue
-                elif char1 == '-' or char2 == '-':  # Gap in only one sequence
-                    if not in_gap:  # Start of a new gap stretch
-                        mismatches += 1
-                        in_gap = True
-                else:  # No gaps
-                    in_gap = False
-                    if char1 == char2:  # Matching characters
-                        matches += 1
-                    else:  # Mismatched characters
-                        mismatches += 1
-
-            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
-
-        def jc69(seq1: str, seq2: str, aln_length: int = None) -> float:
-            """
-            Jukes-Cantor 1969 (JC69) corrected identity.
-            Gaps are excluded. The proportion of differing sites (p-distance) is corrected
-            for multiple hits: d = -(3/4) * ln(1 - (4/3) * p).
-            Returns (1 - d) * 100 as a corrected percent identity (100 = identical).
-            Returns 0 when p >= 0.75 (formula undefined / sequence saturated).
-            """
-            diff, total = 0, 0
-            for c1, c2 in zip(seq1, seq2):
-                if c1 != '-' and c2 != '-':
-                    total += 1
-                    if c1 != c2:
-                        diff += 1
-            if total == 0:
-                return 0.0
-            p = diff / total
-            if p == 0.0:
-                return 100.0
-            correction = 1.0 - (4.0 / 3.0) * p
-            if correction <= 0.0:  # saturated – formula undefined
-                return 0.0
-            d = -(3.0 / 4.0) * math.log(correction)
-            return max(0.0, (1.0 - d) * 100.0)
-
-        def k2p(seq1: str, seq2: str, aln_length: int = None) -> float:
-            """
-            Kimura 2-Parameter (K2P / K80) corrected identity.
-            Gaps are excluded. Transitions and transversions (Tv) are weighted separately:
-            d = -(1/2) * ln(1 - 2P - Q) - (1/4) * ln(1 - 2Q)
-            where P = Ti / total and Q = Tv / total.
-            Returns (1 - d) * 100 as a corrected percent identity (100 = identical).
-            Returns 0 when the logarithm arguments become non-positive (saturated).
-            """
-            transitions = [{'A', 'G'}, {'C', 'T'}]
-
-            ts, tv, total = 0, 0, 0
-            for c1, c2 in zip(seq1, seq2):
-                if c1 != '-' and c2 != '-':
-                    total += 1
-                    if c1 != c2:
-                        if {c1, c2} in transitions:
-                            ts += 1
-                        else:
-                            tv += 1
-            if total == 0:
-                return 0.0
-            if ts == 0 and tv == 0:
-                return 100.0
-            P = ts / total   # transition proportion
-            Q = tv / total   # transversion proportion
-            term1 = 1.0 - 2.0 * P - Q
-            term2 = 1.0 - 2.0 * Q
-            # saturated – formula undefined
-            if term1 <= 0.0 or term2 <= 0.0:
-                return 0.0
-            # calculate distance
-            d = -0.5 * math.log(term1) - 0.25 * math.log(term2)
-
-            return max(0.0, (1 - d) * 100.0)
-
-        # Map distance type to corresponding function
-        distance_functions: Dict[str, Callable[[str, str, int], float]] = {
-            'ghd': ghd,
-            'lhd': lhd,
-            'ged': ged,
-            'gcd': gcd,
-            'jc69': jc69,
-            'k2p': k2p,
-        }
-
-        return distance_functions
 
     # Properties with setters
     @property
@@ -1061,7 +886,7 @@ class MSA:
         """
         Calculates a position matrix of the specified type for the given alignment. The function
         supports generating matrices of types Position Frequency Matrix (PFM), Position Probability
-        Matrix (PPM), Position Weight Matrix (PWM), and cummulative Information Content (IC). It validates
+        Matrix (PPM), Position Weight Matrix (PWM), and cumulative Information Content (IC). It validates
         the provided matrix type and includes pseudo-count adjustments to ensure robust calculations.
 
         :param matrix_type: Type of position matrix to calculate. Accepted values are 'PFM', 'PPM',
@@ -1101,8 +926,6 @@ class MSA:
         ic = np.sum(ppm_non_char_excluded * pwm, axis=0)
         if matrix_type == 'IC':
             return ic
-
-        return None
 
     def calc_percent_recovery(self) -> dict:
         """
@@ -1204,7 +1027,7 @@ class MSA:
 
     def calc_pairwise_identity_matrix(self, distance_type:str='ghd') -> ndarray:
         """
-        Calculate pairwise identities for an alignment. As there are different definitions of sequence identity, there are different options implemented:
+        Calculate pairwise identities for an alignment. Different options are implemented:
 
         **1) ghd (global hamming distance)**: At each alignment position, check if characters match:
         \ndistance = matches / alignment_length * 100
@@ -1213,24 +1036,26 @@ class MSA:
         \ndistance = matches / min(5'3' ungapped seq1, 5'3' ungapped seq2) * 100
 
         **3) ged (gap excluded distance)**: All gaps are excluded from the alignment
-        \ndistance = matches / (matches + mismatches) * 100
+        \ndistance = (1 - mismatches / total) * 100
 
         **4) gcd (gap compressed distance)**: All consecutive gaps are compressed to one mismatch.
         \ndistance = matches / gap_compressed_alignment_length * 100
+
+        RNA/DNA only:
 
         **5) jc69 (Jukes-Cantor 1969)**: Gaps excluded. Applies the JC69 substitution model to correct
         the p-distance for multiple hits (assumes equal base frequencies and substitution rates).
         \ncorrected_identity = (1 - d_JC69) * 100,  where d = -(3/4) * ln(1 - (4/3) * p)
 
-        **6) k2p (Kimura 2-Parameter / K80)**: Gaps excluded. Distinguishes transitions (Ti) and
+        **6) k2p (Kimura 2-Parameter / K80)**: Gaps excluded. Distinguishes transitions (Ts) and
         transversions (Tv). Returns (1 - d_K2P) * 100 as corrected percent identity.
-        \nd = -(1/2) * ln(1 - 2P - Q) - (1/4) * ln(1 - 2Q),  P = Ti/total, Q = Tv/total
+        \nd = -(1/2) * ln(1 - 2P - Q) - (1/4) * ln(1 - 2Q),  P = Ts/total, Q = Tv/total
 
-        :param distance_type: type of distance computation technique
+        :param distance_type: type of distance computation: ghd, lhd, ged, gcd and nucleotide only: jc69 and k2p
         :return: array with pairwise distances.
         """
 
-        distance_functions = self._create_distance_calculation_function_mapping()
+        distance_functions = _create_distance_calculation_function_mapping()
 
         if distance_type not in distance_functions:
             raise ValueError(f"Invalid distance type '{distance_type}'. Choose from {list(distance_functions.keys())}.")
@@ -1258,7 +1083,7 @@ class MSA:
 
     def calc_pairwise_distance_to_reference(self, distance_type:str='ghd') -> PairwiseDistanceResult:
         """
-        Calculate pairwise identities between reference and all sequences in the alignment. Same computation as calc_pairwise_identity_matrix but compared to a single sequence. Supported distance computation methods.
+        Calculate pairwise identities between reference and all sequences in the alignment. Same computation as calc_pairwise_identity_matrix but compared to a single sequence. Different options are implemented:
 
         **1) ghd (global hamming distance)**: At each alignment position, check if characters match:
         \ndistance = matches / alignment_length * 100
@@ -1267,22 +1092,27 @@ class MSA:
         \ndistance = matches / min(5'3' ungapped seq1, 5'3' ungapped seq2) * 100
 
         **3) ged (gap excluded distance)**: All gaps are excluded from the alignment
-        \ndistance = matches / (matches + mismatches) * 100
+        \ndistance = (1 - mismatches / total) * 100
 
         **4) gcd (gap compressed distance)**: All consecutive gaps are compressed to one mismatch.
         \ndistance = matches / gap_compressed_alignment_length * 100
 
-        **5) jc69 (Jukes-Cantor 1969)**: Gaps excluded. JC69 substitution-model corrected identity.
-        \ncorrected_identity = (1 - d_JC69) * 100
+        RNA/DNA only:
 
-        **6) k2p (Kimura 2-Parameter / K80)**: Gaps excluded. Distinguishes transitions and transversions.
-        \ncorrected_identity = (1 - d_K2P) * 100
+        **5) jc69 (Jukes-Cantor 1969)**: Gaps excluded. Applies the JC69 substitution model to correct
+        the p-distance for multiple hits (assumes equal base frequencies and substitution rates).
+        \ncorrected_identity = (1 - d_JC69) * 100,  where d = -(3/4) * ln(1 - (4/3) * p)
 
-        :param distance_type: type of distance computation technique
+        **6) k2p (Kimura 2-Parameter / K80)**: Gaps excluded. Distinguishes transitions (Ts) and
+        transversions (Tv). Returns (1 - d_K2P) * 100 as corrected percent identity.
+        \nd = -(1/2) * ln(1 - 2P - Q) - (1/4) * ln(1 - 2Q),  P = Ts/total, Q = Tv/total
+
+        :param distance_type: type of distance computation: ghd, lhd, ged, gcd and nucleotide only: jc69 and k2p
+        :return: array with pairwise distances.
         :return: dataclass with reference label, sequence ids and pairwise distances.
         """
 
-        distance_functions = self._create_distance_calculation_function_mapping()
+        distance_functions = _create_distance_calculation_function_mapping()
 
         if distance_type not in distance_functions:
             raise ValueError(f"Invalid distance type '{distance_type}'. Choose from {list(distance_functions.keys())}.")
@@ -1305,7 +1135,7 @@ class MSA:
             distance_names.append(seq_id)
             distances.append(distance_func(ref_seq, aln[seq_id], self.length))
 
-        return self.PairwiseDistanceResult(
+        return PairwiseDistanceResult(
             reference_id=ref_id if ref_id is not None else 'consensus',
             sequence_ids=distance_names,
             distances=np.array(distances)

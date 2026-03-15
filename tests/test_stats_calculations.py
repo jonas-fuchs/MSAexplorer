@@ -1,9 +1,10 @@
 """Tests for alignment statistics calculation methods in ``MSA``."""
 
 import pytest
+import numpy as np
 from conftest import create_alignment
 from msaexplorer.explore import MSA
-import numpy as np
+from msaexplorer._msa_data_classes import PairwiseDistanceResult
 
 
 class TestCalcEntropy:
@@ -311,7 +312,7 @@ class TestCalcPairwiseDistanceToReference:
 
         result = msa.calc_pairwise_distance_to_reference(distance_type="ghd")
 
-        assert isinstance(result, MSA.PairwiseDistanceResult)
+        assert isinstance(result, PairwiseDistanceResult)
         assert result.reference_id == "ref"
         assert result.sequence_ids == ["q1", "q2"]
         assert np.allclose(result.distances, np.array([75.0, 50.0]))

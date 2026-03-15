@@ -6,20 +6,9 @@ This module lets you export data produced with MSA explorer.
 ## Functions:
 """
 
-import os
 from numpy import ndarray
 from msaexplorer import config
-
-
-def _check_and_create_path(path: str):
-    """
-    Check and create path if it doesn't exist.
-    :param path: string to file
-    """
-    if path is not None:
-        output_dir = os.path.dirname(path)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+from msaexplorer._helpers import _check_and_create_path
 
 
 def snps(snp_dict: dict, format_type: str = 'vcf', path: str | None = None) -> str | None | ValueError:

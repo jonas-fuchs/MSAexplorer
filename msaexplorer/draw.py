@@ -18,6 +18,7 @@ import os
 
 # MSAexplorer
 from msaexplorer import explore, config
+from msaexplorer._helpers import _validate_color, _get_contrast_text_color
 
 # libs
 import numpy as np
@@ -25,7 +26,7 @@ from numpy import ndarray
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import is_color_like, Normalize, to_rgba, LinearSegmentedColormap
+from matplotlib.colors import Normalize, to_rgba, LinearSegmentedColormap
 from matplotlib.collections import PatchCollection, PolyCollection
 from matplotlib.text import TextPath
 from matplotlib.patches import PathPatch
@@ -70,14 +71,6 @@ def _validate_input_parameters(aln: explore.MSA | str, ax: plt.Axes, annotation:
         return aln, ax
     else:
         return aln, ax, annotation
-
-
-def _validate_color(c):
-    """
-    validate color and raise error
-    """
-    if not is_color_like(c):
-        raise ValueError(f'{c} is not a color')
 
 
 def _validate_color_scheme(scheme: str | None, aln: explore.MSA):
@@ -206,16 +199,6 @@ def _create_legend(color_scheme: str, aln_colors: dict, aln: explore.MSA, detect
         ncols=ncols,
         frameon=False
     )
-
-
-def _get_contrast_text_color(rgba_color):
-        """
-        compute the brightness of a color
-        """
-        r, g, b, a = rgba_color
-        brightness = (r * 299 + g * 587 + b * 114) / 1000
-
-        return 'white' if brightness < 0.5 else 'black'
 
 
 def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_colors: dict | ScalarMappable, fancy_gaps: bool, create_identity_patch: bool,
@@ -1214,7 +1197,7 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
     :param colors: color for each sequence. can be a single named color or a list of named colors or a plt.colormap or None (auto coloring)
     :param window_size: window size for sliding window
     :param step_size: step size for sliding window
-    :param distance_calculation: distance calculation method. Supported: ghd (global hamming distance), ged (gap excluded distance) and for nt: jc69(Jukes-Cantor 1969) and k2p (Kimura 2-Parameter / K80). For more information see: explore.MSA.calc_pairwise_identity_matrix()
+    :param distance_calculation: distance calculation method. Supported: ghd (global hamming distance), ged (gap excluded distance) and for nt additionally: jc69(Jukes-Cantor 1969) and k2p (Kimura 2-Parameter / K80). For more information see: explore.MSA.calc_pairwise_identity_matrix()
     :param line_width: width of the plotted lines
     :param show_legend: whether to show the legend
     :param show_reference: whether to show the reference id in the right lower corner
