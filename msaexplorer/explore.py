@@ -24,10 +24,10 @@ from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
-from msaexplorer._msa_data_classes import PairwiseDistanceResult
+from msaexplorer._data_classes import PairwiseDistanceResult
 from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping
 
-
+#TODO: Move outputs to dataclasses
 class MSA:
     """
     An alignment class that allows computation of several stats. Supported inputs are file paths to alignments in "fasta",
@@ -882,7 +882,7 @@ class MSA:
 
         return similarity_array
 
-    def calc_position_matrix(self, matrix_type:str='PWM') -> ndarray | ValueError:
+    def calc_position_matrix(self, matrix_type:str='PWM') -> None | ndarray | ValueError:
         """
         Calculates a position matrix of the specified type for the given alignment. The function
         supports generating matrices of types Position Frequency Matrix (PFM), Position Probability
@@ -1223,10 +1223,10 @@ class MSA:
 
 class Annotation:
     """
-    An annotation class that allows to read in gff, gb or bed files and adjust its locations to that of the MSA.
+    An annotation class that allows to read in gff, gb, or bed files and adjust its locations to that of the MSA.
     """
 
-    def __init__(self, aln: MSA, annotation_path: str):
+    def __init__(self, aln: MSA, annotation: str | GenBankIterator):
         """
         The annotation class. Lets you parse multiple standard formats
         which might be used for annotating an alignment. The main purpose
@@ -1236,11 +1236,11 @@ class Annotation:
         and the MSA have to partly match.
 
         :param aln: MSA class
-        :param annotation_path: path to annotation file (gb, bed, gff) or raw string
+        :param annotation: path to file (gb, bed, gff) or raw string or GenBankIterator from biopython
 
         """
 
-        self.ann_type, self._seq_id, self.locus, self.features  = self._parse_annotation(annotation_path, aln)  # read annotation
+        self.ann_type, self._seq_id, self.locus, self.features  = self._parse_annotation(annotation, aln)  # read annotation
         self._gapped_seq = self._MSA_validation_and_seq_extraction(aln, self._seq_id)  # extract gapped sequence
         self._position_map = self._build_position_map()  # build a position map
         self._map_to_alignment()  # adapt feature locations
@@ -1259,15 +1259,15 @@ class Annotation:
             return aln._alignment[seq_id]
 
     @staticmethod
-    def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[str, str, str, Dict]:
+    def _parse_annotation(annotation: str | GenBankIterator, aln: MSA) -> tuple[str, str, str, Dict]:
 
-        def detect_annotation_type(handle) -> str:
+        def detect_annotation_type(handle: str | GenBankIterator) -> str:
             """
             Detect the type of annotation file (GenBank, GFF, or BED) based
             on the first relevant line (excluding empty and #). Also recognizes
             Bio.SeqIO iterators as GenBank format.
 
-            :param file_path: Path to the annotation file or Bio.SeqIO iterator for genbank records read with biopython.
+            :param handle: Path to the annotation file or Bio.SeqIO iterator for genbank records read with biopython.
             :return: The detected file type ('gb', 'gff', or 'bed').
 
             :raises ValueError: If the file type cannot be determined.
@@ -1300,22 +1300,22 @@ class Annotation:
             raise ValueError(
                 "File type could not be determined. Ensure the file follows a recognized format (GenBank, GFF, or BED).")
 
-        def parse_gb(file_path) -> dict:
+        def parse_gb(file: str | GenBankIterator) -> dict:
             """
             Parse a GenBank file into the same dictionary structure used by the annotation pipeline.
 
-            :param file_path: path to genbank file, raw string, or Bio.SeqIO iterator
+            :param file: path to genbank file, raw string, or Bio.SeqIO iterator
             :return: nested dictionary
             """
             records = {}
 
             # Check if input is a GenBankIterator
-            if isinstance(file_path, GenBankIterator):
+            if isinstance(file, GenBankIterator):
                 # Direct GenBankIterator input
-                seq_records = list(file_path)
+                seq_records = list(file)
             else:
                 # File path or string input
-                with _get_line_iterator(file_path) as handle:
+                with _get_line_iterator(file) as handle:
                     seq_records = list(SeqIO.parse(handle, "genbank"))
 
             for seq_record in seq_records:
@@ -1459,12 +1459,12 @@ class Annotation:
         }
         # determine the annotation content -> should be standard formatted
         try:
-            annotation_type = detect_annotation_type(annotation_path)
+            annotation_type = detect_annotation_type(annotation)
         except ValueError as err:
             raise err
 
         # read in the annotation
-        annotations = parse_functions[annotation_type](annotation_path)
+        annotations = parse_functions[annotation_type](annotation)
 
         # sanity check whether one of the annotation ids and alignment ids match
         annotation_found = False
@@ -1480,7 +1480,7 @@ class Annotation:
                     break
 
         if not annotation_found:
-            raise ValueError(f'the annotations of {annotation_path} do not match any ids in the MSA')
+            raise ValueError(f'the annotations of {annotation} do not match any ids in the MSA')
 
         # return only the annotation that has been found, the respective type and the seq_id to map to
         return annotation_type, aln_id, annotations[annotation]['locus'], annotations[annotation]['features']

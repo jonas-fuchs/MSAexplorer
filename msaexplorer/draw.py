@@ -1181,7 +1181,7 @@ def consensus_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, threshold
     return ax
 
 def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None, colors: str | list | None = None,
-            window_size: int = 200, step_size: int = 20, distance_calculation: str = 'ghd', line_width: int | float = 0.5,
+            window_size: int = 200, step_size: int = 20, distance_calculation: str = 'ged', line_width: int | float = 1,
             show_legend: bool = False, show_reference: bool = True, bbox_to_anchor: tuple[float|int, float|int] | list= (1, 1),
             show_x_label: bool = False) -> plt.Axes:
     """

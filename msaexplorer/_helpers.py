@@ -3,6 +3,7 @@ This contains helper functions, not intended to be used outside of this package.
 """
 
 import os, io, math
+import numpy as np
 from typing import Callable, Dict
 from matplotlib.colors import is_color_like
 
@@ -46,7 +47,7 @@ def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, 
         matches = sum(c1 == c2 for c1, c2 in zip(seq1_, seq2_))
         length = j - i + 1
 
-        return (matches / length) * 100 if length > 0 else 0.0
+        return (matches / length) * 100 if length > 0 else np.nan
 
     def ged(seq1: str, seq2: str, aln_length: int = None) -> float:
         """
@@ -61,7 +62,7 @@ def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, 
                 if c1 != c2:
                     diff += 1
 
-        return (1 - diff / total) * 100 if total > 0 else 0
+        return (1 - diff / total) * 100 if total > 0 else np.nan
 
     def gcd(seq1: str, seq2: str, aln_length: int = None) -> float:
         """
@@ -86,7 +87,7 @@ def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, 
                 else:  # Mismatched characters
                     mismatches += 1
 
-        return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
+        return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else np.nan
 
     def jc69(seq1: str, seq2: str, aln_length: int = None) -> float:
         """
@@ -103,7 +104,7 @@ def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, 
                 if c1 != c2:
                     diff += 1
         if total == 0:
-            return 0.0
+            return np.nan
         p = diff / total
         if p == 0.0:
             return 100.0
@@ -134,7 +135,7 @@ def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, 
                     else:
                         tv += 1
         if total == 0:
-            return 0.0
+            return np.nan
         if ts == 0 and tv == 0:
             return 100.0
         P = ts / total   # transition proportion

@@ -44,7 +44,7 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
     plot_functions = []
 
     # First plot
-    if inputs['stat_type'] not in ['Off', 'sequence logo']:
+    if inputs['stat_type'] not in ['Off', 'sequence logo', 'simplot-like similarity']:
         height_ratios.append(inputs['plot_1_size'])
         plot_functions.append(
             lambda ax: draw.stat_plot(
@@ -64,6 +64,23 @@ def create_msa_plot(aln, ann, inputs, fig_size=None) -> plt.Figure | None:
                 show_x_label=True if inputs['annotation'] == 'Off' and inputs['alignment_type'] == 'Off' else False,
                 plot_type = inputs['logo_type'],
                 color_scheme = inputs['logo_coloring']
+            )
+        )
+    elif inputs['stat_type'] == 'simplot-like similarity':
+        height_ratios.append(inputs['plot_1_size'])
+        # define window size and step size automatically
+        if aln.length > 100:
+            window_size = 50
+        else:
+            window_size = 2
+        window_step = int(max([window_size/10, 1]))
+        plot_functions.append(
+            lambda ax: draw.simplot(
+                aln, ax=ax, ref=aln.reference_id,
+                window_size=window_size,
+                step_size=window_step,
+                distance_calculation='ged' if aln.aln_type == 'AA' else 'k2p',
+                colors=None
             )
         )
 

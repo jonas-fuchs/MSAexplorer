@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from conftest import create_alignment
 from msaexplorer.explore import MSA
-from msaexplorer._msa_data_classes import PairwiseDistanceResult
+from msaexplorer._data_classes import PairwiseDistanceResult
 
 
 class TestCalcEntropy:

@@ -333,7 +333,7 @@ def server(input, output, session):
 
         if aln.aln_type == 'AA':
             ui.update_selectize('stat_type',
-                                choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity'],
+                                choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity', 'simplot-like similarity'],
                                 selected='Off')
             ui.update_selectize('download_type',
                                 choices=['alignment','SNPs', 'consensus', 'character frequencies', '% recovery', 'entropy',
@@ -345,7 +345,7 @@ def server(input, output, session):
         else:
             ui.update_selectize('stat_type',
                                 choices=['Off', 'sequence logo', 'gc', 'entropy', 'coverage', 'identity', 'similarity',
-                                         'ts tv score', 'gap frequency'], selected='Off')
+                                         'ts tv score', 'gap frequency', 'simplot-like similarity'], selected='Off')
             ui.update_selectize('download_type', choices=['alignment', 'SNPs', 'consensus', 'character frequencies', '% recovery',
                                                           'reverse complement alignment', 'conserved orfs', 'gc',
                                                           'entropy', 'gap frequency', 'coverage', 'mean identity', 'mean similarity',
@@ -914,22 +914,31 @@ def server(input, output, session):
         """
         Update UI for the left plot in the analysis tab
         """
+
+        aln = reactive.alignment.get()
+        if aln is None:
+            return None
+
         # ensure that it is switched back
         if input.analysis_plot_type_left() == 'Off':
             ui.remove_ui(selector="div:has(> #additional_analysis_options_left)")
             ui.remove_ui(selector="div:has(> #additional_analysis_options_left-label)")
             ui.remove_ui(selector="div:has(> #analysis_info_left)")
         if input.analysis_plot_type_left() == 'Pairwise identity':
+            choices = {
+                'ghd': 'global hamming distance',
+                'lhd': 'local hamming distance',
+                'ged': 'gap excluded distance',
+                'gcd': 'gap compressed distance'
+            }
+            if aln.aln_type != 'AA':
+                choices['jc69'] = 'Jukes-Cantor 1969 distance'
+                choices['k2p'] = 'Kimura 2-Parameter (K2P / K80) distance'
             ui.insert_ui(
                 ui.input_selectize(
                     'additional_analysis_options_left',
                     label='Options left',
-                    choices={
-                        'ghd': 'global hamming distance',
-                        'lhd': 'local hamming distance',
-                        'ged': 'gap excluded distance',
-                        'gcd': 'gap compressed distance'
-                    },
+                    choices=choices,
                     selected='ghd'
                 ),
                 selector='#analysis_plot_type_right-label',
@@ -958,7 +967,11 @@ def server(input, output, session):
         elif selected_option == 'ged':
             return 'INFO ged (gap excluded distance):\n\nAll gaps are excluded from the \nalignment\n\ndistance = matches / (matches + mismatches) * 100'
         elif selected_option == 'gcd':
-            return 'INFO gcd (gap compressed distance):\n\nAll consecutive gaps arecompressed to\none mismatch.\n\ndistance = matches / gap_compressed_alignment_length * 100'
+            return 'INFO gcd (gap compressed distance):\n\nAll consecutive gaps are compressed to\none mismatch.\n\ndistance = matches / gap_compressed_alignment_length * 100'
+        elif selected_option == 'jc69':
+            return 'INFO jc69 (Jukes-Cantor 1969 distance):\n\nDistance calculation based ungapped sequences assuming equal substitution rates.'
+        elif selected_option == 'k2p':
+            return 'INFO k2p (Kimura 2-Parameter (K2P / K80) distance):\n\nDistance calculation based ungapped sequences assuming unequal substitution rates\n depending on transitions or transversions.'
         else:
             return None
 
