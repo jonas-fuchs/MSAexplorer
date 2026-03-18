@@ -35,9 +35,10 @@ class MSA:
     compatibility with Biopython.
     """
 
+    # dunder methods
     def __init__(self, alignment_string: str | MultipleSeqAlignment, reference_id: str = None, zoom_range: tuple | int = None):
         """
-        Initialise an Alignment object.
+        Initialize an Alignment object.
         :param alignment_string: Path to alignment file or raw alignment string
         :param reference_id: reference id
         :param zoom_range: start and stop positions to zoom into the alignment
@@ -46,6 +47,16 @@ class MSA:
         self._reference_id = self._validate_ref(reference_id, self._alignment)
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
+
+    def __len__(self) -> int:
+        return len(next(iter(self.alignment.values())))
+
+    def __getitem__(self, key: str) -> str:
+        return self.alignment[key]
+
+    def __contains__(self, item: str) -> bool:
+        """Seq ID present"""
+        return item in self.sequence_ids
 
     # Static methods
     @staticmethod
@@ -196,6 +207,10 @@ class MSA:
         """
         return self._aln_type
 
+    @property
+    def sequence_ids(self) -> list:
+        return list(self.alignment.keys())
+
     # On the fly properties without setters
     @property
     def length(self) -> int:
@@ -232,6 +247,14 @@ class MSA:
             aln_type=self.aln_type,
             reference_id=self.reference_id,
         )
+
+    def _to_array(self) -> ndarray:
+        """convert alignment to numpy array"""
+        return np.array([list(self.alignment[seq_id]) for seq_id in self.sequence_ids])
+
+    def _get_reference_seq(self) -> str:
+        """get the sequence of the reference sequence or majority consensus"""
+        return self.alignment[self.reference_id] if self.reference_id is not None else self.get_consensus()
 
     def get_reference_coords(self) -> tuple[int, int]:
         """
@@ -385,7 +408,7 @@ class MSA:
             - all ungapped seqs[start:stop] must have at least min_length
             - no ungapped seq can have a Stop in between Start Stop
 
-        Conservation is measured by number of positions with identical characters divided by
+        Conservation is measured by the number of positions with identical characters divided by
         orf slice of the alignment.
 
         **Algorithm overview:**
@@ -413,7 +436,8 @@ class MSA:
             stops = config.STOP_CODONS[self.aln_type]
 
             list_of_starts, list_of_stops = [], []
-            ref = alignment[list(alignment.keys())[0]]
+            # define one sequence (first) as reference (it does not matter which one)
+            ref = alignment[self.sequence_ids[0]]
             for nt_position in range(alignment_length):
                 if ref[nt_position:nt_position + 3] in starts:
                     conserved_start = True
@@ -706,7 +730,7 @@ class MSA:
 
         for nuc_pos in range(self.length):
             pos = str()
-            for record in aln.keys():
+            for record in self.sequence_ids:
                 pos = pos + aln[record][nuc_pos]
             coverage.append(1 - pos.count('-') / len(pos))
 
@@ -746,8 +770,7 @@ class MSA:
         :returns matrix
         """
 
-        aln = self.alignment
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
         # ini matrix
         numerical_matrix = np.full(sequences.shape, np.nan, dtype=float)
         # first encode mask
@@ -778,11 +801,10 @@ class MSA:
         :return: identity alignment
         """
 
-        aln = self.alignment
-        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
+        ref = self._get_reference_seq()
 
         # convert alignment to array
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
         reference = np.array(list(ref))
         # ini matrix
         identity_matrix = np.full(sequences.shape, 0, dtype=float)
@@ -861,8 +883,8 @@ class MSA:
             If the specified substitution matrix is not available for the given alignment type.
         """
 
-        aln = self.alignment
-        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
+        ref = self._get_reference_seq()
+
         if matrix_type is None:
             if self.aln_type == 'AA':
                 matrix_type = 'BLOSUM65'
@@ -878,7 +900,7 @@ class MSA:
 
         # set dtype and convert alignment to a NumPy array for vectorized processing
         dtype = np.dtype(float, metadata={'matrix': matrix_type})
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
         reference = np.array(list(ref))
         valid_chars = list(subs_matrix.keys())
         similarity_array = np.full(sequences.shape, np.nan, dtype=dtype)
@@ -916,11 +938,10 @@ class MSA:
         """
 
         # ini
-        aln = self.alignment
         if matrix_type not in ['PFM', 'PPM', 'IC', 'PWM']:
             raise ValueError('Matrix_type must be PFM, PPM, IC or PWM.')
         possible_chars = list(config.CHAR_COLORS[self.aln_type]['standard'].keys())
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
 
         # calc position frequency matrix
         pfm = np.array([np.sum(sequences == char, 0) for char in possible_chars])
@@ -931,7 +952,7 @@ class MSA:
         pseudo_count = 0.0001  # to avoid 0 values
         pfm = pfm + pseudo_count
         ppm_non_char_excluded = pfm/np.sum(pfm, axis=0)  # use this for pwm/ic calculation
-        ppm = pfm/len(aln.keys())  # calculate the frequency based on row number
+        ppm = pfm/len(self.sequence_ids)  # calculate the frequency based on row number
         if matrix_type == 'PPM':
             return ppm
 
@@ -959,11 +980,7 @@ class MSA:
         """
 
         aln = self.alignment
-
-        if self.reference_id is not None:
-            ref = aln[self.reference_id]
-        else:
-            ref = self.get_consensus()  # majority consensus
+        ref = self._get_reference_seq()
 
         if not any(char != '-' for char in ref):
             raise ValueError("Reference sequence is entirely gapped, cannot calculate recovery.")
@@ -977,7 +994,7 @@ class MSA:
         cumulative_length = len(non_gap_positions)
 
         # Calculate recovery
-        for seq_id in aln:
+        for seq_id in self.sequence_ids:
             if seq_id == self.reference_id:
                 continue
             seq = aln[seq_id]
@@ -1099,7 +1116,7 @@ class MSA:
 
         return PairwiseDistance(
             reference_id=None,
-            sequence_ids=list(aln.keys()),
+            sequence_ids=self.sequence_ids,
             distances=distance_matrix
         )
 
@@ -1174,8 +1191,8 @@ class MSA:
         :return: dictionary containing snp positions and their variants including their frequency.
         """
         aln = self.alignment
-        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
-        aln = {x: aln[x] for x in aln.keys() if x != self.reference_id}
+        ref = self._get_reference_seq()
+        aln = {x: aln[x] for x in self.sequence_ids if x != self.reference_id}
         seq_ids = list(aln.keys())
         snp_dict = {'#CHROM': self.reference_id if self.reference_id is not None else 'consensus', 'POS': {}}
 
@@ -1185,7 +1202,7 @@ class MSA:
                 if reference_char in config.AMBIG_CHARS[self.aln_type] and reference_char != '-':
                     continue
             alt_chars, snps = [], []
-            for i, seq_id in enumerate(aln.keys()):
+            for i, seq_id in enumerate(seq_ids):
                 alt_chars.append(aln[seq_id][pos])
                 if reference_char != aln[seq_id][pos]:
                     snps.append(i)
