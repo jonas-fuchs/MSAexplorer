@@ -24,7 +24,7 @@ from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
-from msaexplorer._data_classes import PairwiseDistanceResult
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats
 from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping
 
 #TODO: Move outputs to dataclasses
@@ -215,6 +215,24 @@ class MSA:
             return self._alignment
 
     # functions for different alignment stats
+    def _create_position_stat_result(self, stat_name: str, values: list | ndarray) -> AlignmentStats:
+        """
+        Build a shared dataclass for position-wise statistics.
+        """
+        values_array = np.asarray(values, dtype=float)
+        if self.zoom is None:
+            positions = np.arange(self.length, dtype=int)
+        else:
+            positions = np.arange(self.zoom[0], self.zoom[0] + self.length, dtype=int)
+
+        return AlignmentStats(
+            stat_name=stat_name,
+            positions=positions,
+            values=values_array,
+            aln_type=self.aln_type,
+            reference_id=self.reference_id,
+        )
+
     def get_reference_coords(self) -> tuple[int, int]:
         """
         Determine the start and end coordinates of the reference sequence
@@ -575,7 +593,7 @@ class MSA:
                 'max length': int(np.max(seq_lengths))
                 }
 
-    def calc_entropy(self) -> list:
+    def calc_entropy(self) -> AlignmentStats:
         """
         Calculate the normalized shannon's entropy for every position in an alignment:
 
@@ -642,9 +660,9 @@ class MSA:
                 pos.append(aln[record][nuc_pos])
             entropys.append(shannons_entropy(pos, states, self.aln_type))
 
-        return entropys
+        return self._create_position_stat_result('entropy', entropys)
 
-    def calc_gc(self) -> list | TypeError:
+    def calc_gc(self) -> AlignmentStats | TypeError:
         """
         Determine the GC content for every position in an nt alignment.
         :return: GC content for every position.
@@ -674,9 +692,9 @@ class MSA:
                 sum([nucleotides.count(x) * to_count[x] for x in to_count]) / len(nucleotides)
             )
 
-        return gc
+        return self._create_position_stat_result('gc', gc)
 
-    def calc_coverage(self) -> list:
+    def calc_coverage(self) -> AlignmentStats:
         """
         Determine the coverage of every position in an alignment.
         This is defined as:
@@ -692,15 +710,15 @@ class MSA:
                 pos = pos + aln[record][nuc_pos]
             coverage.append(1 - pos.count('-') / len(pos))
 
-        return coverage
+        return self._create_position_stat_result('coverage', coverage)
 
-    def calc_gap_frequency(self) -> list:
+    def calc_gap_frequency(self) -> AlignmentStats:
         """
         Determine the gap frequency for every position in an alignment. This is the inverted coverage.
         """
         coverage = self.calc_coverage()
 
-        return [1 - x for x in coverage]
+        return self._create_position_stat_result('gap frequency', 1 - coverage.values)
 
     def calc_reverse_complement_alignment(self) -> dict | TypeError:
         """
@@ -1025,7 +1043,7 @@ class MSA:
 
         return freqs
 
-    def calc_pairwise_identity_matrix(self, distance_type:str='ghd') -> ndarray:
+    def calc_pairwise_identity_matrix(self, distance_type:str='ghd') -> PairwiseDistance:
         """
         Calculate pairwise identities for an alignment. Different options are implemented:
 
@@ -1079,9 +1097,13 @@ class MSA:
                 distance_matrix[i, j] = dist
                 distance_matrix[j, i] = dist
 
-        return distance_matrix
+        return PairwiseDistance(
+            reference_id=None,
+            sequence_ids=list(aln.keys()),
+            distances=distance_matrix
+        )
 
-    def calc_pairwise_distance_to_reference(self, distance_type:str='ghd') -> PairwiseDistanceResult:
+    def calc_pairwise_distance_to_reference(self, distance_type:str='ghd') -> PairwiseDistance:
         """
         Calculate pairwise identities between reference and all sequences in the alignment. Same computation as calc_pairwise_identity_matrix but compared to a single sequence. Different options are implemented:
 
@@ -1135,7 +1157,7 @@ class MSA:
             distance_names.append(seq_id)
             distances.append(distance_func(ref_seq, aln[seq_id], self.length))
 
-        return PairwiseDistanceResult(
+        return PairwiseDistance(
             reference_id=ref_id if ref_id is not None else 'consensus',
             sequence_ids=distance_names,
             distances=np.array(distances)
@@ -1194,7 +1216,7 @@ class MSA:
 
         return snp_dict
 
-    def calc_transition_transversion_score(self) -> list:
+    def calc_transition_transversion_score(self) -> AlignmentStats:
         """
         Based on the snp positions, calculates a transition/transversions score.
         A positive score means higher ratio of transitions and negative score means
@@ -1218,7 +1240,7 @@ class MSA:
                 else:
                     score[pos] -= snps['POS'][pos]['ALT'][alt]['AF']
 
-        return score
+        return self._create_position_stat_result('ts tv score', score)
 
 
 class Annotation:

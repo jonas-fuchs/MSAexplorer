@@ -34,6 +34,7 @@ from shinywidgets import render_widget
 
 # msaexplorer
 from msaexplorer import explore, config, export, draw
+from msaexplorer._data_classes import AlignmentStats
 
 
 def server(input, output, session):
@@ -715,7 +716,7 @@ def server(input, output, session):
 
         def _stat_option():
             # create function mapping
-            stat_functions: Dict[str, Callable[[], list | ndarray]] = {
+            stat_functions: Dict[str, Callable[[], AlignmentStats | ndarray]] = {
                 'gc': aln.calc_gc,
                 'entropy': aln.calc_entropy,
                 'coverage': aln.calc_coverage,
@@ -735,8 +736,10 @@ def server(input, output, session):
                     break
             # use correct function
             data = stat_functions[stat_type]()
-            # calculate the mean (identical to draw module of msaexplorer)
-            if stat_type in ['mean identity', 'mean similarity']:
+            if isinstance(data, AlignmentStats):
+                data = data.values
+            # calculate the mean for identity or similarity (identical to draw module of msaexplorer)
+            else:
                 # for the mean nan values get handled as the lowest possible number in the matrix
                 data = np.nan_to_num(data, True, -1 if stat_type == 'identity' else 0)
                 data = np.mean(data, axis=0)

@@ -199,7 +199,7 @@ def create_analysis_custom_heatmap(aln, inputs):
     else:
         figure_size = int(inputs['dimensions']['width'] * 0.7)
 
-    matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options_left'])
+    matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options_left']).distances
     labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
 
     # generate hover text

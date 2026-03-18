@@ -18,6 +18,7 @@ import os
 
 # MSAexplorer
 from msaexplorer import explore, config
+from msaexplorer._data_classes import AlignmentStats
 from msaexplorer._helpers import _validate_color, _get_contrast_text_color
 
 # libs
@@ -675,7 +676,7 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
     aln, ax = _validate_input_parameters(aln, ax)
 
     # define possible functions to calc here
-    stat_functions: Dict[str, Callable[[], list | ndarray]] = {
+    stat_functions: Dict[str, Callable[[], AlignmentStats | ndarray]] = {
         'gc': aln.calc_gc,
         'entropy': aln.calc_entropy,
         'coverage': aln.calc_coverage,
@@ -694,7 +695,9 @@ def stat_plot(aln: explore.MSA | str, stat_type: str, ax: plt.Axes | None = None
 
     # generate input data
     array = stat_functions[stat_type]()
-
+    if isinstance(array, AlignmentStats):
+        array = array.values
+    # define possible spans for values
     if stat_type == 'identity':
         min_value, max_value = -1, 0
     elif stat_type == 'ts tv score':
@@ -1193,7 +1196,7 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
 
     :param aln: alignment MSA class or path
     :param ax: matplotlib axes
-    :param ref: reference sequence id or None. For None all computations are compared to a majority consensus
+    :param ref: reference sequence id or None. For 'None' all computations are compared to a majority consensus
     :param colors: color for each sequence. can be a single named color or a list of named colors or a plt.colormap or None (auto coloring)
     :param window_size: window size for sliding window
     :param step_size: step size for sliding window

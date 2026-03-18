@@ -6,8 +6,10 @@ This module lets you export data produced with MSA explorer.
 ## Functions:
 """
 
+import numpy as np
 from numpy import ndarray
 from msaexplorer import config
+from msaexplorer._data_classes import AlignmentStats
 from msaexplorer._helpers import _check_and_create_path
 
 
@@ -147,11 +149,11 @@ def fasta(sequence: str | dict, header: str | None = None, path: str | None = No
         return fasta_formated_sequence
 
 
-def stats(stat_data: list | ndarray, seperator: str = '\t', path: str | None = None) -> str | None:
+def stats(stat_data: AlignmentStats | list | ndarray, seperator: str = '\t', path: str | None = None) -> str | None:
     """
     Export a list of stats per nucleotide to tabular or csv format.
 
-    :param stat_data: list of stat values
+    :param stat_data: position statistic dataclass or list/array of values
     :param seperator: seperator for values and index
     :param path: path to save the file
     :return: tabular/csv formatted string
@@ -161,8 +163,15 @@ def stats(stat_data: list | ndarray, seperator: str = '\t', path: str | None = N
 
     lines = [f'position{seperator}value']
 
-    for idx, stat_val in enumerate(stat_data):
-        lines.append(f'{idx}{seperator}{stat_val}')
+    if isinstance(stat_data, AlignmentStats):
+        positions = stat_data.positions
+        values = stat_data.values
+    else:
+        values = stat_data
+        positions = np.arange(len(values), dtype=int)
+
+    for position, stat_val in zip(positions, values):
+        lines.append(f'{position}{seperator}{stat_val}')
 
     if path is not None:
         with open(path, 'w') as out_file:
