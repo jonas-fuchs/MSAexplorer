@@ -25,7 +25,7 @@ from Bio.SeqIO.InsdcIO import GenBankIterator
 # msaexplorer
 from msaexplorer import config
 from msaexplorer._data_classes import PairwiseDistance, AlignmentStats
-from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping
+from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping, _read_alignment
 
 #TODO: Move outputs to dataclasses
 class MSA:
@@ -43,75 +43,24 @@ class MSA:
         :param reference_id: reference id
         :param zoom_range: start and stop positions to zoom into the alignment
         """
-        self._alignment = self._read_alignment(alignment_string)
+        self._alignment = _read_alignment(alignment_string)
         self._reference_id = self._validate_ref(reference_id, self._alignment)
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
 
     def __len__(self) -> int:
-        return len(next(iter(self.alignment.values())))
+        return len(self.sequence_ids)
 
     def __getitem__(self, key: str) -> str:
         return self.alignment[key]
 
     def __contains__(self, item: str) -> bool:
-        """Seq ID present"""
         return item in self.sequence_ids
 
+    def __iter__(self):
+        return iter(self.alignment)
+
     # Static methods
-    @staticmethod
-    def _read_alignment(source: str | MultipleSeqAlignment) -> dict:
-        """
-        Parse MSA alignment using Biopython with automatic format detection.
-        :param source: Path to alignment file, raw alignment string, or Bio.Align.MultipleSeqAlignment object
-        :return: dictionary with ids as keys and sequences as values
-        """
-        # Handle Bio.Align.MultipleSeqAlignment objects
-        if isinstance(source, MultipleSeqAlignment):
-            aln_dict = {record.id: str(record.seq).upper() for record in source}
-        else:
-            # Try multiple formats in order of likelihood
-            formats_to_try = ["fasta", "clustal", "phylip", "stockholm", "nexus"]
-
-            aln_dict = None
-            for fmt in formats_to_try:
-                try:
-                    with _get_line_iterator(source) as handle:
-                        alignment = AlignIO.read(handle, fmt)
-                        aln_dict = {record.id: str(record.seq).upper() for record in alignment}
-                        break
-                except Exception:
-                    continue
-
-            if aln_dict is None:
-                # If no format worked, raise an error
-                raise ValueError(f"Alignment file could not be parsed. Supported formats: {', '.join(formats_to_try)}")
-
-        # Validate alignment
-        if not aln_dict:
-            raise ValueError(f"Alignment does not contain any sequences.")
-
-        if len(aln_dict) < 2:
-            raise ValueError("Alignment must contain more than one sequence.")
-
-        # Check for non-allowed characters
-        for sequence_id, seq in aln_dict.items():
-            invalid_chars = set(seq) - set(config.POSSIBLE_CHARS)
-            if invalid_chars:
-                raise ValueError(
-                    f"{sequence_id} contains invalid characters: {', '.join(invalid_chars)}. Allowed chars are: {config.POSSIBLE_CHARS}"
-                )
-
-        # Validate all sequences have same length
-        first_seq_len = len(next(iter(aln_dict.values())))
-        for sequence_id, seq in aln_dict.items():
-            if len(seq) != first_seq_len:
-                raise ValueError(
-                    f"All alignment sequences must have the same length. Sequence '{sequence_id}' has length {len(seq)}, expected {first_seq_len}."
-                )
-
-        return aln_dict
-
     @staticmethod
     def _validate_ref(reference: str | None, alignment: dict) -> str | None | ValueError:
         """
@@ -229,7 +178,6 @@ class MSA:
         else:
             return self._alignment
 
-    # functions for different alignment stats
     def _create_position_stat_result(self, stat_name: str, values: list | ndarray) -> AlignmentStats:
         """
         Build a shared dataclass for position-wise statistics.
@@ -249,12 +197,15 @@ class MSA:
         )
 
     def _to_array(self) -> ndarray:
-        """convert alignment to numpy array"""
+        """convert alignment to a numpy array"""
         return np.array([list(self.alignment[seq_id]) for seq_id in self.sequence_ids])
 
     def _get_reference_seq(self) -> str:
         """get the sequence of the reference sequence or majority consensus"""
         return self.alignment[self.reference_id] if self.reference_id is not None else self.get_consensus()
+
+    def items(self):
+        return self.alignment.items()
 
     def get_reference_coords(self) -> tuple[int, int]:
         """
@@ -262,7 +213,7 @@ class MSA:
         defined as the first/last nucleotide in the reference sequence
         (excluding N and gaps).
 
-        :return: start, end
+        :return: Start, End
         """
         start, end = 0, self.length
 
@@ -1508,7 +1459,7 @@ class Annotation:
         # sanity check whether one of the annotation ids and alignment ids match
         annotation_found = False
         for annotation in annotations.keys():
-            for aln_id in aln.alignment.keys():
+            for aln_id in aln:
                 aln_id_sanitized = aln_id.split(' ')[0]
                 # check in both directions
                 if aln_id_sanitized in annotation:

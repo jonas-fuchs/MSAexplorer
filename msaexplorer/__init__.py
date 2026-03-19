@@ -296,7 +296,7 @@ msa = explore.MSA('alignment.fasta')
 annotation = explore.Annotation(msa, 'annotation.gff3')
 
 # Set parameters
-msa.reference_id = list(msa.alignment.keys())[0]
+msa.reference_id = next(iter(msa))
 msa.zoom = (0, 2000)
 
 # Compute statistics

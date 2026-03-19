@@ -128,7 +128,7 @@ def server(input, output, session):
                 complete_size += input.plot_1_size()
             if inputs['annotation'] != 'Off':
                 complete_size += input.plot_3_size()
-            relative_msa_height = input.plot_2_size() * increase_height / complete_size * window_height / len(aln.alignment)
+            relative_msa_height = input.plot_2_size() * increase_height / complete_size * window_height / len(aln)
             try:
                 relative_msa_width = window_width / (inputs['zoom_range'][1] - inputs['zoom_range'][0])
             except ZeroDivisionError:
@@ -292,10 +292,10 @@ def server(input, output, session):
         All the necessary steps to load an alignment into the app are done here.
         """
 
-        aln.reference_id = list(aln.alignment.keys())[0]
+        aln.reference_id = next(iter(aln))
         reactive.alignment.set(aln)
 
-        alignment_length = len(next(iter(aln.alignment.values()))) - 1
+        alignment_length = aln.length - 1
         ui.update_slider('zoom_range', max=alignment_length - 1, value=(0, alignment_length - 1))
 
         ui.remove_ui(selector="#orf_column")
@@ -315,7 +315,7 @@ def server(input, output, session):
             )
 
         for id in ['reference', 'reference_2']:
-            ui.update_selectize(id=id, choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first')
+            ui.update_selectize(id=id, choices=['first', 'consensus'] + list(aln), selected='first')
 
         ui.update_selectize(
             id='matrix',
@@ -323,7 +323,7 @@ def server(input, output, session):
             selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
         )
 
-        aln_len, seq_threshold = len(aln.alignment.keys()), 5
+        aln_len, seq_threshold = len(aln), 5
         for ratio in config.STANDARD_HEIGHT_RATIOS.keys():
             if aln_len >= ratio:
                 seq_threshold = ratio
@@ -634,7 +634,7 @@ def server(input, output, session):
                 where='beforeBegin'
             ) if aln is None else ui.insert_ui(
                 ui.input_selectize(
-                    id='reference_2', label='Reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
+                    id='reference_2', label='Reference', choices=['first', 'consensus'] + list(aln), selected='first'
                 ),
                 selector='#download_format-label',
                 where='beforeBegin'
@@ -689,7 +689,7 @@ def server(input, output, session):
         # helper functions
         def _snp_option():
             if input.reference_2() == 'first':
-                aln.reference_id = list(aln.alignment.keys())[0]
+                aln.reference_id = next(iter(aln))
             elif input.reference_2() == 'consensus':
                 aln.reference_id = None
             else:
@@ -776,7 +776,7 @@ def server(input, output, session):
 
         def _percent_recovery_option():
             if input.reference_2() == 'first':
-                aln.reference_id = list(aln.alignment.keys())[0]
+                aln.reference_id = next(iter(aln))
             elif input.reference_2() == 'consensus':
                 aln.reference_id = None
             else:
@@ -879,7 +879,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        return len(aln.alignment)
+        return len(aln)
 
     @render.ui
     def aln_len():

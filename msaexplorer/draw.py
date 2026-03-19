@@ -132,20 +132,20 @@ def _seq_names(aln: explore.MSA, ax: plt.Axes, custom_seq_names: tuple, show_seq
         show_seq_names = True
         if not isinstance(custom_seq_names, tuple):
             raise ValueError('configure your custom names list: custom_names=(name1, name2...)')
-        if len(custom_seq_names) != len(aln.alignment.keys()):
+        if len(custom_seq_names) != len(aln):
             raise ValueError('length of sequences not equal to number of custom names')
     if show_seq_names:
         ax.yaxis.set_ticks_position('none')
-        ax.set_yticks(np.arange(len(aln.alignment)))
+        ax.set_yticks(np.arange(len(aln)))
         if custom_seq_names:
             names = custom_seq_names[::-1]
         else:
-            names = [x.split(' ')[0] for x in list(aln.alignment.keys())[::-1]]
+            names = [x.split(' ')[0] for x in aln.sequence_ids[::-1]]
         if include_consensus:
             names = names + ['consensus']
-            y_ticks = np.arange(len(aln.alignment) + 1)
+            y_ticks = np.arange(len(aln) + 1)
         else:
-            y_ticks = np.arange(len(aln.alignment))
+            y_ticks = np.arange(len(aln))
         ax.set_yticks(y_ticks)
         ax.set_yticklabels(names)
     else:
@@ -318,7 +318,7 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
         else:
             different_cols = [False] * aln.length
 
-        for idx, (character, value) in enumerate(zip(aln.alignment[seq_name], values)):
+        for idx, (character, value) in enumerate(zip(aln[seq_name], values)):
             if value != value_to_skip and character != '-' or seq_name == ref_name and character != '-' or character == '-' and not show_gaps or always_text and character != '-':
                 if seq_name == ref_name and ref_color is not None:
                     text_color = _get_contrast_text_color(to_rgba(ref_color))
@@ -343,9 +343,9 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
     polygons, polygon_colors, patch_list = [], [], []
     # determine zoom
     zoom = (0, aln.length) if aln.zoom is None else aln.zoom
-    for i, seq_name in enumerate(aln.alignment):
+    for i, seq_name in enumerate(aln):
         # define initial y position
-        y_position = len(aln.alignment) - i - 1.4
+        y_position = len(aln) - i - 1.4
         # now plot relevant stuff for the current row
         row = matrix[i]
         # plot a line below everything for fancy gaps
@@ -376,7 +376,7 @@ def _create_alignment(aln: explore.MSA, ax: plt.Axes, matrix: ndarray, aln_color
         # add sequence text
         if show_different_sequence or show_sequence_all:
             _plot_sequence_text(
-                aln=aln, seq_name=list(aln.alignment.keys())[i], ref_name=aln.reference_id, always_text=show_sequence_all,
+                aln=aln, seq_name=seq_name, ref_name=aln.reference_id, always_text=show_sequence_all,
                 values=matrix[i], matrix=matrix, ax=ax, zoom=zoom, y_position=y_position, value_to_skip=identical_value, ref_color=reference_color,
                 show_gaps=show_gaps, aln_colors=aln_colors
             )
@@ -451,9 +451,9 @@ def alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_sequence_
         consensus_plot(aln=aln, ax=ax, show_x_label=show_x_label, show_name=False, show_sequence=show_sequence_all,
             color_scheme='standard', basic_color=basic_color, mask_color=mask_color, ambiguity_color=ambiguity_color
         )
-        ax.set_ylim(-0.5, len(aln.alignment) + 1)
+        ax.set_ylim(-0.5, len(aln) + 1)
     else:
-        ax.set_ylim(-0.5, len(aln.alignment))
+        ax.set_ylim(-0.5, len(aln))
 
     _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names, include_consensus=show_consensus)
     # configure axis
@@ -537,9 +537,9 @@ def identity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, show_
                        color_scheme='standard', basic_color=basic_color, mask_color=mask_color,
                        ambiguity_color=ambiguity_color
                        )
-        ax.set_ylim(-0.5, len(aln.alignment) + 1)
+        ax.set_ylim(-0.5, len(aln) + 1)
     else:
-        ax.set_ylim(-0.5, len(aln.alignment))
+        ax.set_ylim(-0.5, len(aln))
 
     _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names,
                include_consensus=show_consensus)
@@ -619,9 +619,9 @@ def similarity_alignment(aln: explore.MSA | str, ax: plt.Axes | None = None, mat
     if show_consensus:
         consensus_plot(aln=aln, ax=ax, show_x_label=show_x_label, show_name=False, show_sequence=any([show_sequence_all, show_similarity_sequence]),
                        color_scheme='standard', basic_color=basic_color)
-        ax.set_ylim(-0.5, len(aln.alignment) + 1)
+        ax.set_ylim(-0.5, len(aln) + 1)
     else:
-        ax.set_ylim(-0.5, len(aln.alignment))
+        ax.set_ylim(-0.5, len(aln))
 
     _seq_names(aln=aln, ax=ax, custom_seq_names=custom_seq_names, show_seq_names=show_seq_names,
                include_consensus=show_consensus)
@@ -849,7 +849,6 @@ def variant_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, lollisize: 
     ax.set_ylabel('reference')
 
     return ax
-
 
 
 def _plot_annotation(annotation_dict: dict, ax: plt.Axes, direction_marker_size: int | None, color: str | ScalarMappable):
@@ -1130,7 +1129,7 @@ def consensus_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, threshold
 
     zoom_offset = aln.zoom[0] if aln.zoom is not None else 0
 
-    y_position = len(aln.alignment) - 0.4
+    y_position = len(aln) - 0.4
 
     for pos, char in enumerate(consensus):
         x = pos + zoom_offset
@@ -1216,7 +1215,7 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
         raise ValueError('window_size has to be a positive integer')
     if window_size > aln.length:
         raise ValueError('window_size can not be larger than the (zoomed) alignment length')
-    if ref is not None and ref not in aln.alignment:
+    if ref is not None and ref not in aln:
         raise ValueError(f'Reference {ref} not in alignment')
     if distance_calculation not in ['ghd', 'ged', 'jc69', 'k2p']:
         raise ValueError(f'Distance calculation method {distance_calculation} not supported. Supported: ghd, ged, jc69, k2p')
@@ -1224,7 +1223,7 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
         raise ValueError(f'Distance calculation method {distance_calculation} only supported for nucleotide alignments')
 
     # get the sequence ids to plot
-    sequence_ids = [key for key in aln.alignment.keys() if key != ref]
+    sequence_ids = [seq_id for seq_id in aln if seq_id != ref]
 
     # validate colors
     if colors is not None:
@@ -1272,7 +1271,7 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
         # slice alignment and replace the original alignment
         aln_tmp._alignment = {
             seq_id: seq[left_side:right_side]
-            for seq_id, seq in aln.alignment.items()
+            for seq_id, seq in aln.items()
         }
         window_result = aln_tmp.calc_pairwise_distance_to_reference(distance_type=distance_calculation)
         value_map = {seq_id: value for seq_id, value in zip(window_result.sequence_ids, window_result.distances)}

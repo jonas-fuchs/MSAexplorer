@@ -12,7 +12,7 @@ from msaexplorer import config
 from msaexplorer._data_classes import AlignmentStats
 from msaexplorer._helpers import _check_and_create_path
 
-
+#TODO Include tests for export functions
 def snps(snp_dict: dict, format_type: str = 'vcf', path: str | None = None) -> str | None | ValueError:
     """
     Export a SNP dictionary to a VCF or tabular format. Importantly, the input dictionary has to be in the standard

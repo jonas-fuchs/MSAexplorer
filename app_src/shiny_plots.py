@@ -13,7 +13,7 @@ def set_aln(aln, inputs):
     # set the reference sequence
     if 'reference' in inputs:
         if inputs['reference'] == 'first':
-            aln.reference_id = list(aln.alignment.keys())[0]
+            aln.reference_id = next(iter(aln))
         elif inputs['reference'] == 'consensus':
             aln.reference_id = None
         else:
@@ -200,7 +200,7 @@ def create_analysis_custom_heatmap(aln, inputs):
         figure_size = int(inputs['dimensions']['width'] * 0.7)
 
     matrix = aln.calc_pairwise_identity_matrix(inputs['additional_analysis_options_left']).distances
-    labels = [x.split(' ')[0] for x in list(aln.alignment.keys())]
+    labels = [x.split(' ')[0] for x in list(aln)]
 
     # generate hover text
     hover_text = [
