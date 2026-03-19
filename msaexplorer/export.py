@@ -9,7 +9,7 @@ This module lets you export data produced with MSA explorer.
 import numpy as np
 from numpy import ndarray
 from msaexplorer import config
-from msaexplorer._data_classes import AlignmentStats
+from msaexplorer._data_classes import AlignmentStats, OrfContainer
 from msaexplorer._helpers import _check_and_create_path
 
 
@@ -180,33 +180,31 @@ def stats(stat_data: AlignmentStats | list | ndarray, seperator: str = '\t', pat
         return '\n'.join(lines)
 
 
-def orf(orf_dict: dict, chrom: str, path: str | None = None) -> str | ValueError:
+def orf(orf_dict: OrfContainer, chrom: str, path: str | None = None) -> str | ValueError | None:
     """
-    Exports the ORF dictionary to a .bed file.
+    Exports the ORF collection to a .bed file.
 
-    :param orf_dict: Dictionary containing ORF information.
+    :param orf_dict: OrfContainer instance
     :param chrom: CHROM identifier for bed format.
     :param path: Path to the output .bed file.
-    :param : Reference name
     """
-    if not orf_dict:
-        raise ValueError("The ORF dictionary is empty. Nothing to export.")
-    else:
-        if list(orf_dict[list(orf_dict.keys())[0]].keys()) != ['location', 'frame', 'strand', 'conservation', 'internal']:
-            raise ValueError("The ORF dictionary has not the right format.")
+    if not isinstance(orf_dict, OrfContainer):
+        raise ValueError('The ORF collection must be an instance of msaexplorer._data_classes.OrfContainer.')
 
     _check_and_create_path(path)
 
     lines = []
 
     for orf_id, orf_data in orf_dict.items():
-        lines.append(
-            f"{chrom}\t{orf_data['location'][0][0]}\t{orf_data['location'][0][1]}\t{orf_id}\t{orf_data['conservation']:.2f}\t{orf_data['strand']}"
-        )
+        loc = orf_data.location[0]
+        conservation = orf_data.conservation
+        strand = orf_data.strand
+        lines.append(f"{chrom}\t{loc[0]}\t{loc[1]}\t{orf_id}\t{conservation:.2f}\t{strand}")
 
     if path is not None:
         with open(path, 'w') as out_file:
             out_file.write('\n'.join(lines))
+        return None
     else:
         return '\n'.join(lines)
 

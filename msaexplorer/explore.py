@@ -24,7 +24,7 @@ from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
-from msaexplorer._data_classes import PairwiseDistance, AlignmentStats
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, OpenReadingFrame, OrfContainer
 from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping, _read_alignment
 
 #TODO: Move outputs to dataclasses
@@ -192,8 +192,6 @@ class MSA:
             stat_name=stat_name,
             positions=positions,
             values=values_array,
-            aln_type=self.aln_type,
-            reference_id=self.reference_id,
         )
 
     def _to_array(self) -> ndarray:
@@ -203,9 +201,6 @@ class MSA:
     def _get_reference_seq(self) -> str:
         """get the sequence of the reference sequence or majority consensus"""
         return self.alignment[self.reference_id] if self.reference_id is not None else self.get_consensus()
-
-    def items(self):
-        return self.alignment.items()
 
     def get_reference_coords(self) -> tuple[int, int]:
         """
@@ -350,7 +345,7 @@ class MSA:
 
         return consensus
 
-    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> dict:
+    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> OrfContainer:
         """
         **conserved ORF definition:**
             - conserved starts and stops
@@ -459,7 +454,8 @@ class MSA:
         aln_len = self.length
 
         orf_counter = 0
-        orf_dict = {}
+        # use mutable dicts during construction and convert to dataclass at the end for immutability
+        temp_orfs: list[dict] = []
 
         for aln, direction in zip(alignments, ['+', '-']):
             # check for starts and stops in the first seq and then check if these are present in all seqs
@@ -483,28 +479,42 @@ class MSA:
                     # if no stop codon between start and stop --> write to dictionary
                     if not additional_stops(ungapped_sliced_seqs):
                         if direction == '+':
-                            positions = [start, next_stop + 3]
+                            positions = (start, next_stop + 3)
                         else:
-                            positions = [aln_len - next_stop - 3, aln_len - start]
+                            positions = (aln_len - next_stop - 3, aln_len - start)
                         if last_stop != next_stop:
                             last_stop = next_stop
-                            conservation = calculate_identity(identities, positions)
+                            conservation = calculate_identity(identities, list(positions))
                             if identity_cutoff is not None and conservation < identity_cutoff:
                                 continue
-                            orf_dict[f'ORF_{orf_counter}'] = {'location': [positions],
-                                                              'frame': frame,
-                                                              'strand': direction,
-                                                              'conservation': conservation,
-                                                              'internal': []
-                                                              }
+                            temp_orfs.append({
+                                'orf_id': f'ORF_{orf_counter}',
+                                'location': [positions],
+                                'frame': frame,
+                                'strand': direction,
+                                'conservation': conservation,
+                                'internal': [],
+                            })
                             orf_counter += 1
                         else:
-                            if orf_dict:
-                                orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
+                            if temp_orfs:
+                                temp_orfs[-1]['internal'].append(positions)
 
-        return orf_dict
+        # convert mutable intermediate dicts to frozen dataclasses
+        orf_list = [
+            OpenReadingFrame(
+                orf_id=t['orf_id'],
+                location=tuple(t['location']),
+                frame=t['frame'],
+                strand=t['strand'],
+                conservation=t['conservation'],
+                internal=tuple(t['internal']),
+            )
+            for t in temp_orfs
+        ]
+        return OrfContainer(orfs=tuple(orf_list))
 
-    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> dict:
+    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> OrfContainer:
         """
         First calculates all ORFs and then searches from 5'
         all non-overlapping orfs in the fw strand and from the
@@ -521,37 +531,33 @@ class MSA:
 
             frame:    3      2           1      2       1
 
-        :return: dictionary with non-overlapping orfs
+        :return: OrfContainer with non-overlapping orfs
         """
-        orf_dict = self.get_conserved_orfs(min_length, identity_cutoff)
+        all_orfs = self.get_conserved_orfs(min_length, identity_cutoff)
 
         fw_orfs, rw_orfs = [], []
 
-        for orf in orf_dict:
-            if orf_dict[orf]['strand'] == '+':
-                fw_orfs.append((orf, orf_dict[orf]['location'][0]))
+        for orf in all_orfs:
+            orf_obj = all_orfs[orf]
+            if orf_obj.strand == '+':
+                fw_orfs.append((orf, orf_obj.location[0]))
             else:
-                rw_orfs.append((orf, orf_dict[orf]['location'][0]))
+                rw_orfs.append((orf, orf_obj.location[0]))
 
         fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
         rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
-        non_overlapping_orfs = []
+        non_overlapping_ids = []
         for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
             previous_stop = -1 if strand == '+' else self.length + 1
             for orf in orf_list:
                 if strand == '+' and orf[1][0] >= previous_stop:
-                    non_overlapping_orfs.append(orf[0])
+                    non_overlapping_ids.append(orf[0])
                     previous_stop = orf[1][1]
                 elif strand == '-' and orf[1][1] <= previous_stop:
-                    non_overlapping_orfs.append(orf[0])
+                    non_overlapping_ids.append(orf[0])
                     previous_stop = orf[1][0]
 
-        non_overlap_dict = {}
-        for orf in orf_dict:
-            if orf in non_overlapping_orfs:
-                non_overlap_dict[orf] = orf_dict[orf]
-
-        return non_overlap_dict
+        return OrfContainer(orfs=tuple(all_orfs[orf_id] for orf_id in all_orfs if orf_id in non_overlapping_ids))
 
     def calc_length_stats(self) -> dict:
         """

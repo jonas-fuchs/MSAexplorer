@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from msaexplorer import export
-from msaexplorer._data_classes import AlignmentStats
+from msaexplorer._data_classes import AlignmentStats, OpenReadingFrame, OrfContainer
 
 
 @pytest.fixture
@@ -117,8 +117,6 @@ class TestStatsExport:
             stat_name="entropy",
             positions=np.array([2, 4, 6]),
             values=np.array([0.1, 0.2, 0.3]),
-            aln_type="dna",
-            reference_id=None,
         )
 
         result = export.stats(stat_data, seperator=",")
@@ -143,25 +141,26 @@ class TestStatsExport:
 
 
 class TestOrfExport:
-    def test_orf_output_is_correct(self):
-        """Test that the ORF output is correct."""
-        orf_dict = {
-            "orf_1": {
-                "location": [(10, 50)],
-                "frame": 1,
-                "strand": "+",
-                "conservation": 87.125,
-                "internal": False,
-            }
-        }
+    @pytest.fixture
+    def orf_collection(self):
+        return OrfContainer(orfs=(
+            OpenReadingFrame(
+                orf_id='orf_1',
+                location=((10, 50),),
+                frame=1,
+                strand='+',
+                conservation=87.125,
+            ),
+        ))
 
-        result = export.orf(orf_dict, chrom="chr1")
+    def test_orf_output_is_correct(self, orf_collection):
+        result = export.orf(orf_collection, chrom="chr1")
 
         assert result == "chr1\t10\t50\torf_1\t87.12\t+"
 
     def test_orf_invalid_input_raises(self):
-        """Test that invalid input raises a ValueError."""
-        with pytest.raises(ValueError, match="empty"):
+        with pytest.raises(ValueError, match="instance"):
+            export.orf(OrfContainer(), chrom="chr1")
             export.orf({}, chrom="chr1")
 
 

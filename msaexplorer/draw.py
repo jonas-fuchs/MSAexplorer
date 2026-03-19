@@ -945,12 +945,25 @@ def orf_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, min_length: int
     aln_temp = deepcopy(aln)
     aln_temp.zoom = None
     if non_overlapping_orfs:
-        annotation_dict = aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length)
+        orf_collection = aln_temp.get_non_overlapping_conserved_orfs(min_length=min_length)
     else:
-        annotation_dict = aln_temp.get_conserved_orfs(min_length=min_length)
+        orf_collection = aln_temp.get_conserved_orfs(min_length=min_length)
+
+    # Normalize ORF dataclasses to the annotation dict shape consumed by plotting helpers.
+    annotation_dict = {}
+    for orf_id, orf_data in orf_collection.items():
+        annotation_dict[orf_id] = {
+            'location': orf_data.location,
+            'strand': orf_data.strand,
+            'conservation': orf_data.conservation,
+        }
     # filter dict for zoom
     if aln.zoom is not None:
-        annotation_dict = {key:val for key, val in annotation_dict.items() if max(val['location'][0][0], aln.zoom[0]) <= min(val['location'][0][1], aln.zoom[1])}
+        annotation_dict = {
+            key: val
+            for key, val in annotation_dict.items()
+            if max(val['location'][0][0], aln.zoom[0]) <= min(val['location'][0][1], aln.zoom[1])
+        }
     # add track for plotting
     _add_track_positions(annotation_dict)
     # plot

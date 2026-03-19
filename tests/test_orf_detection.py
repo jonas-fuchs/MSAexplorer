@@ -4,6 +4,7 @@ Tests for conserved ORF detection.
 
 import pytest
 from msaexplorer.explore import MSA
+from msaexplorer._data_classes import OpenReadingFrame, OrfContainer
 from conftest import create_alignment
 
 
@@ -22,10 +23,10 @@ class TestGetConservedOrfs:
         orfs = aln.get_conserved_orfs(min_length=9)
 
         assert len(orfs) > 0
-        orf_key = list(orfs.keys())[0]
-        assert orfs[orf_key]['strand'] == '+'
-        assert orfs[orf_key]['location'][0][0] == 0  # Start at position 0
-        assert orfs[orf_key]['location'][0][1] == 12  # End at position 9
+        orf_obj = orfs[0]
+        assert orf_obj.strand == '+'
+        assert orf_obj.location[0][0] == 0  # Start at position 0
+        assert orf_obj.location[0][1] == 12  # End at position 12
 
     def test_with_gaps(self):
         """Test ORF detection handles gaps correctly."""
@@ -40,7 +41,7 @@ class TestGetConservedOrfs:
         assert len(orfs) == 1
 
     def test_no_orfs(self):
-        """Test that empty dict is returned when no ORFs found."""
+        """Test that empty collection is returned when no ORFs found."""
         alignment_dict = {
             'seq1': 'AAAAAAAAAAA',
             'seq2': 'AAAAAAAAAAA',
@@ -65,7 +66,6 @@ class TestGetConservedOrfs:
 
     def test_multiple_frames(self):
         """Test ORF detection across different reading frames."""
-        # One ORF in frame 1
         alignment_dict = {
             'seq1': 'CATGAAATAAGATGCCCTAG',
             'seq2': 'CATGAAATAAGATGCCCTAG',
@@ -75,12 +75,11 @@ class TestGetConservedOrfs:
         orfs = aln.get_conserved_orfs(min_length=9)
 
         # Should detect ORFs in frame 1
-        frames = [orf['frame'] for orf in orfs.values()]
+        frames = [orf.frame for orf in orfs.values()]
         assert 1 in frames
 
     def test_reverse_strand(self):
         """Test ORF detection on reverse complement strand."""
-        # Should find ORF in both strands
         alignment_dict = {
             'seq1': 'ATGTTATTTCATTAA',
             'seq2': 'ATGTTATTTCATTAA',
@@ -88,15 +87,15 @@ class TestGetConservedOrfs:
         }
         aln = MSA(create_alignment(alignment_dict))
         orfs = aln.get_conserved_orfs(min_length=9)
-        strands = [orf['strand'] for orf in orfs.values()]
+        strands = [orf.strand for orf in orfs.values()]
 
         assert strands == ['+', '-']
 
     def test_non_conserved_start(self):
         """Test that non-conserved start codons are rejected."""
         alignment_dict = {
-            'seq1': 'ATGAAATAA',  # Has ATG
-            'seq2': 'ATGAAATAA',  # Has ATG
+            'seq1': 'ATGAAATAA',
+            'seq2': 'ATGAAATAA',
             'seq3': 'TTGAAATAA'   # Has TTG (not a start codon)
         }
         aln = MSA(create_alignment(alignment_dict))
@@ -107,8 +106,8 @@ class TestGetConservedOrfs:
     def test_non_conserved_stop(self):
         """Test that non-conserved stop codons are rejected."""
         alignment_dict = {
-            'seq1': 'ATGAAATAA',  # Has TAA stop
-            'seq2': 'ATGAAATAA',  # Has TAA stop
+            'seq1': 'ATGAAATAA',
+            'seq2': 'ATGAAATAA',
             'seq3': 'ATGAAACAA'   # Has CAA (not a stop)
         }
         aln = MSA(create_alignment(alignment_dict))
@@ -144,8 +143,7 @@ class TestGetConservedOrfs:
         aln = MSA(create_alignment(alignment_dict))
         orfs = aln.get_conserved_orfs(min_length=9)
 
-        assert len(orfs['ORF_0']['internal']) == 1
-
+        assert len(orfs['ORF_0'].internal) == 1
 
     def test_rna_alignment(self):
         """Test ORF detection works with RNA alignments (U instead of T)."""
@@ -197,16 +195,14 @@ class TestGetConservedOrfs:
         }
         aln = MSA(create_alignment(alignment_dict))
 
-        # Negative cutoff
         with pytest.raises(ValueError, match='conservation cutoff must be between 0 and 100'):
             aln.get_conserved_orfs(min_length=9, identity_cutoff=-1.0)
 
-        # > 100 cutoff
         with pytest.raises(ValueError, match='conservation cutoff must be between 0 and 100'):
             aln.get_conserved_orfs(min_length=9, identity_cutoff=101.0)
 
     def test_return_structure(self):
-        """Test that returned ORF dictionary has correct structure."""
+        """Test that the return value is an OrfContainer instance with correct structure."""
         alignment_dict = {
             'seq1': 'ATGAAATAA',
             'seq2': 'ATGAAATAA',
@@ -215,24 +211,56 @@ class TestGetConservedOrfs:
         aln = MSA(create_alignment(alignment_dict))
         orfs = aln.get_conserved_orfs(min_length=9)
 
-        assert isinstance(orfs, dict)
+        assert isinstance(orfs, OrfContainer)
 
-        # first orf
-        orf = orfs[list(orfs.keys())[0]]
+        orf_obj = orfs[0]
+        assert isinstance(orf_obj, OpenReadingFrame)
+        assert isinstance(orf_obj.location, tuple)
+        assert isinstance(orf_obj.frame, int)
+        assert orf_obj.strand in ['+', '-']
+        assert isinstance(orf_obj.conservation, float)
+        assert isinstance(orf_obj.internal, tuple)
 
-        # Check required keys
-        assert 'location' in orf
-        assert 'frame' in orf
-        assert 'strand' in orf
-        assert 'conservation' in orf
-        assert 'internal' in orf
+    def test_getitem_by_name(self):
+        """OrfContainer supports access by orf_id string."""
+        alignment_dict = {
+            'seq1': 'ATGAAATAA',
+            'seq2': 'ATGAAATAA',
+            'seq3': 'ATGAAATAA'
+        }
+        aln = MSA(create_alignment(alignment_dict))
+        orfs = aln.get_conserved_orfs(min_length=9)
 
-        # Check types
-        assert isinstance(orf['location'], list)
-        assert isinstance(orf['frame'], int)
-        assert orf['strand'] in ['+', '-']
-        assert isinstance(orf['conservation'], float)
-        assert isinstance(orf['internal'], list)
+        assert orfs['ORF_0'] is orfs[0]
+
+    def test_contains(self):
+        """'ORF_0' should be contained in result, 'ORF_99' should not."""
+        alignment_dict = {
+            'seq1': 'ATGAAATAA',
+            'seq2': 'ATGAAATAA',
+            'seq3': 'ATGAAATAA'
+        }
+        aln = MSA(create_alignment(alignment_dict))
+        orfs = aln.get_conserved_orfs(min_length=9)
+
+        assert 'ORF_0' in orfs
+        assert 'ORF_99' not in orfs
+
+    def test_orf_len_and_contains_position(self):
+        """OpenReadingFrame.__len__ and __contains__ work correctly."""
+        alignment_dict = {
+            'seq1': 'ATGAAATAA',
+            'seq2': 'ATGAAATAA',
+            'seq3': 'ATGAAATAA'
+        }
+        aln = MSA(create_alignment(alignment_dict))
+        orfs = aln.get_conserved_orfs(min_length=9)
+        orf_obj = orfs[0]
+
+        assert len(orf_obj) == 9        # 0..9
+        assert 0 in orf_obj             # start is inside
+        assert 8 in orf_obj             # last position inside
+        assert 9 not in orf_obj         # stop is exclusive
 
 
 class TestGetNonOverlappingConservedOrfs:
@@ -240,7 +268,6 @@ class TestGetNonOverlappingConservedOrfs:
 
     def test_basic(self):
         """Test basic non-overlapping ORF selection."""
-        # Two non-overlapping ORFs (first and second frame) but one internal in the first
         alignment_dict = {
             'seq1': 'ATGAAAATGAAATAACCCTATGGGGTAG',
             'seq2': 'ATGAAAATGAAATAACCCTATGGGGTAG',
@@ -254,7 +281,7 @@ class TestGetNonOverlappingConservedOrfs:
             assert len(orfs) == 2
 
     def test_adjecent_orfs(self):
-        """Test if ORFs that are directly adjacent (touching boundaries) are retained as non-overlapping for both frames."""
+        """Test if ORFs that are directly adjacent are retained as non-overlapping."""
         alignment_dict = {
             'seq1': 'ATGAAAATGTAAATGAAAATGTAA',
             'seq2': 'ATGAAAATGTAAATGAAAATGTAA',
@@ -266,25 +293,6 @@ class TestGetNonOverlappingConservedOrfs:
             orfs = aln.get_non_overlapping_conserved_orfs(min_length=9)
             assert len(orfs) == 2
 
-    def test_preserves_structure(self):
-        """Test that non-overlapping ORFs preserve the same data structure."""
-        alignment_dict = {
-            'seq1': 'ATGAAATAA',
-            'seq2': 'ATGAAATAA',
-            'seq3': 'ATGAAATAA'
-        }
-        aln = MSA(create_alignment(alignment_dict))
-        orfs = aln.get_non_overlapping_conserved_orfs(min_length=9)
-        # first orf
-        orf = orfs[list(orfs.keys())[0]]
-
-        # Check all required keys are present
-        assert 'location' in orf
-        assert 'frame' in orf
-        assert 'strand' in orf
-        assert 'conservation' in orf
-        assert 'internal' in orf
-
     def test_with_identity_cutoff(self):
         """Test non-overlapping ORFs with identity cutoff."""
         alignment_dict = {
@@ -295,6 +303,5 @@ class TestGetNonOverlappingConservedOrfs:
         aln = MSA(create_alignment(alignment_dict))
         orfs = aln.get_non_overlapping_conserved_orfs(min_length=9, identity_cutoff=90.0)
 
-        # All returned ORFs should meet identity cutoff
         for orf in orfs.values():
-            assert orf['conservation'] >= 90.0
+            assert orf.conservation >= 90.0
