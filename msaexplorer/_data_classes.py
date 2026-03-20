@@ -26,10 +26,6 @@ class VariantCollection:
     chrom: str
     positions: dict[int, SingleNucleotidePolymorphism] = field(default_factory=dict)
 
-    def __post_init__(self):
-        """sort the positions by position (key)"""
-        object.__setattr__(self, 'positions', dict(sorted(self.positions.items())))
-
     def __len__(self) -> int:
         return len(self.positions)
 
@@ -38,6 +34,10 @@ class VariantCollection:
 
     def __contains__(self, position: int) -> bool:
         return position in self.positions
+    
+    def __getitem__(self, position: int) -> SingleNucleotidePolymorphism:
+        """Access a SNP by position."""
+        return self.positions[position]
 
 
 @dataclass(frozen=True)

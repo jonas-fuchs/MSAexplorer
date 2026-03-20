@@ -871,7 +871,7 @@ def server(input, output, session):
 
         aln = set_aln(aln, prepare_minimal_inputs())
 
-        return f'{aln.zoom[0]} - {aln.zoom[1]}'
+        return f'{aln.zoom[0]} - {aln.zoom[1]-1}'
 
     @render.ui
     def number_of_seq():
@@ -909,7 +909,7 @@ def server(input, output, session):
 
         aln = set_aln(aln, prepare_minimal_inputs(ref=True))
 
-        return len(aln.get_snps()['POS'])
+        return len(aln.get_snps())
 
     @reactive.Effect
     @reactive.event(input.analysis_plot_type_left)

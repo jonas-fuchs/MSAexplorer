@@ -1151,7 +1151,9 @@ class MSA:
         ref = self._get_reference_seq()
         aln = {x: aln[x] for x in self.sequence_ids if x != self.reference_id}
         seq_ids = list(aln.keys())
-        snp_dict = {'#CHROM': self.reference_id if self.reference_id is not None else 'consensus', 'POS': {}}
+        chrom = self.reference_id if self.reference_id is not None else 'consensus'
+        snp_positions = {}
+        aln_size = len(aln)
 
         for pos in range(self.length):
             reference_char = ref[pos]
@@ -1160,11 +1162,13 @@ class MSA:
                     continue
             alt_chars, snps = [], []
             for i, seq_id in enumerate(seq_ids):
-                alt_chars.append(aln[seq_id][pos])
-                if reference_char != aln[seq_id][pos]:
+                alt_char = aln[seq_id][pos]
+                alt_chars.append(alt_char)
+                if reference_char != alt_char:
                     snps.append(i)
             if not snps:
                 continue
+            # Filter out ambiguous snps if not included
             if include_ambig:
                 if all(alt_chars[x] in config.AMBIG_CHARS[self.aln_type] for x in snps):
                     continue
@@ -1172,31 +1176,23 @@ class MSA:
                 snps = [x for x in snps if alt_chars[x] not in config.AMBIG_CHARS[self.aln_type]]
                 if not snps:
                     continue
-            if pos not in snp_dict['POS']:
-                snp_dict['POS'][pos] = {'ref': reference_char, 'ALT': {}}
-            for snp in snps:
-                if alt_chars[snp] not in snp_dict['POS'][pos]['ALT']:
-                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]] = {
-                        'AF': 1,
-                        'SEQ_ID': [seq_ids[snp]]
-                    }
-                else:
-                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]]['AF'] += 1
-                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]]['SEQ_ID'].append(seq_ids[snp])
-            # calculate AF
-            if pos in snp_dict['POS']:
-                for alt in snp_dict['POS'][pos]['ALT']:
-                    snp_dict['POS'][pos]['ALT'][alt]['AF'] /= len(aln)
-
-        snp_positions = {}
-        for pos, pos_info in snp_dict['POS'].items():
+            # Build allele dict with counts
+            alt_dict = {}
+            for snp_idx in snps:
+                alt_char = alt_chars[snp_idx]
+                if alt_char not in alt_dict:
+                    alt_dict[alt_char] = {'count': 0, 'seq_ids': []}
+                alt_dict[alt_char]['count'] += 1
+                alt_dict[alt_char]['seq_ids'].append(seq_ids[snp_idx])
+            
+            # Convert to final format: alt_char -> (frequency, seq_ids_tuple)
             alt = {
-                allele: (details['AF'], tuple(details['SEQ_ID']))
-                for allele, details in pos_info['ALT'].items()
+                alt_char: (data['count'] / aln_size, tuple(data['seq_ids']))
+                for alt_char, data in alt_dict.items()
             }
-            snp_positions[pos] = SingleNucleotidePolymorphism(ref=pos_info['ref'], alt=alt)
+            snp_positions[pos] = SingleNucleotidePolymorphism(ref=reference_char, alt=alt)
 
-        return VariantCollection(chrom=snp_dict['#CHROM'], positions=snp_positions)
+        return VariantCollection(chrom=chrom, positions=snp_positions)
 
     def calc_transition_transversion_score(self) -> AlignmentStats:
         """

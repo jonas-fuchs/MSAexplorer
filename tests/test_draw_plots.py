@@ -1,6 +1,7 @@
 """Tests for the main plotting helpers in ``msaexplorer.draw``."""
 
 from pathlib import Path
+from typing import Any, Generator
 
 import matplotlib
 matplotlib.use('Agg')
@@ -14,7 +15,7 @@ from msaexplorer.explore import MSA
 
 
 @pytest.fixture
-def ax() -> Axes:
+def ax() -> Generator[Axes, Any, None]:
     """Create a fresh matplotlib axis for each test."""
     fig, axis = plt.subplots()
     yield axis
