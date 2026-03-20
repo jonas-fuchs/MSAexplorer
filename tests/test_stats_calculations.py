@@ -4,7 +4,28 @@ import pytest
 import numpy as np
 from conftest import create_alignment
 from msaexplorer.explore import MSA
-from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, VariantCollection
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, LengthStats, VariantCollection
+
+class TestCalcLengthStats:
+    """Tests for calc_length_stats."""
+
+    def test_returns_length_stats_dataclass(self):
+        msa = MSA(create_alignment({'s1': 'A-CG', 's2': 'AT-G', 's3': 'ATCG'}))
+
+        result = msa.calc_length_stats()
+
+        assert isinstance(result, LengthStats)
+
+    def test_length_stats_values_are_correct(self):
+        msa = MSA(create_alignment({'s1': 'A-CG', 's2': 'AT-G', 's3': 'ATCG'}))
+
+        result = msa.calc_length_stats()
+
+        assert result.n_sequences == 3
+        assert result.mean_length == pytest.approx(3.3333333333)
+        assert result.std_length == pytest.approx(0.4714045208)
+        assert result.min_length == 3
+        assert result.max_length == 4
 
 
 class TestCalcEntropy:

@@ -66,6 +66,17 @@ class AlignmentStats:
 
 
 @dataclass(frozen=True)
+class LengthStats:
+    """Summary statistics for ungapped sequence lengths in an alignment."""
+
+    n_sequences: int
+    mean_length: float
+    std_length: float
+    min_length: int
+    max_length: int
+
+
+@dataclass(frozen=True)
 class PairwiseDistance:
     """
     Result container for Pairwise distances. Array can either be a 2D (compared to reference) or 3D array.

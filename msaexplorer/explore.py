@@ -24,7 +24,7 @@ from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
-from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, OpenReadingFrame, OrfCollection, SingleNucleotidePolymorphism, VariantCollection
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, LengthStats, OpenReadingFrame, OrfCollection, SingleNucleotidePolymorphism, VariantCollection
 from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping, _read_alignment
 
 #TODO: Move outputs to dataclasses
@@ -559,20 +559,21 @@ class MSA:
 
         return OrfCollection(orfs=tuple(all_orfs[orf_id] for orf_id in all_orfs if orf_id in non_overlapping_ids))
 
-    def calc_length_stats(self) -> dict:
+    def calc_length_stats(self) -> LengthStats:
         """
         Determine the stats for the length of the ungapped seqs in the alignment.
-        :return: dictionary with length stats
+        :return: dataclass with length stats
         """
 
         seq_lengths = [len(self.alignment[x].replace('-', '')) for x in self.alignment]
 
-        return {'number of seq': len(self.alignment),
-                'mean length': float(np.mean(seq_lengths)),
-                'std length': float(np.std(seq_lengths)),
-                'min length': int(np.min(seq_lengths)),
-                'max length': int(np.max(seq_lengths))
-                }
+        return LengthStats(
+            n_sequences=len(self.alignment),
+            mean_length=float(np.mean(seq_lengths)),
+            std_length=float(np.std(seq_lengths)),
+            min_length=int(np.min(seq_lengths)),
+            max_length=int(np.max(seq_lengths)),
+        )
 
     def calc_entropy(self) -> AlignmentStats:
         """
@@ -923,7 +924,7 @@ class MSA:
         if matrix_type == 'IC':
             return ic
 
-    def calc_percent_recovery(self) -> dict:
+    def calc_percent_recovery(self) -> dict[str, float]:
         """
         Recovery per sequence either compared to the majority consensus seq
         or the reference seq.\n
