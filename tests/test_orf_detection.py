@@ -4,7 +4,7 @@ Tests for conserved ORF detection.
 
 import pytest
 from msaexplorer.explore import MSA
-from msaexplorer._data_classes import OpenReadingFrame, OrfContainer
+from msaexplorer._data_classes import OpenReadingFrame, OrfCollection
 from conftest import create_alignment
 
 
@@ -211,7 +211,7 @@ class TestGetConservedOrfs:
         aln = MSA(create_alignment(alignment_dict))
         orfs = aln.get_conserved_orfs(min_length=9)
 
-        assert isinstance(orfs, OrfContainer)
+        assert isinstance(orfs, OrfCollection)
 
         orf_obj = orfs[0]
         assert isinstance(orf_obj, OpenReadingFrame)

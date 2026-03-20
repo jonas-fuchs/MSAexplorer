@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from conftest import create_alignment
 from msaexplorer.explore import MSA
-from msaexplorer._data_classes import PairwiseDistance, AlignmentStats
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, VariantCollection
 
 
 class TestCalcEntropy:
@@ -167,8 +167,9 @@ class TestGetSnps:
         msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
         snps = msa.get_snps()
 
-        assert snps["#CHROM"] == "consensus"
-        assert snps["POS"] == {}
+        assert isinstance(snps, VariantCollection)
+        assert snps.chrom == "consensus"
+        assert snps.positions == {}
 
     def test_exclude_ambiguous(self):
         """Test if no variants are present for include_ambig=False"""
@@ -182,10 +183,10 @@ class TestGetSnps:
         )
         snps = msa.get_snps(include_ambig=False)
 
-        assert snps["POS"] == {}
+        assert snps.positions == {}
 
     def test_include_ambiguous(self):
-        """Test if variants are present in correct frequency for include_ambig=False"""
+        """Test if variants are present in correct frequency for include_ambig=True"""
         msa = MSA(
             create_alignment({
                 "ref": "AAAA",
@@ -196,12 +197,12 @@ class TestGetSnps:
         )
 
         snps = msa.get_snps(include_ambig=True)
-        alts = snps["POS"][1]["ALT"]
+        alts = snps.positions[1].alt
 
-        assert 1 in snps["POS"]
+        assert 1 in snps
         assert set(alts.keys()) == {"C", "N"}
-        assert alts["C"]["AF"] == 0.5
-        assert alts["N"]["AF"] == 0.5
+        assert alts["C"][0] == 0.5
+        assert alts["N"][0] == 0.5
 
     def test_alt_gaps_exclude_ambiguous(self):
         """Test that no gaps are present for include_ambig=False"""
@@ -216,7 +217,7 @@ class TestGetSnps:
 
         snps = msa.get_snps(include_ambig=False)
 
-        assert snps["POS"] == {}
+        assert snps.positions == {}
 
     def test_alt_gaps_include_ambiguous(self):
         """Test that there are gaps present for include_ambig=True"""
@@ -230,11 +231,11 @@ class TestGetSnps:
         )
 
         snps = msa.get_snps(include_ambig=True)
-        alts = snps["POS"][1]["ALT"]
+        alts = snps.positions[1].alt
 
-        assert 1 in snps["POS"]
+        assert 1 in snps
         assert set(alts.keys()) == {'-', 'C'}
-        assert alts["-"]["AF"] == 0.5
+        assert alts["-"][0] == 0.5
 
     def test_gaps_in_reference(self):
         """Test that gaps are always included if in the reference"""
@@ -249,8 +250,8 @@ class TestGetSnps:
 
         snps = msa.get_snps(include_ambig=False)
 
-        assert snps["POS"][1]['ref'] == '-'
-        assert snps["POS"][2]['ref'] == '-'
+        assert snps.positions[1].ref == '-'
+        assert snps.positions[2].ref == '-'
 
     def test_correct_sequence_identifiers(self):
         msa = MSA(
@@ -263,9 +264,9 @@ class TestGetSnps:
         )
         snps = msa.get_snps()
 
-        assert snps["#CHROM"] == "ref"
-        assert set(snps["POS"][1]["ALT"]["C"]["SEQ_ID"]) == {"q1"}
-        assert set(snps["POS"][1]["ALT"]["G"]["SEQ_ID"]) == {"q2"}
+        assert snps.chrom == "ref"
+        assert set(snps.positions[1].alt["C"][1]) == {"q1"}
+        assert set(snps.positions[1].alt["G"][1]) == {"q2"}
 
 
 class TestCalcPairwiseIdentityMatrix:

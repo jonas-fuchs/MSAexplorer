@@ -778,32 +778,31 @@ def variant_plot(aln: explore.MSA | str, ax: plt.Axes | None = None, lollisize: 
     # define where to plot (each ref type gets a separate line)
     ref_y_positions, y_pos, detected_var = {}, 0, set()
 
-    # iterate over snp dict
-    for pos in snps['POS']:
-        for identifier in snps['POS'][pos]:
-            # fill in y pos dict
-            if identifier == 'ref':
-                if snps['POS'][pos]['ref'] not in ref_y_positions:
-                    ref_y_positions[snps['POS'][pos]['ref']] = y_pos
-                    y_pos += 1.1
-                    continue
-            # plot
-            if identifier == 'ALT':
-                for alt in snps['POS'][pos]['ALT']:
-                    ax.vlines(x=pos + aln.zoom[0] if aln.zoom is not None else pos,
-                              ymin=ref_y_positions[snps['POS'][pos]['ref']],
-                              ymax=ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
-                              color=colors[alt],
-                              zorder=100,
-                              linewidth=lollisize[0]
-                              )
-                    ax.plot(pos + aln.zoom[0] if aln.zoom is not None else pos,
-                            ref_y_positions[snps['POS'][pos]['ref']] + snps['POS'][pos]['ALT'][alt]['AF'],
-                            color=colors[alt],
-                            marker='o',
-                            markersize=lollisize[1]
-                            )
-                    detected_var.add(alt)
+    # iterate over SNPs
+    for pos, snp_pos in snps.positions.items():
+        if snp_pos.ref not in ref_y_positions:
+            ref_y_positions[snp_pos.ref] = y_pos
+            y_pos += 1.1
+
+        for alt, (af, _) in snp_pos.alt.items():
+            x_pos = pos + aln.zoom[0] if aln.zoom is not None else pos
+            y_ref = ref_y_positions[snp_pos.ref]
+            ax.vlines(
+                x=x_pos,
+                ymin=y_ref,
+                ymax=y_ref + af,
+                color=colors[alt],
+                zorder=100,
+                linewidth=lollisize[0]
+            )
+            ax.plot(
+                x_pos,
+                y_ref + af,
+                color=colors[alt],
+                marker='o',
+                markersize=lollisize[1]
+            )
+            detected_var.add(alt)
 
     # plot hlines
     for y_char in ref_y_positions:

@@ -4,36 +4,34 @@ import numpy as np
 import pytest
 
 from msaexplorer import export
-from msaexplorer._data_classes import AlignmentStats, OpenReadingFrame, OrfContainer
+from msaexplorer._data_classes import AlignmentStats, OpenReadingFrame, OrfCollection, SingleNucleotidePolymorphism, VariantCollection
 
 
 @pytest.fixture
-def snp_dict():
-    """Returns a SNP dictionary for testing."""
-    return {
-        "#CHROM": "ref",
-        "POS": {
-            3: {
-                "ref": "C",
-                "ALT": {
-                    "T": {"AF": 1.0, "SEQ_ID": ["s1"]},
+def snp_result():
+    """Returns a SNP dataclass object for testing."""
+    return VariantCollection(
+        chrom="ref",
+        positions={
+            3: SingleNucleotidePolymorphism(
+                ref="C",
+                alt={"T": (1.0, ("s1",))},
+            ),
+            1: SingleNucleotidePolymorphism(
+                ref="A",
+                alt={
+                    "G": (0.5, ("s1", "s2")),
+                    "-": (0.5, ("s3",)),
                 },
-            },
-            1: {
-                "ref": "A",
-                "ALT": {
-                    "G": {"AF": 0.5, "SEQ_ID": ["s1", "s2"]},
-                    "-": {"AF": 0.5, "SEQ_ID": ["s3"]},
-                },
-            },
+            ),
         },
-    }
+    )
 
 
 class TestSnpsExport:
-    def test_vcf_output_is_correct_and_sorted(self, snp_dict):
+    def test_vcf_output_is_correct_and_sorted(self, snp_result):
         """Test that the VCF has correct vcf format."""
-        result = export.snps(snp_dict, format_type="vcf")
+        result = export.snps(snp_result, format_type="vcf")
 
         assert result == "\n".join(
             [
@@ -45,9 +43,9 @@ class TestSnpsExport:
             ]
         )
 
-    def test_tabular_output_is_correct(self, snp_dict):
+    def test_tabular_output_is_correct(self, snp_result):
         """Test that the VCF has correct tabular format."""
-        result = export.snps(snp_dict, format_type="tabular")
+        result = export.snps(snp_result, format_type="tabular")
 
         assert result == "\n".join(
             [
@@ -60,20 +58,18 @@ class TestSnpsExport:
 
     def test_invalid_input_raises_value_error(self):
         """Test that invalid input raises a ValueError."""
-        with pytest.raises(ValueError, match="must be a dictionary"):
+        with pytest.raises(ValueError, match="must be a VariantCollection"):
             export.snps([], format_type="vcf")
 
-        with pytest.raises(ValueError, match="Missing required key"):
-            export.snps({"POS": {}}, format_type="vcf")
-
+    def test_invalid_format_raises_value_error(self, snp_result):
         with pytest.raises(ValueError, match="Invalid format_type"):
-            export.snps({"#CHROM": "ref", "POS": {}}, format_type="csv")
+            export.snps(snp_result, format_type="csv")
 
-    def test_file_export_creates_expected_extension(self, snp_dict, tmp_path):
+    def test_file_export_creates_expected_extension(self, snp_result, tmp_path):
         """Test that the file extension is correct when written."""
         path_without_ext = tmp_path / "nested" / "snps_output"
 
-        result = export.snps(snp_dict, format_type="vcf", path=str(path_without_ext))
+        result = export.snps(snp_result, format_type="vcf", path=str(path_without_ext))
 
         assert result is None
         written = path_without_ext.with_suffix(path_without_ext.suffix + ".vcf")
@@ -143,7 +139,7 @@ class TestStatsExport:
 class TestOrfExport:
     @pytest.fixture
     def orf_collection(self):
-        return OrfContainer(orfs=(
+        return OrfCollection(orfs=(
             OpenReadingFrame(
                 orf_id='orf_1',
                 location=((10, 50),),
@@ -160,7 +156,7 @@ class TestOrfExport:
 
     def test_orf_invalid_input_raises(self):
         with pytest.raises(ValueError, match="instance"):
-            export.orf(OrfContainer(), chrom="chr1")
+            export.orf(OrfCollection(), chrom="chr1")
             export.orf({}, chrom="chr1")
 
 
@@ -209,5 +205,3 @@ class TestPercentRecoveryExport:
         """Test that the percent recovery value must be a float."""
         with pytest.raises(ValueError, match="invalid"):
             export.percent_recovery({"seq1": 75})
-
-

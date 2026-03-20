@@ -2,11 +2,42 @@
 this contains the dataclasses used to store the data for the msa explorer. these are not meant to be used outside of this package.
 """
 
-# build-in
+# built-in
 from dataclasses import dataclass, field
 
 # libs
 from numpy import ndarray
+
+
+@dataclass(frozen=True)
+class SingleNucleotidePolymorphism:
+    """
+    SNP data for one alignment position.
+    """
+
+    ref: str
+    alt: dict[str, tuple[float, tuple[str, ...]]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class VariantCollection:
+    """Container for SNPs"""
+
+    chrom: str
+    positions: dict[int, SingleNucleotidePolymorphism] = field(default_factory=dict)
+
+    def __post_init__(self):
+        """sort the positions by position (key)"""
+        object.__setattr__(self, 'positions', dict(sorted(self.positions.items())))
+
+    def __len__(self) -> int:
+        return len(self.positions)
+
+    def __iter__(self):
+        return iter(self.positions)
+
+    def __contains__(self, position: int) -> bool:
+        return position in self.positions
 
 
 @dataclass(frozen=True)
@@ -105,7 +136,7 @@ class OpenReadingFrame:
 
 
 @dataclass(frozen=True)
-class OrfContainer:
+class OrfCollection:
     """
     Ordered collection of `OpenReadingFrame` objects returned by
     `MSA.get_conserved_orfs` or`MSA.get_non_overlapping_conserved_orfs`.

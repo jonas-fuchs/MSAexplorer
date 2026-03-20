@@ -24,7 +24,7 @@ from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
-from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, OpenReadingFrame, OrfContainer
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, OpenReadingFrame, OrfCollection, SingleNucleotidePolymorphism, VariantCollection
 from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping, _read_alignment
 
 #TODO: Move outputs to dataclasses
@@ -345,7 +345,7 @@ class MSA:
 
         return consensus
 
-    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> OrfContainer:
+    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> OrfCollection:
         """
         **conserved ORF definition:**
             - conserved starts and stops
@@ -512,9 +512,9 @@ class MSA:
             )
             for t in temp_orfs
         ]
-        return OrfContainer(orfs=tuple(orf_list))
+        return OrfCollection(orfs=tuple(orf_list))
 
-    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> OrfContainer:
+    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> OrfCollection:
         """
         First calculates all ORFs and then searches from 5'
         all non-overlapping orfs in the fw strand and from the
@@ -557,7 +557,7 @@ class MSA:
                     non_overlapping_ids.append(orf[0])
                     previous_stop = orf[1][0]
 
-        return OrfContainer(orfs=tuple(all_orfs[orf_id] for orf_id in all_orfs if orf_id in non_overlapping_ids))
+        return OrfCollection(orfs=tuple(all_orfs[orf_id] for orf_id in all_orfs if orf_id in non_overlapping_ids))
 
     def calc_length_stats(self) -> dict:
         """
@@ -1137,7 +1137,7 @@ class MSA:
             distances=np.array(distances)
         )
 
-    def get_snps(self, include_ambig:bool=False) -> dict:
+    def get_snps(self, include_ambig:bool=False) -> VariantCollection:
         """
         Calculate snps similar to snp-sites (output is comparable):
         https://github.com/sanger-pathogens/snp-sites
@@ -1145,7 +1145,7 @@ class MSA:
         The SNPs are compared to a majority consensus sequence or to a reference if it has been set.
 
         :param include_ambig: Include ambiguous snps (default: False)
-        :return: dictionary containing snp positions and their variants including their frequency.
+        :return: dataclass containing SNP positions and their variants including frequency.
         """
         aln = self.alignment
         ref = self._get_reference_seq()
@@ -1172,7 +1172,7 @@ class MSA:
                 snps = [x for x in snps if alt_chars[x] not in config.AMBIG_CHARS[self.aln_type]]
                 if not snps:
                     continue
-            if pos not in snp_dict:
+            if pos not in snp_dict['POS']:
                 snp_dict['POS'][pos] = {'ref': reference_char, 'ALT': {}}
             for snp in snps:
                 if alt_chars[snp] not in snp_dict['POS'][pos]['ALT']:
@@ -1188,7 +1188,15 @@ class MSA:
                 for alt in snp_dict['POS'][pos]['ALT']:
                     snp_dict['POS'][pos]['ALT'][alt]['AF'] /= len(aln)
 
-        return snp_dict
+        snp_positions = {}
+        for pos, pos_info in snp_dict['POS'].items():
+            alt = {
+                allele: (details['AF'], tuple(details['SEQ_ID']))
+                for allele, details in pos_info['ALT'].items()
+            }
+            snp_positions[pos] = SingleNucleotidePolymorphism(ref=pos_info['ref'], alt=alt)
+
+        return VariantCollection(chrom=snp_dict['#CHROM'], positions=snp_positions)
 
     def calc_transition_transversion_score(self) -> AlignmentStats:
         """
@@ -1205,14 +1213,13 @@ class MSA:
         snps = self.get_snps()
         score = [0]*self.length
 
-        for pos in snps['POS']:
-            t_score_temp = 0
-            for alt in snps['POS'][pos]['ALT']:
+        for pos, snp in snps.positions.items():
+            for alt, (af, _) in snp.alt.items():
                 # check the type of substitution
-                if snps['POS'][pos]['ref'] + alt in ['AG', 'GA', 'CT', 'TC', 'CU', 'UC']:
-                    score[pos] += snps['POS'][pos]['ALT'][alt]['AF']
+                if snp.ref + alt in ['AG', 'GA', 'CT', 'TC', 'CU', 'UC']:
+                    score[pos] += af
                 else:
-                    score[pos] -= snps['POS'][pos]['ALT'][alt]['AF']
+                    score[pos] -= af
 
         return self._create_position_stat_result('ts tv score', score)
 
