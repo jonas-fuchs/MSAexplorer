@@ -1283,7 +1283,7 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
         # slice alignment and replace the original alignment
         aln_tmp._alignment = {
             seq_id: seq[left_side:right_side]
-            for seq_id, seq in aln.items()
+            for seq_id, seq in aln.alignment.items()
         }
         window_result = aln_tmp.calc_pairwise_distance_to_reference(distance_type=distance_calculation)
         value_map = {seq_id: value for seq_id, value in zip(window_result.sequence_ids, window_result.distances)}
