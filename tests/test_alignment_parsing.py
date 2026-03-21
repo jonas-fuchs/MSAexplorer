@@ -71,3 +71,21 @@ def test_read_alignment_raises_for_unparseable_content() -> None:
     """Test that MSA raises ValueError when given unparseable content."""
     with pytest.raises(ValueError, match="could not be parsed"):
         _read_alignment("this is not an alignment")
+
+
+def test_zoom_allows_exclusive_end_equal_to_alignment_length() -> None:
+    """Accept zoom ranges that use Python slicing semantics [start:end)."""
+    msa = MSA(str(DATA_DIR / 'alignment.fasta'))
+
+    msa.zoom = (0, msa.length)
+
+    assert msa.length == len(EXPECTED_ALIGNMENT['seq1'])
+
+
+def test_zoom_rejects_end_beyond_alignment_length() -> None:
+    """Reject zoom ranges whose end exceeds the alignment length."""
+    msa = MSA(str(DATA_DIR / 'alignment.fasta'))
+
+    with pytest.raises(ValueError, match='Zoom position out of range'):
+        msa.zoom = (0, msa.length + 1)
+

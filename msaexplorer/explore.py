@@ -90,18 +90,22 @@ class MSA:
             # check if only over value is provided -> stop is alignment length
             if isinstance(zoom, int):
                 if 0 <= zoom < aln_length:
-                    return zoom, aln_length - 1
+                    return zoom, aln_length
                 else:
                     raise ValueError('Zoom start must be within the alignment length range.')
             # check if more than 2 values are provided
             if len(zoom) != 2:
                 raise ValueError('Zoom position have to be (zoom_start, zoom_end)')
-            # validate zoom start/stop
-            for position in zoom:
-                if type(position) != int:
-                    raise ValueError('Zoom positions have to be integers.')
-                if position not in range(0, aln_length):
-                    raise ValueError('Zoom position out of range')
+            start, end = zoom
+            # validate zoom start/stop for Python slicing semantics [start:end)
+            if type(start) is not int or type(end) is not int:
+                raise ValueError('Zoom positions have to be integers.')
+            if not (0 <= start < aln_length):
+                raise ValueError('Zoom position out of range')
+            if not (0 < end <= aln_length):
+                raise ValueError('Zoom position out of range')
+            if start >= end:
+                raise ValueError('Zoom position have to be (zoom_start, zoom_end) with zoom_start < zoom_end')
 
         return zoom
 

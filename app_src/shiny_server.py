@@ -824,6 +824,11 @@ def server(input, output, session):
                 str(error),
                 style="color: red; font-weight: bold;"
             ), duration=10)
+            # create dummy download
+            with tempfile.NamedTemporaryFile(prefix='download_error_', suffix='.txt', delete=False) as tmpfile:
+                tmpfile.write(b'')
+                tmpfile.flush()
+                return tmpfile.name
 
     @output
     @render.download
