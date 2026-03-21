@@ -61,8 +61,8 @@ class AlignmentStats:
     def __getitem__(self, index: int) -> float:
         return self.values[index]
 
-    def __contains__(self, item: float) -> bool:
-        return item in self.positions
+    def __contains__(self, position: int) -> bool:
+        return position in self.positions
 
 
 @dataclass(frozen=True)
