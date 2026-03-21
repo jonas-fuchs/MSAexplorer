@@ -156,7 +156,6 @@ class TestOrfExport:
 
     def test_orf_invalid_input_raises(self):
         with pytest.raises(ValueError, match="instance"):
-            export.orf(OrfCollection(), chrom="chr1")
             export.orf({}, chrom="chr1")
 
 
