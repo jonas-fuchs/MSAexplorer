@@ -295,8 +295,7 @@ def server(input, output, session):
         aln.reference_id = next(iter(aln))
         reactive.alignment.set(aln)
 
-        alignment_length = aln.length - 1
-        ui.update_slider('zoom_range', max=alignment_length - 1, value=(0, alignment_length - 1))
+        ui.update_slider('zoom_range', max=aln.length - 1, value=(0, aln.length - 1))
 
         ui.remove_ui(selector="#orf_column")
         if aln.aln_type != 'AA':
@@ -685,7 +684,6 @@ def server(input, output, session):
         """
         Download various files in standard format
         """
-
         # helper functions
         def _snp_option():
             if input.reference_2() == 'first':
@@ -730,10 +728,7 @@ def server(input, output, session):
                 raise ValueError('Rolling_average must be between 1 and length of alignment.')
             # define seperator
             seperator = '\t' if input.download_format() == 'tabular' else ','
-            # define which stat type to exprt
-            for stat_type in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
-                if stat_type == input.download_type():
-                    break
+            stat_type = str(input.download_type())
             # use correct function
             data = stat_functions[stat_type]()
             if isinstance(data, AlignmentStats):
@@ -741,7 +736,7 @@ def server(input, output, session):
             # calculate the mean for identity or similarity (identical to draw module of msaexplorer)
             else:
                 # for the mean nan values get handled as the lowest possible number in the matrix
-                data = np.nan_to_num(data, True, -1 if stat_type == 'identity' else 0)
+                data = np.nan_to_num(data, True, -1 if stat_type == 'mean identity' else 0)
                 data = np.mean(data, axis=0)
             # apply rolling average
             data = draw._moving_average(data, input.download_type_options_1(), None, aln.length)[0]

@@ -1227,6 +1227,10 @@ def simplot(aln: explore.MSA | str, ref: str | None, ax: plt.Axes | None = None,
         raise ValueError('window_size has to be a positive integer')
     if window_size > aln.length:
         raise ValueError('window_size can not be larger than the (zoomed) alignment length')
+    if not isinstance(step_size, int) or step_size <= 0:
+        raise ValueError('step_size has to be a positive integer')
+    if step_size > aln.length:
+        raise ValueError('step_size can not be larger than the (zoomed) alignment length')
     if ref is not None and ref not in aln:
         raise ValueError(f'Reference {ref} not in alignment')
     if distance_calculation not in ['ghd', 'ged', 'jc69', 'k2p']:

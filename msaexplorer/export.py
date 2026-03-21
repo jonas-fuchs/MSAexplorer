@@ -13,7 +13,7 @@ from msaexplorer._data_classes import AlignmentStats, OrfCollection, VariantColl
 from msaexplorer._helpers import _check_and_create_path
 
 
-def snps(snp_data: VariantCollection, format_type: str = 'vcf', path: str | None = None) -> str | None | ValueError:
+def snps(snp_data: VariantCollection, format_type: str = 'vcf', path: str | None = None) -> str | None:
     """
     Export SNP data from a VariantCollection to VCF or tabular format.
 
@@ -21,7 +21,7 @@ def snps(snp_data: VariantCollection, format_type: str = 'vcf', path: str | None
     :param format_type: Format type ('vcf' or 'tabular'). Default is 'vcf'.
     :param path: Path to output VCF or tabular format. (optional)
     :return: A string containing the SNP data in the requested format.
-    :raises ValueError: if the input type is invalid or format_type is invalid.
+    :raises ValueError: If the input type is invalid or format_type is invalid.
     """
 
     def _validate():
@@ -148,7 +148,7 @@ def stats(stat_data: AlignmentStats | list | ndarray, seperator: str = '\t', pat
         return '\n'.join(lines)
 
 
-def orf(orf_dict: OrfCollection, chrom: str, path: str | None = None) -> str | ValueError | None:
+def orf(orfs: OrfCollection, chrom: str, path: str | None = None) -> str | ValueError | None:
     """
     Exports the ORF collection to a .bed file.
 
@@ -156,14 +156,17 @@ def orf(orf_dict: OrfCollection, chrom: str, path: str | None = None) -> str | V
     :param chrom: CHROM identifier for bed format.
     :param path: Path to the output .bed file.
     """
-    if not isinstance(orf_dict, OrfCollection):
-        raise ValueError('The ORF collection must be an instance of msaexplorer._data_classes.OrfContainer.')
+    if not isinstance(orfs, OrfCollection):
+        raise ValueError('The ORF collection must be an instance of msaexplorer._data_classes.OrfCollection.')
+
+    if not orfs:
+        raise ValueError('The ORF collection is empty.')
 
     _check_and_create_path(path)
 
     lines = []
 
-    for orf_id, orf_data in orf_dict.items():
+    for orf_id, orf_data in orfs.items():
         loc = orf_data.location[0]
         conservation = orf_data.conservation
         strand = orf_data.strand

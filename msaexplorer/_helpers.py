@@ -181,7 +181,7 @@ def _create_distance_calculation_function_mapping() -> Dict[str, Callable[[str, 
         Returns (1 - d) * 100 as a corrected percent identity (100 = identical).
         Returns 0 when the logarithm arguments become non-positive (saturated).
         """
-        transitions = [{'A', 'G'}, {'C', 'T'}]
+        transitions = [{'A', 'G'}, {'C', 'T'}, {'C', 'U'}]
 
         ts, tv, total = 0, 0, 0
         for c1, c2 in zip(seq1, seq2):
