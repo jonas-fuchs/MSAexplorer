@@ -34,6 +34,7 @@ from shinywidgets import render_widget
 
 # msaexplorer
 from msaexplorer import explore, config, export, draw
+from msaexplorer._data_classes import AlignmentStats
 
 
 def server(input, output, session):
@@ -127,7 +128,7 @@ def server(input, output, session):
                 complete_size += input.plot_1_size()
             if inputs['annotation'] != 'Off':
                 complete_size += input.plot_3_size()
-            relative_msa_height = input.plot_2_size() * increase_height / complete_size * window_height / len(aln.alignment)
+            relative_msa_height = input.plot_2_size() * increase_height / complete_size * window_height / len(aln)
             try:
                 relative_msa_width = window_width / (inputs['zoom_range'][1] - inputs['zoom_range'][0])
             except ZeroDivisionError:
@@ -291,11 +292,10 @@ def server(input, output, session):
         All the necessary steps to load an alignment into the app are done here.
         """
 
-        aln.reference_id = list(aln.alignment.keys())[0]
+        aln.reference_id = next(iter(aln))
         reactive.alignment.set(aln)
 
-        alignment_length = len(next(iter(aln.alignment.values()))) - 1
-        ui.update_slider('zoom_range', max=alignment_length - 1, value=(0, alignment_length - 1))
+        ui.update_slider('zoom_range', max=aln.length - 1, value=(0, aln.length - 1))
 
         ui.remove_ui(selector="#orf_column")
         if aln.aln_type != 'AA':
@@ -314,7 +314,7 @@ def server(input, output, session):
             )
 
         for id in ['reference', 'reference_2']:
-            ui.update_selectize(id=id, choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first')
+            ui.update_selectize(id=id, choices=['first', 'consensus'] + list(aln), selected='first')
 
         ui.update_selectize(
             id='matrix',
@@ -322,7 +322,7 @@ def server(input, output, session):
             selected='BLOSUM65' if aln.aln_type == 'AA' else 'TRANS',
         )
 
-        aln_len, seq_threshold = len(aln.alignment.keys()), 5
+        aln_len, seq_threshold = len(aln), 5
         for ratio in config.STANDARD_HEIGHT_RATIOS.keys():
             if aln_len >= ratio:
                 seq_threshold = ratio
@@ -333,7 +333,7 @@ def server(input, output, session):
 
         if aln.aln_type == 'AA':
             ui.update_selectize('stat_type',
-                                choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity'],
+                                choices=['Off', 'sequence logo', 'entropy', 'coverage', 'identity', 'similarity', 'simplot-like similarity'],
                                 selected='Off')
             ui.update_selectize('download_type',
                                 choices=['alignment','SNPs', 'consensus', 'character frequencies', '% recovery', 'entropy',
@@ -345,7 +345,7 @@ def server(input, output, session):
         else:
             ui.update_selectize('stat_type',
                                 choices=['Off', 'sequence logo', 'gc', 'entropy', 'coverage', 'identity', 'similarity',
-                                         'ts tv score', 'gap frequency'], selected='Off')
+                                         'ts tv score', 'gap frequency', 'simplot-like similarity'], selected='Off')
             ui.update_selectize('download_type', choices=['alignment', 'SNPs', 'consensus', 'character frequencies', '% recovery',
                                                           'reverse complement alignment', 'conserved orfs', 'gc',
                                                           'entropy', 'gap frequency', 'coverage', 'mean identity', 'mean similarity',
@@ -633,7 +633,7 @@ def server(input, output, session):
                 where='beforeBegin'
             ) if aln is None else ui.insert_ui(
                 ui.input_selectize(
-                    id='reference_2', label='Reference', choices=['first', 'consensus'] + list(aln.alignment.keys()), selected='first'
+                    id='reference_2', label='Reference', choices=['first', 'consensus'] + list(aln), selected='first'
                 ),
                 selector='#download_format-label',
                 where='beforeBegin'
@@ -684,11 +684,10 @@ def server(input, output, session):
         """
         Download various files in standard format
         """
-
         # helper functions
         def _snp_option():
             if input.reference_2() == 'first':
-                aln.reference_id = list(aln.alignment.keys())[0]
+                aln.reference_id = next(iter(aln))
             elif input.reference_2() == 'consensus':
                 aln.reference_id = None
             else:
@@ -715,7 +714,7 @@ def server(input, output, session):
 
         def _stat_option():
             # create function mapping
-            stat_functions: Dict[str, Callable[[], list | ndarray]] = {
+            stat_functions: Dict[str, Callable[[], AlignmentStats | ndarray]] = {
                 'gc': aln.calc_gc,
                 'entropy': aln.calc_entropy,
                 'coverage': aln.calc_coverage,
@@ -729,16 +728,15 @@ def server(input, output, session):
                 raise ValueError('Rolling_average must be between 1 and length of alignment.')
             # define seperator
             seperator = '\t' if input.download_format() == 'tabular' else ','
-            # define which stat type to exprt
-            for stat_type in ['entropy', 'mean similarity', 'coverage', 'mean identity', 'ts tv score', 'gc']:
-                if stat_type == input.download_type():
-                    break
+            stat_type = str(input.download_type())
             # use correct function
             data = stat_functions[stat_type]()
-            # calculate the mean (identical to draw module of msaexplorer)
-            if stat_type in ['mean identity', 'mean similarity']:
+            if isinstance(data, AlignmentStats):
+                data = data.values
+            # calculate the mean for identity or similarity (identical to draw module of msaexplorer)
+            else:
                 # for the mean nan values get handled as the lowest possible number in the matrix
-                data = np.nan_to_num(data, True, -1 if stat_type == 'identity' else 0)
+                data = np.nan_to_num(data, True, -1 if stat_type == 'mean identity' else 0)
                 data = np.mean(data, axis=0)
             # apply rolling average
             data = draw._moving_average(data, input.download_type_options_1(), None, aln.length)[0]
@@ -773,7 +771,7 @@ def server(input, output, session):
 
         def _percent_recovery_option():
             if input.reference_2() == 'first':
-                aln.reference_id = list(aln.alignment.keys())[0]
+                aln.reference_id = next(iter(aln))
             elif input.reference_2() == 'consensus':
                 aln.reference_id = None
             else:
@@ -826,6 +824,11 @@ def server(input, output, session):
                 str(error),
                 style="color: red; font-weight: bold;"
             ), duration=10)
+            # create dummy download
+            with tempfile.NamedTemporaryFile(prefix='download_error_', suffix='.txt', delete=False) as tmpfile:
+                tmpfile.write(b'')
+                tmpfile.flush()
+                return tmpfile.name
 
     @output
     @render.download
@@ -868,7 +871,7 @@ def server(input, output, session):
 
         aln = set_aln(aln, prepare_minimal_inputs())
 
-        return f'{aln.zoom[0]} - {aln.zoom[1]}'
+        return f'{aln.zoom[0]} - {aln.zoom[1]-1}'
 
     @render.ui
     def number_of_seq():
@@ -876,7 +879,7 @@ def server(input, output, session):
         if aln is None:
             return None
 
-        return len(aln.alignment)
+        return len(aln)
 
     @render.ui
     def aln_len():
@@ -906,7 +909,7 @@ def server(input, output, session):
 
         aln = set_aln(aln, prepare_minimal_inputs(ref=True))
 
-        return len(aln.get_snps()['POS'])
+        return len(aln.get_snps())
 
     @reactive.Effect
     @reactive.event(input.analysis_plot_type_left)
@@ -914,22 +917,31 @@ def server(input, output, session):
         """
         Update UI for the left plot in the analysis tab
         """
+
+        aln = reactive.alignment.get()
+        if aln is None:
+            return None
+
         # ensure that it is switched back
         if input.analysis_plot_type_left() == 'Off':
             ui.remove_ui(selector="div:has(> #additional_analysis_options_left)")
             ui.remove_ui(selector="div:has(> #additional_analysis_options_left-label)")
             ui.remove_ui(selector="div:has(> #analysis_info_left)")
         if input.analysis_plot_type_left() == 'Pairwise identity':
+            choices = {
+                'ghd': 'global hamming distance',
+                'lhd': 'local hamming distance',
+                'ged': 'gap excluded distance',
+                'gcd': 'gap compressed distance'
+            }
+            if aln.aln_type != 'AA':
+                choices['jc69'] = 'Jukes-Cantor 1969 distance'
+                choices['k2p'] = 'Kimura 2-Parameter (K2P / K80) distance'
             ui.insert_ui(
                 ui.input_selectize(
                     'additional_analysis_options_left',
                     label='Options left',
-                    choices={
-                        'ghd': 'global hamming distance',
-                        'lhd': 'local hamming distance',
-                        'ged': 'gap excluded distance',
-                        'gcd': 'gap compressed distance'
-                    },
+                    choices=choices,
                     selected='ghd'
                 ),
                 selector='#analysis_plot_type_right-label',
@@ -958,7 +970,11 @@ def server(input, output, session):
         elif selected_option == 'ged':
             return 'INFO ged (gap excluded distance):\n\nAll gaps are excluded from the \nalignment\n\ndistance = matches / (matches + mismatches) * 100'
         elif selected_option == 'gcd':
-            return 'INFO gcd (gap compressed distance):\n\nAll consecutive gaps arecompressed to\none mismatch.\n\ndistance = matches / gap_compressed_alignment_length * 100'
+            return 'INFO gcd (gap compressed distance):\n\nAll consecutive gaps are compressed to\none mismatch.\n\ndistance = matches / gap_compressed_alignment_length * 100'
+        elif selected_option == 'jc69':
+            return 'INFO jc69 (Jukes-Cantor 1969 distance):\n\nDistance calculation based ungapped sequences assuming equal substitution rates.'
+        elif selected_option == 'k2p':
+            return 'INFO k2p (Kimura 2-Parameter (K2P / K80) distance):\n\nDistance calculation based ungapped sequences assuming unequal substitution rates\n depending on transitions or transversions.'
         else:
             return None
 

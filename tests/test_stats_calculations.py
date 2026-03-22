@@ -1,20 +1,42 @@
 """Tests for alignment statistics calculation methods in ``MSA``."""
 
 import pytest
+import numpy as np
 from conftest import create_alignment
 from msaexplorer.explore import MSA
-import numpy as np
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, LengthStats, VariantCollection
+
+class TestCalcLengthStats:
+    """Tests for calc_length_stats."""
+
+    def test_returns_length_stats_dataclass(self):
+        msa = MSA(create_alignment({'s1': 'A-CG', 's2': 'AT-G', 's3': 'ATCG'}))
+
+        result = msa.calc_length_stats()
+
+        assert isinstance(result, LengthStats)
+
+    def test_length_stats_values_are_correct(self):
+        msa = MSA(create_alignment({'s1': 'A-CG', 's2': 'AT-G', 's3': 'ATCG'}))
+
+        result = msa.calc_length_stats()
+
+        assert result.n_sequences == 3
+        assert result.mean_length == pytest.approx(3.3333333333)
+        assert result.std_length == pytest.approx(0.4714045208)
+        assert result.min_length == 3
+        assert result.max_length == 4
 
 
 class TestCalcEntropy:
     """Tests for calc_entropy."""
 
-    def test_returns_list_of_correct_length(self):
-        """Entropy list has length equal to alignment length."""
+    def test_returns_dataclass_of_correct_length(self):
+        """Entropy output has length equal to alignment length."""
         msa = MSA(create_alignment({"s1": "ACGTACGT", "s2": "ACGTACGT"}))
         entropy = msa.calc_entropy()
 
-        assert isinstance(entropy, list)
+        assert isinstance(entropy, AlignmentStats)
         assert len(entropy) == 8
 
     def test_identical_sequences_is_zero(self):
@@ -22,46 +44,46 @@ class TestCalcEntropy:
         msa = MSA(create_alignment({"s1": "ACGTACGT", "s2": "ACGTACGT"}))
         entropy = msa.calc_entropy()
 
-        assert all(e == 0 for e in entropy)
+        assert np.all(entropy.values == 0)
 
     def test_perfectly_mixed_position(self):
         """Position with equal frequencies has maximum entropy."""
         msa = MSA(create_alignment({"s1": "AAAA", "s2": "CCCC", "s3": "GGGG", "s4": "TTTT"}))
         entropy = msa.calc_entropy()
 
-        assert all(e == 1 for e in entropy)
+        assert np.all(entropy.values == 1)
 
     def test_normalized_between_zero_and_one(self):
         """Entropy values are normalized to [0, 1]."""
         msa = MSA(create_alignment({"s1": "ACGTACGT", "s2": "ACGTACGT", "s3": "GCGTACGT"}))
         entropy = msa.calc_entropy()
 
-        assert all(0 <= e <= 1 for e in entropy)
+        assert np.all((entropy.values >= 0) & (entropy.values <= 1))
 
     def test_single_gap_position(self):
         """Gaps are handled correctly (ignored in entropy calculation)."""
         msa = MSA(create_alignment({"s1": "A-GT", "s2": "ACGT", "s3": "ACGT"}))
         entropy = msa.calc_entropy()
 
-        assert entropy[1] == 0
+        assert entropy.values[1] == 0
 
     def test_with_ambiguous_nucleotides(self):
         """Ambiguous nucleotides are handled in entropy calculation."""
         msa = MSA(create_alignment({"s1": "ARGT", "s2": "ACGT"}))
         entropy = msa.calc_entropy()
 
-        assert entropy[1] == 0.75
+        assert entropy.values[1] == 0.75
 
 
 class TestCalcGC:
     """Tests for calc_gc."""
 
-    def test_returns_list_of_correct_length(self):
-        """GC list has length equal to alignment length."""
+    def test_returns_dataclass_of_correct_length(self):
+        """GC output has length equal to alignment length."""
         msa = MSA(create_alignment({"s1": "ACGTACGT", "s2": "ACGTACGT"}))
         gc = msa.calc_gc()
 
-        assert isinstance(gc, list)
+        assert isinstance(gc, AlignmentStats)
         assert len(gc) == 8
 
     def test_mixed_bases_partial_gc(self):
@@ -69,10 +91,10 @@ class TestCalcGC:
         msa = MSA(create_alignment({"s1": "AAGT", "s2": "ACGT"}))
         gc = msa.calc_gc()
 
-        assert gc[0] == 0.0
-        assert gc[1] == 0.5
-        assert gc[2] == 1.0
-        assert gc[3] == 0.0
+        assert gc.values[0] == 0.0
+        assert gc.values[1] == 0.5
+        assert gc.values[2] == 1.0
+        assert gc.values[3] == 0.0
 
     def test_raises_error_for_aa_alignment(self):
         """GC calculation raises TypeError for amino acid alignments."""
@@ -85,18 +107,18 @@ class TestCalcGC:
         msa = MSA(create_alignment({"s1": "SWGT", "s2": "ACGT"}))
         gc = msa.calc_gc()
 
-        assert all(g == 0.5 for g in gc[0:1])
+        assert np.all(gc.values[0:1] == 0.5)
 
 
 class TestCalcCoverage:
     """Tests for calc_coverage."""
 
-    def test_returns_list_of_correct_length(self):
-        """Coverage list has length equal to alignment length."""
+    def test_returns_dataclass_of_correct_length(self):
+        """Coverage output has length equal to alignment length."""
         msa = MSA(create_alignment({"s1": "ACGTACGT", "s2": "ACGTACGT"}))
         coverage = msa.calc_coverage()
 
-        assert isinstance(coverage, list)
+        assert isinstance(coverage, AlignmentStats)
         assert len(coverage) == 8
 
     def test_with_gaps(self):
@@ -104,20 +126,20 @@ class TestCalcCoverage:
         msa = MSA(create_alignment({"s1": "AT--", "s2": "C---", "s3": "G---", "s4": "GT--"}))
         coverage = msa.calc_coverage()
 
-        assert coverage[0] == 1.0
-        assert coverage[1] == 0.5
-        assert all(c == 0.0 for c in coverage[2:])
+        assert coverage.values[0] == 1.0
+        assert coverage.values[1] == 0.5
+        assert np.all(coverage.values[2:] == 0.0)
 
 
 class TestCalcTransitionTransversionScore:
     """Tests for calc_transition_transversion_score."""
 
-    def test_returns_list_of_correct_length(self):
-        """TS/TV score list has length equal to alignment length."""
+    def test_returns_dataclass_of_correct_length(self):
+        """TS/TV score output has length equal to alignment length."""
         msa = MSA(create_alignment({"s1": "ACGTACGT", "s2": "ACGTACGT"}))
         score = msa.calc_transition_transversion_score()
 
-        assert isinstance(score, list)
+        assert isinstance(score, AlignmentStats)
         assert len(score) == 8
 
     def test_identical_sequences_is_zero(self):
@@ -125,23 +147,23 @@ class TestCalcTransitionTransversionScore:
         msa = MSA(create_alignment({"s1": "ACGTACGT", "s2": "ACGTACGT"}))
         score = msa.calc_transition_transversion_score()
 
-        assert all(s == 0 for s in score)
+        assert np.all(score.values == 0)
 
     def test_transition_is_positive(self):
         """Transition substitutions (A<->G, C<->T) are positive."""
         msa = MSA(create_alignment({"s1": "AGAG", "s2": "AAAA"}))
         score = msa.calc_transition_transversion_score()
 
-        assert score[1] == 0.5
-        assert score[3] == 0.5
+        assert score.values[1] == 0.5
+        assert score.values[3] == 0.5
 
     def test_transversion_is_negative(self):
         """Transversion substitutions (A<->C, A<->T, G<->C, G<->T) are negative."""
         msa = MSA(create_alignment({"s1": "ACAC", "s2": "AAAA"}))
         score = msa.calc_transition_transversion_score()
 
-        assert score[1] == -0.5
-        assert score[3] == -0.5
+        assert score.values[1] == -0.5
+        assert score.values[3] == -0.5
 
 
     def test_raises_error_for_aa_alignment(self):
@@ -155,7 +177,7 @@ class TestCalcTransitionTransversionScore:
         msa = MSA(create_alignment({"s1": "AGAGAG", "s2": "AUAAAA"}))
         score = msa.calc_transition_transversion_score()
 
-        assert score[1] == -0.5
+        assert score.values[1] == -0.5
 
 
 class TestGetSnps:
@@ -166,8 +188,9 @@ class TestGetSnps:
         msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
         snps = msa.get_snps()
 
-        assert snps["#CHROM"] == "consensus"
-        assert snps["POS"] == {}
+        assert isinstance(snps, VariantCollection)
+        assert snps.chrom == "consensus"
+        assert snps.positions == {}
 
     def test_exclude_ambiguous(self):
         """Test if no variants are present for include_ambig=False"""
@@ -181,10 +204,10 @@ class TestGetSnps:
         )
         snps = msa.get_snps(include_ambig=False)
 
-        assert snps["POS"] == {}
+        assert snps.positions == {}
 
     def test_include_ambiguous(self):
-        """Test if variants are present in correct frequency for include_ambig=False"""
+        """Test if variants are present in correct frequency for include_ambig=True"""
         msa = MSA(
             create_alignment({
                 "ref": "AAAA",
@@ -195,12 +218,12 @@ class TestGetSnps:
         )
 
         snps = msa.get_snps(include_ambig=True)
-        alts = snps["POS"][1]["ALT"]
+        alts = snps.positions[1].alt
 
-        assert 1 in snps["POS"]
+        assert 1 in snps
         assert set(alts.keys()) == {"C", "N"}
-        assert alts["C"]["AF"] == 0.5
-        assert alts["N"]["AF"] == 0.5
+        assert alts["C"][0] == 0.5
+        assert alts["N"][0] == 0.5
 
     def test_alt_gaps_exclude_ambiguous(self):
         """Test that no gaps are present for include_ambig=False"""
@@ -215,7 +238,7 @@ class TestGetSnps:
 
         snps = msa.get_snps(include_ambig=False)
 
-        assert snps["POS"] == {}
+        assert snps.positions == {}
 
     def test_alt_gaps_include_ambiguous(self):
         """Test that there are gaps present for include_ambig=True"""
@@ -229,11 +252,11 @@ class TestGetSnps:
         )
 
         snps = msa.get_snps(include_ambig=True)
-        alts = snps["POS"][1]["ALT"]
+        alts = snps.positions[1].alt
 
-        assert 1 in snps["POS"]
+        assert 1 in snps
         assert set(alts.keys()) == {'-', 'C'}
-        assert alts["-"]["AF"] == 0.5
+        assert alts["-"][0] == 0.5
 
     def test_gaps_in_reference(self):
         """Test that gaps are always included if in the reference"""
@@ -248,8 +271,8 @@ class TestGetSnps:
 
         snps = msa.get_snps(include_ambig=False)
 
-        assert snps["POS"][1]['ref'] == '-'
-        assert snps["POS"][2]['ref'] == '-'
+        assert snps.positions[1].ref == '-'
+        assert snps.positions[2].ref == '-'
 
     def test_correct_sequence_identifiers(self):
         msa = MSA(
@@ -262,9 +285,9 @@ class TestGetSnps:
         )
         snps = msa.get_snps()
 
-        assert snps["#CHROM"] == "ref"
-        assert set(snps["POS"][1]["ALT"]["C"]["SEQ_ID"]) == {"q1"}
-        assert set(snps["POS"][1]["ALT"]["G"]["SEQ_ID"]) == {"q2"}
+        assert snps.chrom == "ref"
+        assert set(snps.positions[1].alt["C"][1]) == {"q1"}
+        assert set(snps.positions[1].alt["G"][1]) == {"q2"}
 
 
 class TestCalcPairwiseIdentityMatrix:
@@ -281,8 +304,10 @@ class TestCalcPairwiseIdentityMatrix:
     )
     def test_distance_types(self, distance_type, expected_offdiag):
         msa = MSA(create_alignment({"s1": "-A-CGT-", "s2": "TAACG--"}))
-        matrix = msa.calc_pairwise_identity_matrix(distance_type=distance_type)
+        pairwise_distance = msa.calc_pairwise_identity_matrix(distance_type=distance_type)
+        assert isinstance(pairwise_distance, PairwiseDistance)
 
+        matrix = pairwise_distance.distances
         assert matrix.shape == (2, 2)
         assert matrix[0, 0] == 100.0
         assert matrix[1, 1] == 100.0
@@ -293,6 +318,43 @@ class TestCalcPairwiseIdentityMatrix:
         msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
         with pytest.raises(ValueError, match="Invalid distance type"):
             msa.calc_pairwise_identity_matrix(distance_type="invalid")
+
+
+class TestCalcPairwiseDistanceToReference:
+    """Tests for calc_pairwise_distance_to_reference."""
+
+    @pytest.mark.parametrize(
+        "sequences",
+        [
+            {"ref": "AAAA", "q1": "AAAT", "q2": "AATT"},
+            {"q1": "AAAT", "ref": "AAAA", "q2": "AATT"},
+            {"q1": "AAAT", "q2": "AATT", "ref": "AAAA"},
+        ],
+    )
+    def test_returns_dataclass_for_all_reference_positions(self, sequences):
+        msa = MSA(create_alignment(sequences), reference_id="ref")
+
+        result = msa.calc_pairwise_distance_to_reference(distance_type="ghd")
+
+        assert isinstance(result, PairwiseDistance)
+        assert result.reference_id == "ref"
+        assert result.sequence_ids == ["q1", "q2"]
+        assert np.allclose(result.distances, np.array([75.0, 50.0]))
+
+    def test_uses_consensus_when_reference_id_is_not_set(self):
+        msa = MSA(create_alignment({"q1": "AAAA", "q2": "AAAT", "q3": "AATT"}))
+
+        result = msa.calc_pairwise_distance_to_reference(distance_type="ghd")
+
+        assert result.reference_id == "consensus"
+        assert result.sequence_ids == ["q1", "q2", "q3"]
+        assert np.allclose(result.distances, np.array([75.0, 100.0, 75.0]))
+
+    def test_invalid_distance_type_raises(self):
+        msa = MSA(create_alignment({"s1": "ACGT", "s2": "ACGT"}))
+
+        with pytest.raises(ValueError, match="Invalid distance type"):
+            msa.calc_pairwise_distance_to_reference(distance_type="invalid")
 
 
 class TestCalcPositionMatrix:

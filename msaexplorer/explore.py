@@ -9,8 +9,6 @@ and can be used to compute several statistics or be used as the input for the `d
 """
 
 # built-in
-import os
-import io
 import math
 import collections
 import re
@@ -19,23 +17,15 @@ from typing import Callable, Dict
 # installed
 import numpy as np
 from numpy import ndarray
-from Bio import AlignIO
 from Bio import SeqIO
 from Bio.Align import MultipleSeqAlignment
 from Bio.SeqIO.InsdcIO import GenBankIterator
 
 # msaexplorer
 from msaexplorer import config
+from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, LengthStats, OpenReadingFrame, OrfCollection, SingleNucleotidePolymorphism, VariantCollection
+from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping, _read_alignment
 
-
-def _get_line_iterator(source):
-    """
-    allow reading in both raw string or paths
-    """
-    if isinstance(source, str) and os.path.exists(source):
-        return open(source, 'r')
-    else:
-        return io.StringIO(source)
 
 class MSA:
     """
@@ -44,72 +34,32 @@ class MSA:
     compatibility with Biopython.
     """
 
+    # dunder methods
     def __init__(self, alignment_string: str | MultipleSeqAlignment, reference_id: str = None, zoom_range: tuple | int = None):
         """
-        Initialise an Alignment object.
+        Initialize an Alignment object.
         :param alignment_string: Path to alignment file or raw alignment string
         :param reference_id: reference id
         :param zoom_range: start and stop positions to zoom into the alignment
         """
-        self._alignment = self._read_alignment(alignment_string)
+        self._alignment = _read_alignment(alignment_string)
         self._reference_id = self._validate_ref(reference_id, self._alignment)
         self._zoom = self._validate_zoom(zoom_range, self._alignment)
         self._aln_type = self._determine_aln_type(self._alignment)
 
+    def __len__(self) -> int:
+        return len(self.sequence_ids)
+
+    def __getitem__(self, key: str) -> str:
+        return self.alignment[key]
+
+    def __contains__(self, item: str) -> bool:
+        return item in self.sequence_ids
+
+    def __iter__(self):
+        return iter(self.alignment)
+
     # Static methods
-    @staticmethod
-    def _read_alignment(source: str | MultipleSeqAlignment) -> dict:
-        """
-        Parse MSA alignment using Biopython with automatic format detection.
-        :param source: Path to alignment file, raw alignment string, or Bio.Align.MultipleSeqAlignment object
-        :return: dictionary with ids as keys and sequences as values
-        """
-        # Handle Bio.Align.MultipleSeqAlignment objects
-        if isinstance(source, MultipleSeqAlignment):
-            aln_dict = {record.id: str(record.seq).upper() for record in source}
-        else:
-            # Try multiple formats in order of likelihood
-            formats_to_try = ["fasta", "clustal", "phylip", "stockholm", "nexus"]
-
-            aln_dict = None
-            for fmt in formats_to_try:
-                try:
-                    with _get_line_iterator(source) as handle:
-                        alignment = AlignIO.read(handle, fmt)
-                        aln_dict = {record.id: str(record.seq).upper() for record in alignment}
-                        break
-                except Exception:
-                    continue
-
-            if aln_dict is None:
-                # If no format worked, raise an error
-                raise ValueError(f"Alignment file could not be parsed. Supported formats: {', '.join(formats_to_try)}")
-
-        # Validate alignment
-        if not aln_dict:
-            raise ValueError(f"Alignment does not contain any sequences.")
-
-        if len(aln_dict) < 2:
-            raise ValueError("Alignment must contain more than one sequence.")
-
-        # Check for non-allowed characters
-        for sequence_id, seq in aln_dict.items():
-            invalid_chars = set(seq) - set(config.POSSIBLE_CHARS)
-            if invalid_chars:
-                raise ValueError(
-                    f"{sequence_id} contains invalid characters: {', '.join(invalid_chars)}. Allowed chars are: {config.POSSIBLE_CHARS}"
-                )
-
-        # Validate all sequences have same length
-        first_seq_len = len(next(iter(aln_dict.values())))
-        for sequence_id, seq in aln_dict.items():
-            if len(seq) != first_seq_len:
-                raise ValueError(
-                    f"All alignment sequences must have the same length. Sequence '{sequence_id}' has length {len(seq)}, expected {first_seq_len}."
-                )
-
-        return aln_dict
-
     @staticmethod
     def _validate_ref(reference: str | None, alignment: dict) -> str | None | ValueError:
         """
@@ -139,18 +89,22 @@ class MSA:
             # check if only over value is provided -> stop is alignment length
             if isinstance(zoom, int):
                 if 0 <= zoom < aln_length:
-                    return zoom, aln_length - 1
+                    return zoom, aln_length
                 else:
                     raise ValueError('Zoom start must be within the alignment length range.')
             # check if more than 2 values are provided
             if len(zoom) != 2:
                 raise ValueError('Zoom position have to be (zoom_start, zoom_end)')
-            # validate zoom start/stop
-            for position in zoom:
-                if type(position) != int:
-                    raise ValueError('Zoom positions have to be integers.')
-                if position not in range(0, aln_length):
-                    raise ValueError('Zoom position out of range')
+            start, end = zoom
+            # validate zoom start/stop for Python slicing semantics [start:end)
+            if type(start) is not int or type(end) is not int:
+                raise ValueError('Zoom positions have to be integers.')
+            if not (0 <= start < aln_length):
+                raise ValueError('Zoom position out of range')
+            if not (0 < end <= aln_length):
+                raise ValueError('Zoom position out of range')
+            if start >= end:
+                raise ValueError('Zoom position have to be (zoom_start, zoom_end) with zoom_start < zoom_end')
 
         return zoom
 
@@ -175,7 +129,7 @@ class MSA:
 
     # Properties with setters
     @property
-    def reference_id(self):
+    def reference_id(self) -> str:
         return self._reference_id
 
     @reference_id.setter
@@ -205,6 +159,10 @@ class MSA:
         """
         return self._aln_type
 
+    @property
+    def sequence_ids(self) -> list:
+        return list(self.alignment.keys())
+
     # On the fly properties without setters
     @property
     def length(self) -> int:
@@ -223,14 +181,37 @@ class MSA:
         else:
             return self._alignment
 
-    # functions for different alignment stats
+    def _create_position_stat_result(self, stat_name: str, values: list | ndarray) -> AlignmentStats:
+        """
+        Build a shared dataclass for position-wise statistics.
+        """
+        values_array = np.asarray(values, dtype=float)
+        if self.zoom is None:
+            positions = np.arange(self.length, dtype=int)
+        else:
+            positions = np.arange(self.zoom[0], self.zoom[0] + self.length, dtype=int)
+
+        return AlignmentStats(
+            stat_name=stat_name,
+            positions=positions,
+            values=values_array,
+        )
+
+    def _to_array(self) -> ndarray:
+        """convert alignment to a numpy array"""
+        return np.array([list(self.alignment[seq_id]) for seq_id in self.sequence_ids])
+
+    def _get_reference_seq(self) -> str:
+        """get the sequence of the reference sequence or majority consensus"""
+        return self.alignment[self.reference_id] if self.reference_id is not None else self.get_consensus()
+
     def get_reference_coords(self) -> tuple[int, int]:
         """
         Determine the start and end coordinates of the reference sequence
         defined as the first/last nucleotide in the reference sequence
         (excluding N and gaps).
 
-        :return: start, end
+        :return: Start, End
         """
         start, end = 0, self.length
 
@@ -367,7 +348,7 @@ class MSA:
 
         return consensus
 
-    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> dict:
+    def get_conserved_orfs(self, min_length: int = 100, identity_cutoff: float | None = None) -> OrfCollection:
         """
         **conserved ORF definition:**
             - conserved starts and stops
@@ -376,7 +357,7 @@ class MSA:
             - all ungapped seqs[start:stop] must have at least min_length
             - no ungapped seq can have a Stop in between Start Stop
 
-        Conservation is measured by number of positions with identical characters divided by
+        Conservation is measured by the number of positions with identical characters divided by
         orf slice of the alignment.
 
         **Algorithm overview:**
@@ -404,7 +385,8 @@ class MSA:
             stops = config.STOP_CODONS[self.aln_type]
 
             list_of_starts, list_of_stops = [], []
-            ref = alignment[list(alignment.keys())[0]]
+            # define one sequence (first) as reference (it does not matter which one)
+            ref = alignment[self.sequence_ids[0]]
             for nt_position in range(alignment_length):
                 if ref[nt_position:nt_position + 3] in starts:
                     conserved_start = True
@@ -475,7 +457,8 @@ class MSA:
         aln_len = self.length
 
         orf_counter = 0
-        orf_dict = {}
+        # use mutable dicts during construction and convert to dataclass at the end for immutability
+        temp_orfs: list[dict] = []
 
         for aln, direction in zip(alignments, ['+', '-']):
             # check for starts and stops in the first seq and then check if these are present in all seqs
@@ -499,28 +482,42 @@ class MSA:
                     # if no stop codon between start and stop --> write to dictionary
                     if not additional_stops(ungapped_sliced_seqs):
                         if direction == '+':
-                            positions = [start, next_stop + 3]
+                            positions = (start, next_stop + 3)
                         else:
-                            positions = [aln_len - next_stop - 3, aln_len - start]
+                            positions = (aln_len - next_stop - 3, aln_len - start)
                         if last_stop != next_stop:
                             last_stop = next_stop
-                            conservation = calculate_identity(identities, positions)
+                            conservation = calculate_identity(identities, list(positions))
                             if identity_cutoff is not None and conservation < identity_cutoff:
                                 continue
-                            orf_dict[f'ORF_{orf_counter}'] = {'location': [positions],
-                                                              'frame': frame,
-                                                              'strand': direction,
-                                                              'conservation': conservation,
-                                                              'internal': []
-                                                              }
+                            temp_orfs.append({
+                                'orf_id': f'ORF_{orf_counter}',
+                                'location': [positions],
+                                'frame': frame,
+                                'strand': direction,
+                                'conservation': conservation,
+                                'internal': [],
+                            })
                             orf_counter += 1
                         else:
-                            if orf_dict:
-                                orf_dict[f'ORF_{orf_counter - 1}']['internal'].append(positions)
+                            if temp_orfs:
+                                temp_orfs[-1]['internal'].append(positions)
 
-        return orf_dict
+        # convert mutable intermediate dicts to frozen dataclasses
+        orf_list = [
+            OpenReadingFrame(
+                orf_id=t['orf_id'],
+                location=tuple(t['location']),
+                frame=t['frame'],
+                strand=t['strand'],
+                conservation=t['conservation'],
+                internal=tuple(t['internal']),
+            )
+            for t in temp_orfs
+        ]
+        return OrfCollection(orfs=tuple(orf_list))
 
-    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> dict:
+    def get_non_overlapping_conserved_orfs(self, min_length: int = 100, identity_cutoff:float = None) -> OrfCollection:
         """
         First calculates all ORFs and then searches from 5'
         all non-overlapping orfs in the fw strand and from the
@@ -537,54 +534,51 @@ class MSA:
 
             frame:    3      2           1      2       1
 
-        :return: dictionary with non-overlapping orfs
+        :return: OrfContainer with non-overlapping orfs
         """
-        orf_dict = self.get_conserved_orfs(min_length, identity_cutoff)
+        all_orfs = self.get_conserved_orfs(min_length, identity_cutoff)
 
         fw_orfs, rw_orfs = [], []
 
-        for orf in orf_dict:
-            if orf_dict[orf]['strand'] == '+':
-                fw_orfs.append((orf, orf_dict[orf]['location'][0]))
+        for orf in all_orfs:
+            orf_obj = all_orfs[orf]
+            if orf_obj.strand == '+':
+                fw_orfs.append((orf, orf_obj.location[0]))
             else:
-                rw_orfs.append((orf, orf_dict[orf]['location'][0]))
+                rw_orfs.append((orf, orf_obj.location[0]))
 
         fw_orfs.sort(key=lambda x: x[1][0])  # sort by start pos
         rw_orfs.sort(key=lambda x: x[1][1], reverse=True)  # sort by stop pos
-        non_overlapping_orfs = []
+        non_overlapping_ids = []
         for orf_list, strand in zip([fw_orfs, rw_orfs], ['+', '-']):
             previous_stop = -1 if strand == '+' else self.length + 1
             for orf in orf_list:
                 if strand == '+' and orf[1][0] >= previous_stop:
-                    non_overlapping_orfs.append(orf[0])
+                    non_overlapping_ids.append(orf[0])
                     previous_stop = orf[1][1]
                 elif strand == '-' and orf[1][1] <= previous_stop:
-                    non_overlapping_orfs.append(orf[0])
+                    non_overlapping_ids.append(orf[0])
                     previous_stop = orf[1][0]
 
-        non_overlap_dict = {}
-        for orf in orf_dict:
-            if orf in non_overlapping_orfs:
-                non_overlap_dict[orf] = orf_dict[orf]
+        return OrfCollection(orfs=tuple(all_orfs[orf_id] for orf_id in all_orfs if orf_id in non_overlapping_ids))
 
-        return non_overlap_dict
-
-    def calc_length_stats(self) -> dict:
+    def calc_length_stats(self) -> LengthStats:
         """
         Determine the stats for the length of the ungapped seqs in the alignment.
-        :return: dictionary with length stats
+        :return: dataclass with length stats
         """
 
         seq_lengths = [len(self.alignment[x].replace('-', '')) for x in self.alignment]
 
-        return {'number of seq': len(self.alignment),
-                'mean length': float(np.mean(seq_lengths)),
-                'std length': float(np.std(seq_lengths)),
-                'min length': int(np.min(seq_lengths)),
-                'max length': int(np.max(seq_lengths))
-                }
+        return LengthStats(
+            n_sequences=len(self.alignment),
+            mean_length=float(np.mean(seq_lengths)),
+            std_length=float(np.std(seq_lengths)),
+            min_length=int(np.min(seq_lengths)),
+            max_length=int(np.max(seq_lengths)),
+        )
 
-    def calc_entropy(self) -> list:
+    def calc_entropy(self) -> AlignmentStats:
         """
         Calculate the normalized shannon's entropy for every position in an alignment:
 
@@ -651,9 +645,9 @@ class MSA:
                 pos.append(aln[record][nuc_pos])
             entropys.append(shannons_entropy(pos, states, self.aln_type))
 
-        return entropys
+        return self._create_position_stat_result('entropy', entropys)
 
-    def calc_gc(self) -> list | TypeError:
+    def calc_gc(self) -> AlignmentStats | TypeError:
         """
         Determine the GC content for every position in an nt alignment.
         :return: GC content for every position.
@@ -683,9 +677,9 @@ class MSA:
                 sum([nucleotides.count(x) * to_count[x] for x in to_count]) / len(nucleotides)
             )
 
-        return gc
+        return self._create_position_stat_result('gc', gc)
 
-    def calc_coverage(self) -> list:
+    def calc_coverage(self) -> AlignmentStats:
         """
         Determine the coverage of every position in an alignment.
         This is defined as:
@@ -697,19 +691,19 @@ class MSA:
 
         for nuc_pos in range(self.length):
             pos = str()
-            for record in aln.keys():
+            for record in self.sequence_ids:
                 pos = pos + aln[record][nuc_pos]
             coverage.append(1 - pos.count('-') / len(pos))
 
-        return coverage
+        return self._create_position_stat_result('coverage', coverage)
 
-    def calc_gap_frequency(self) -> list:
+    def calc_gap_frequency(self) -> AlignmentStats:
         """
         Determine the gap frequency for every position in an alignment. This is the inverted coverage.
         """
         coverage = self.calc_coverage()
 
-        return [1 - x for x in coverage]
+        return self._create_position_stat_result('gap frequency', 1 - coverage.values)
 
     def calc_reverse_complement_alignment(self) -> dict | TypeError:
         """
@@ -727,7 +721,7 @@ class MSA:
 
         return reverse_complement_dict
 
-    def calc_numerical_alignment(self, encode_mask:bool=False, encode_ambiguities:bool=False):
+    def calc_numerical_alignment(self, encode_mask:bool=False, encode_ambiguities:bool=False) -> ndarray:
         """
         Transforms the alignment to numerical values. Ambiguities are encoded as -3, mask as -2 and the
         remaining chars with the idx + 1 of config.CHAR_COLORS[self.aln_type]['standard'].
@@ -737,8 +731,7 @@ class MSA:
         :returns matrix
         """
 
-        aln = self.alignment
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
         # ini matrix
         numerical_matrix = np.full(sequences.shape, np.nan, dtype=float)
         # first encode mask
@@ -757,7 +750,7 @@ class MSA:
 
         return numerical_matrix
 
-    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False, encode_each_mismatch_char:bool=False) -> np.ndarray:
+    def calc_identity_alignment(self, encode_mismatches:bool=True, encode_mask:bool=False, encode_gaps:bool=True, encode_ambiguities:bool=False, encode_each_mismatch_char:bool=False) -> ndarray:
         """
         Converts alignment to identity array (identical=0) compared to majority consensus or reference:\n
 
@@ -769,11 +762,10 @@ class MSA:
         :return: identity alignment
         """
 
-        aln = self.alignment
-        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
+        ref = self._get_reference_seq()
 
         # convert alignment to array
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
         reference = np.array(list(ref))
         # ini matrix
         identity_matrix = np.full(sequences.shape, 0, dtype=float)
@@ -818,7 +810,7 @@ class MSA:
 
         return identity_matrix
 
-    def calc_similarity_alignment(self, matrix_type:str|None=None, normalize:bool=True) -> np.ndarray:
+    def calc_similarity_alignment(self, matrix_type:str|None=None, normalize:bool=True) -> ndarray:
         """
         Calculate the similarity score between the alignment and the reference sequence, with normalization to highlight
         differences. The similarity scores are scaled to the range [0, 1] based on the substitution matrix values for the
@@ -852,8 +844,8 @@ class MSA:
             If the specified substitution matrix is not available for the given alignment type.
         """
 
-        aln = self.alignment
-        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
+        ref = self._get_reference_seq()
+
         if matrix_type is None:
             if self.aln_type == 'AA':
                 matrix_type = 'BLOSUM65'
@@ -869,7 +861,7 @@ class MSA:
 
         # set dtype and convert alignment to a NumPy array for vectorized processing
         dtype = np.dtype(float, metadata={'matrix': matrix_type})
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
         reference = np.array(list(ref))
         valid_chars = list(subs_matrix.keys())
         similarity_array = np.full(sequences.shape, np.nan, dtype=dtype)
@@ -891,11 +883,11 @@ class MSA:
 
         return similarity_array
 
-    def calc_position_matrix(self, matrix_type:str='PWM') -> np.ndarray | ValueError:
+    def calc_position_matrix(self, matrix_type:str='PWM') -> None | ndarray:
         """
         Calculates a position matrix of the specified type for the given alignment. The function
         supports generating matrices of types Position Frequency Matrix (PFM), Position Probability
-        Matrix (PPM), Position Weight Matrix (PWM), and cummulative Information Content (IC). It validates
+        Matrix (PPM), Position Weight Matrix (PWM), and cumulative Information Content (IC). It validates
         the provided matrix type and includes pseudo-count adjustments to ensure robust calculations.
 
         :param matrix_type: Type of position matrix to calculate. Accepted values are 'PFM', 'PPM',
@@ -907,11 +899,10 @@ class MSA:
         """
 
         # ini
-        aln = self.alignment
         if matrix_type not in ['PFM', 'PPM', 'IC', 'PWM']:
             raise ValueError('Matrix_type must be PFM, PPM, IC or PWM.')
         possible_chars = list(config.CHAR_COLORS[self.aln_type]['standard'].keys())
-        sequences = np.array([list(aln[seq_id]) for seq_id in list(aln.keys())])
+        sequences = self._to_array()
 
         # calc position frequency matrix
         pfm = np.array([np.sum(sequences == char, 0) for char in possible_chars])
@@ -922,7 +913,7 @@ class MSA:
         pseudo_count = 0.0001  # to avoid 0 values
         pfm = pfm + pseudo_count
         ppm_non_char_excluded = pfm/np.sum(pfm, axis=0)  # use this for pwm/ic calculation
-        ppm = pfm/len(aln.keys())  # calculate the frequency based on row number
+        ppm = pfm/len(self.sequence_ids)  # calculate the frequency based on row number
         if matrix_type == 'PPM':
             return ppm
 
@@ -936,9 +927,7 @@ class MSA:
         if matrix_type == 'IC':
             return ic
 
-        return None
-
-    def calc_percent_recovery(self) -> dict:
+    def calc_percent_recovery(self) -> dict[str, float]:
         """
         Recovery per sequence either compared to the majority consensus seq
         or the reference seq.\n
@@ -952,11 +941,7 @@ class MSA:
         """
 
         aln = self.alignment
-
-        if self.reference_id is not None:
-            ref = aln[self.reference_id]
-        else:
-            ref = self.get_consensus()  # majority consensus
+        ref = self._get_reference_seq()
 
         if not any(char != '-' for char in ref):
             raise ValueError("Reference sequence is entirely gapped, cannot calculate recovery.")
@@ -970,7 +955,7 @@ class MSA:
         cumulative_length = len(non_gap_positions)
 
         # Calculate recovery
-        for seq_id in aln:
+        for seq_id in self.sequence_ids:
             if seq_id == self.reference_id:
                 continue
             seq = aln[seq_id]
@@ -1036,9 +1021,9 @@ class MSA:
 
         return freqs
 
-    def calc_pairwise_identity_matrix(self, distance_type:str='ghd') -> ndarray:
+    def calc_pairwise_identity_matrix(self, distance_type:str='ghd') -> PairwiseDistance:
         """
-        Calculate pairwise identities for an alignment. As there are different definitions of sequence identity, there are different options implemented:
+        Calculate pairwise identities for an alignment. Different options are implemented:
 
         **1) ghd (global hamming distance)**: At each alignment position, check if characters match:
         \ndistance = matches / alignment_length * 100
@@ -1047,82 +1032,36 @@ class MSA:
         \ndistance = matches / min(5'3' ungapped seq1, 5'3' ungapped seq2) * 100
 
         **3) ged (gap excluded distance)**: All gaps are excluded from the alignment
-        \ndistance = matches / (matches + mismatches) * 100
+        \ndistance = (1 - mismatches / total) * 100
 
         **4) gcd (gap compressed distance)**: All consecutive gaps are compressed to one mismatch.
         \ndistance = matches / gap_compressed_alignment_length * 100
 
+        RNA/DNA only:
+
+        **5) jc69 (Jukes-Cantor 1969)**: Gaps excluded. Applies the JC69 substitution model to correct
+        the p-distance for multiple hits (assumes equal base frequencies and substitution rates).
+        \ncorrected_identity = (1 - d_JC69) * 100,  where d = -(3/4) * ln(1 - (4/3) * p)
+
+        **6) k2p (Kimura 2-Parameter / K80)**: Gaps excluded. Distinguishes transitions (Ts) and
+        transversions (Tv). Returns (1 - d_K2P) * 100 as corrected percent identity.
+        \nd = -(1/2) * ln(1 - 2P - Q) - (1/4) * ln(1 - 2Q),  P = Ts/total, Q = Tv/total
+
+        :param distance_type: type of distance computation: ghd, lhd, ged, gcd and nucleotide only: jc69 and k2p
         :return: array with pairwise distances.
         """
 
-        def hamming_distance(seq1: str, seq2: str) -> int:
-            return sum(c1 == c2 for c1, c2 in zip(seq1, seq2))
-
-        def ghd(seq1: str, seq2: str) -> float:
-            return hamming_distance(seq1, seq2) / self.length * 100
-
-        def lhd(seq1, seq2):
-            # Trim gaps from both sides
-            i, j = 0, self.length - 1
-            while i < self.length and (seq1[i] == '-' or seq2[i] == '-'):
-                i += 1
-            while j >= 0 and (seq1[j] == '-' or seq2[j] == '-'):
-                j -= 1
-            if i > j:
-                return 0.0
-
-            seq1_, seq2_ = seq1[i:j + 1], seq2[i:j + 1]
-            matches = sum(c1 == c2 for c1, c2 in zip(seq1_, seq2_))
-            length = j - i + 1
-            return (matches / length) * 100 if length > 0 else 0.0
-
-        def ged(seq1: str, seq2: str) -> float:
-
-            matches, mismatches = 0, 0
-
-            for c1, c2 in zip(seq1, seq2):
-                if c1 != '-' and c2 != '-':
-                    if c1 == c2:
-                        matches += 1
-                    else:
-                        mismatches += 1
-            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
-
-        def gcd(seq1: str, seq2: str) -> float:
-            matches = 0
-            mismatches = 0
-            in_gap = False
-
-            for char1, char2 in zip(seq1, seq2):
-                if char1 == '-' and char2 == '-':  # Shared gap: do nothing
-                    continue
-                elif char1 == '-' or char2 == '-':  # Gap in only one sequence
-                    if not in_gap:  # Start of a new gap stretch
-                        mismatches += 1
-                        in_gap = True
-                else:  # No gaps
-                    in_gap = False
-                    if char1 == char2:  # Matching characters
-                        matches += 1
-                    else:  # Mismatched characters
-                        mismatches += 1
-
-            return matches / (matches + mismatches) * 100 if (matches + mismatches) > 0 else 0
-
-
-        # Map distance type to corresponding function
-        distance_functions: Dict[str, Callable[[str, str], float]] = {
-            'ghd': ghd,
-            'lhd': lhd,
-            'ged': ged,
-            'gcd': gcd
-        }
+        distance_functions = _create_distance_calculation_function_mapping()
 
         if distance_type not in distance_functions:
             raise ValueError(f"Invalid distance type '{distance_type}'. Choose from {list(distance_functions.keys())}.")
 
-        # Compute pairwise distances
         aln = self.alignment
+
+        if self.aln_type == 'AA' and distance_type in ['jc69', 'k2p']:
+            raise ValueError(f"JC69 and K2P are not supported for {self.aln_type} alignment.")
+
+        # Compute pairwise distances
         distance_func = distance_functions[distance_type]
         distance_matrix = np.zeros((len(aln), len(aln)))
 
@@ -1132,13 +1071,77 @@ class MSA:
             seq1 = sequences[i]
             for j in range(i, n):
                 seq2 = sequences[j]
-                dist = distance_func(seq1, seq2)
+                dist = distance_func(seq1, seq2, self.length)
                 distance_matrix[i, j] = dist
                 distance_matrix[j, i] = dist
 
-        return distance_matrix
+        return PairwiseDistance(
+            reference_id=None,
+            sequence_ids=self.sequence_ids,
+            distances=distance_matrix
+        )
 
-    def get_snps(self, include_ambig:bool=False) -> dict:
+    def calc_pairwise_distance_to_reference(self, distance_type:str='ghd') -> PairwiseDistance:
+        """
+        Calculate pairwise identities between reference and all sequences in the alignment. Same computation as calc_pairwise_identity_matrix but compared to a single sequence. Different options are implemented:
+
+        **1) ghd (global hamming distance)**: At each alignment position, check if characters match:
+        \ndistance = matches / alignment_length * 100
+
+        **2) lhd (local hamming distance)**: Restrict the alignment to the region in both sequences that do not start and end with gaps:
+        \ndistance = matches / min(5'3' ungapped seq1, 5'3' ungapped seq2) * 100
+
+        **3) ged (gap excluded distance)**: All gaps are excluded from the alignment
+        \ndistance = (1 - mismatches / total) * 100
+
+        **4) gcd (gap compressed distance)**: All consecutive gaps are compressed to one mismatch.
+        \ndistance = matches / gap_compressed_alignment_length * 100
+
+        RNA/DNA only:
+
+        **5) jc69 (Jukes-Cantor 1969)**: Gaps excluded. Applies the JC69 substitution model to correct
+        the p-distance for multiple hits (assumes equal base frequencies and substitution rates).
+        \ncorrected_identity = (1 - d_JC69) * 100,  where d = -(3/4) * ln(1 - (4/3) * p)
+
+        **6) k2p (Kimura 2-Parameter / K80)**: Gaps excluded. Distinguishes transitions (Ts) and
+        transversions (Tv). Returns (1 - d_K2P) * 100 as corrected percent identity.
+        \nd = -(1/2) * ln(1 - 2P - Q) - (1/4) * ln(1 - 2Q),  P = Ts/total, Q = Tv/total
+
+        :param distance_type: type of distance computation: ghd, lhd, ged, gcd and nucleotide only: jc69 and k2p
+        :return: array with pairwise distances.
+        :return: dataclass with reference label, sequence ids and pairwise distances.
+        """
+
+        distance_functions = _create_distance_calculation_function_mapping()
+
+        if distance_type not in distance_functions:
+            raise ValueError(f"Invalid distance type '{distance_type}'. Choose from {list(distance_functions.keys())}.")
+
+        if self.aln_type == 'AA' and distance_type in ['jc69', 'k2p']:
+            raise ValueError(f"JC69 and K2P are not supported for {self.aln_type} alignment.")
+
+        # Compute pairwise distances
+        distance_func = distance_functions[distance_type]
+        aln = self.alignment
+        ref_id = self.reference_id
+
+        ref_seq = aln[ref_id] if ref_id is not None else self.get_consensus()
+        distances = []
+        distance_names = []
+
+        for seq_id in aln:
+            if seq_id == ref_id:
+                continue
+            distance_names.append(seq_id)
+            distances.append(distance_func(ref_seq, aln[seq_id], self.length))
+
+        return PairwiseDistance(
+            reference_id=ref_id if ref_id is not None else 'consensus',
+            sequence_ids=distance_names,
+            distances=np.array(distances)
+        )
+
+    def get_snps(self, include_ambig:bool=False) -> VariantCollection:
         """
         Calculate snps similar to snp-sites (output is comparable):
         https://github.com/sanger-pathogens/snp-sites
@@ -1146,13 +1149,15 @@ class MSA:
         The SNPs are compared to a majority consensus sequence or to a reference if it has been set.
 
         :param include_ambig: Include ambiguous snps (default: False)
-        :return: dictionary containing snp positions and their variants including their frequency.
+        :return: dataclass containing SNP positions and their variants including frequency.
         """
         aln = self.alignment
-        ref = aln[self.reference_id] if self.reference_id is not None else self.get_consensus()
-        aln = {x: aln[x] for x in aln.keys() if x != self.reference_id}
+        ref = self._get_reference_seq()
+        aln = {x: aln[x] for x in self.sequence_ids if x != self.reference_id}
         seq_ids = list(aln.keys())
-        snp_dict = {'#CHROM': self.reference_id if self.reference_id is not None else 'consensus', 'POS': {}}
+        chrom = self.reference_id if self.reference_id is not None else 'consensus'
+        snp_positions = {}
+        aln_size = len(aln)
 
         for pos in range(self.length):
             reference_char = ref[pos]
@@ -1160,12 +1165,14 @@ class MSA:
                 if reference_char in config.AMBIG_CHARS[self.aln_type] and reference_char != '-':
                     continue
             alt_chars, snps = [], []
-            for i, seq_id in enumerate(aln.keys()):
-                alt_chars.append(aln[seq_id][pos])
-                if reference_char != aln[seq_id][pos]:
+            for i, seq_id in enumerate(seq_ids):
+                alt_char = aln[seq_id][pos]
+                alt_chars.append(alt_char)
+                if reference_char != alt_char:
                     snps.append(i)
             if not snps:
                 continue
+            # Filter out ambiguous snps if not included
             if include_ambig:
                 if all(alt_chars[x] in config.AMBIG_CHARS[self.aln_type] for x in snps):
                     continue
@@ -1173,25 +1180,25 @@ class MSA:
                 snps = [x for x in snps if alt_chars[x] not in config.AMBIG_CHARS[self.aln_type]]
                 if not snps:
                     continue
-            if pos not in snp_dict:
-                snp_dict['POS'][pos] = {'ref': reference_char, 'ALT': {}}
-            for snp in snps:
-                if alt_chars[snp] not in snp_dict['POS'][pos]['ALT']:
-                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]] = {
-                        'AF': 1,
-                        'SEQ_ID': [seq_ids[snp]]
-                    }
-                else:
-                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]]['AF'] += 1
-                    snp_dict['POS'][pos]['ALT'][alt_chars[snp]]['SEQ_ID'].append(seq_ids[snp])
-            # calculate AF
-            if pos in snp_dict['POS']:
-                for alt in snp_dict['POS'][pos]['ALT']:
-                    snp_dict['POS'][pos]['ALT'][alt]['AF'] /= len(aln)
+            # Build allele dict with counts
+            alt_dict = {}
+            for snp_idx in snps:
+                alt_char = alt_chars[snp_idx]
+                if alt_char not in alt_dict:
+                    alt_dict[alt_char] = {'count': 0, 'seq_ids': []}
+                alt_dict[alt_char]['count'] += 1
+                alt_dict[alt_char]['seq_ids'].append(seq_ids[snp_idx])
+            
+            # Convert to final format: alt_char -> (frequency, seq_ids_tuple)
+            alt = {
+                alt_char: (data['count'] / aln_size, tuple(data['seq_ids']))
+                for alt_char, data in alt_dict.items()
+            }
+            snp_positions[pos] = SingleNucleotidePolymorphism(ref=reference_char, alt=alt)
 
-        return snp_dict
+        return VariantCollection(chrom=chrom, positions=snp_positions)
 
-    def calc_transition_transversion_score(self) -> list:
+    def calc_transition_transversion_score(self) -> AlignmentStats:
         """
         Based on the snp positions, calculates a transition/transversions score.
         A positive score means higher ratio of transitions and negative score means
@@ -1206,24 +1213,23 @@ class MSA:
         snps = self.get_snps()
         score = [0]*self.length
 
-        for pos in snps['POS']:
-            t_score_temp = 0
-            for alt in snps['POS'][pos]['ALT']:
+        for pos, snp in snps.positions.items():
+            for alt, (af, _) in snp.alt.items():
                 # check the type of substitution
-                if snps['POS'][pos]['ref'] + alt in ['AG', 'GA', 'CT', 'TC', 'CU', 'UC']:
-                    score[pos] += snps['POS'][pos]['ALT'][alt]['AF']
+                if snp.ref + alt in ['AG', 'GA', 'CT', 'TC', 'CU', 'UC']:
+                    score[pos] += af
                 else:
-                    score[pos] -= snps['POS'][pos]['ALT'][alt]['AF']
+                    score[pos] -= af
 
-        return score
+        return self._create_position_stat_result('ts tv score', score)
 
 
 class Annotation:
     """
-    An annotation class that allows to read in gff, gb or bed files and adjust its locations to that of the MSA.
+    An annotation class that allows to read in gff, gb, or bed files and adjust its locations to that of the MSA.
     """
 
-    def __init__(self, aln: MSA, annotation_path: str):
+    def __init__(self, aln: MSA, annotation: str | GenBankIterator):
         """
         The annotation class. Lets you parse multiple standard formats
         which might be used for annotating an alignment. The main purpose
@@ -1233,11 +1239,11 @@ class Annotation:
         and the MSA have to partly match.
 
         :param aln: MSA class
-        :param annotation_path: path to annotation file (gb, bed, gff) or raw string
+        :param annotation: path to file (gb, bed, gff) or raw string or GenBankIterator from biopython
 
         """
 
-        self.ann_type, self._seq_id, self.locus, self.features  = self._parse_annotation(annotation_path, aln)  # read annotation
+        self.ann_type, self._seq_id, self.locus, self.features  = self._parse_annotation(annotation, aln)  # read annotation
         self._gapped_seq = self._MSA_validation_and_seq_extraction(aln, self._seq_id)  # extract gapped sequence
         self._position_map = self._build_position_map()  # build a position map
         self._map_to_alignment()  # adapt feature locations
@@ -1256,15 +1262,15 @@ class Annotation:
             return aln._alignment[seq_id]
 
     @staticmethod
-    def _parse_annotation(annotation_path: str, aln: MSA) -> tuple[str, str, str, Dict]:
+    def _parse_annotation(annotation: str | GenBankIterator, aln: MSA) -> tuple[str, str, str, Dict]:
 
-        def detect_annotation_type(handle) -> str:
+        def detect_annotation_type(handle: str | GenBankIterator) -> str:
             """
             Detect the type of annotation file (GenBank, GFF, or BED) based
             on the first relevant line (excluding empty and #). Also recognizes
             Bio.SeqIO iterators as GenBank format.
 
-            :param file_path: Path to the annotation file or Bio.SeqIO iterator for genbank records read with biopython.
+            :param handle: Path to the annotation file or Bio.SeqIO iterator for genbank records read with biopython.
             :return: The detected file type ('gb', 'gff', or 'bed').
 
             :raises ValueError: If the file type cannot be determined.
@@ -1297,22 +1303,22 @@ class Annotation:
             raise ValueError(
                 "File type could not be determined. Ensure the file follows a recognized format (GenBank, GFF, or BED).")
 
-        def parse_gb(file_path) -> dict:
+        def parse_gb(file: str | GenBankIterator) -> dict:
             """
             Parse a GenBank file into the same dictionary structure used by the annotation pipeline.
 
-            :param file_path: path to genbank file, raw string, or Bio.SeqIO iterator
+            :param file: path to genbank file, raw string, or Bio.SeqIO iterator
             :return: nested dictionary
             """
             records = {}
 
             # Check if input is a GenBankIterator
-            if isinstance(file_path, GenBankIterator):
+            if isinstance(file, GenBankIterator):
                 # Direct GenBankIterator input
-                seq_records = list(file_path)
+                seq_records = list(file)
             else:
                 # File path or string input
-                with _get_line_iterator(file_path) as handle:
+                with _get_line_iterator(file) as handle:
                     seq_records = list(SeqIO.parse(handle, "genbank"))
 
             for seq_record in seq_records:
@@ -1456,17 +1462,17 @@ class Annotation:
         }
         # determine the annotation content -> should be standard formatted
         try:
-            annotation_type = detect_annotation_type(annotation_path)
+            annotation_type = detect_annotation_type(annotation)
         except ValueError as err:
             raise err
 
         # read in the annotation
-        annotations = parse_functions[annotation_type](annotation_path)
+        annotations = parse_functions[annotation_type](annotation)
 
         # sanity check whether one of the annotation ids and alignment ids match
         annotation_found = False
         for annotation in annotations.keys():
-            for aln_id in aln.alignment.keys():
+            for aln_id in aln:
                 aln_id_sanitized = aln_id.split(' ')[0]
                 # check in both directions
                 if aln_id_sanitized in annotation:
@@ -1477,7 +1483,7 @@ class Annotation:
                     break
 
         if not annotation_found:
-            raise ValueError(f'the annotations of {annotation_path} do not match any ids in the MSA')
+            raise ValueError(f'the annotations of {annotation} do not match any ids in the MSA')
 
         # return only the annotation that has been found, the respective type and the seq_id to map to
         return annotation_type, aln_id, annotations[annotation]['locus'], annotations[annotation]['features']

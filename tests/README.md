@@ -1,6 +1,6 @@
 # Tests
 
-This test suite validates the `msaexplorer.explore` module.
+This test suite validates the `msaexplorer` module.
 
 Run with:
 

@@ -87,15 +87,15 @@ options:
   --version    show program's version number and exit  
 ```
 
-- :white_check_mark: The app runs solely in your browser. No need to install anything, just might take a few seconds to load.
-- :white_check_mark: Use the app offline (after loading it).
-- :white_check_mark: Analyse alignments on your smartphone or tablet.
-- :white_check_mark: Download alignment statistics (e.g. entropy, SNPs, coverage, consensus, ORFs and more).
-- :white_check_mark: Annotate the alignment by additionally reading in gb, gff or bed files.
-- :white_check_mark: Flexibility to customize plots and colors.
-- :white_check_mark: Easily export the plot as pdf.
-- :white_check_mark: Generate plots of the whole alignment as well as just parts of it.
-- :white_check_mark: Publication ready figures with just a few clicks.
+- The app runs solely in your browser. No need to install anything, just might take a few seconds to load.
+- Use the app offline (after loading it).
+- Analyse alignments on your smartphone or tablet.
+- Download alignment statistics (e.g. entropy, SNPs, coverage, consensus, ORFs and more).
+- Annotate the alignment by additionally reading in gb, gff or bed files.
+- Flexibility to customize plots and colors.
+- Easily export the plot as pdf.
+- Generate plots of the whole alignment as well as just parts of it.
+- Publication ready figures with just a few clicks.
 
 | ![](readme_assets/upload_tab.png) | ![](readme_assets/plot_tab.png) | ![](readme_assets/plot2_tab.png) | ![](readme_assets/analysis_tab.png) |
 |-----------------------------------|---------------------------------|----------------------------------|-------------------------------------|
@@ -112,11 +112,9 @@ shinylive export ./ site/  # you should now have a new 'site' folder with the ap
 ```
 
 ## Features of MSAexplorer as a python package ([full documentation](https://jonas-fuchs.github.io/MSAexplorer/docs/msaexplorer.html))
-- :white_check_mark: Access MSAexplorer as a python package
-- :white_check_mark: Seamlessly integrates with Biopython.
-- :white_check_mark: Maximum flexibility for the plotting and analysis features while retaining minimal syntax.
-- :white_check_mark: Integrates seamlessly with matplotlib.
-- :white_check_mark: Minimal requirements.
+- Access MSAexplorer as a python package
+- Seamlessly integrates with Biopython and matplotlib.
+- Maximum flexibility for the plotting and analysis features while retaining minimal syntax.
 
 ```python
 ### Minimal analysis example ###
