@@ -50,7 +50,7 @@ jobs:
       - name: Generate API Docs
         run: |
           pdoc ./msaexplorer \
-            --logo ../logo.svg \
+            --logo https://raw.githubusercontent.com/jonas-fuchs/MSAexplorer/master/app_src/www/img/logo.svg \
             -o docs/
 
       - name: Prepare Deployment Directory
