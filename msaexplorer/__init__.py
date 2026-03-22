@@ -1,382 +1,159 @@
 r"""
-# What is MSAexplorer?
+# MSAexplorer
 
-MSAexplorer is a comprehensive Python package for analyzing and visualizing multiple sequence alignments (MSAs).
-It combines powerful statistical analysis, publication-quality plotting, and flexible data export in a simple,
-dependency-light package. Perfect for both interactive use and integration into bioinformatics pipelines.
+MSAexplorer is a lightweight toolkit to **explore**, **plot**, and **export** multiple sequence alignments.
+The API is organized into three modules:
 
-## Key Features
+- `explore`: parse alignments/annotations and compute statistics.
+- `draw`: create matplotlib plots directly from `MSA` objects or file paths.
+- `export`: serialize computed results (SNPs, stats, FASTA, ORFs, recovery tables).
 
-- **Multiple input formats**: FASTA, CLUSTAL, PHYLIP, STOCKHOLM, NEXUS, or direct Biopython objects
-- **Annotation support**: GenBank, GFF3, BED formats with automatic coordinate mapping
-- **Rich statistics**: Entropy, GC content, coverage, pairwise identity, ORF detection, SNP analysis, and more
-- **Publication-ready plots**: Identity matrices, statistical plots, similarity heatmaps, and custom visualizations
-- **Flexible export**: Generate reports, export alignments in multiple formats, process with external tools
-- **Interactive web app**: Shiny-based interface with no installation required
-- **Biopython integration**: Direct support for Bio.SeqIO and Bio.AlignIO objects for seamless workflows
+All examples below are tested with files from `example_alignments/`.
 
-## Installation
+## Quick Start (`explore`)
 
-### Via pip (recommended)
-```bash
-pip install msaexplorer
-# or with optional sequence processing tools:
-pip install msaexplorer[process]  # adds pyfamsa and pytrimal support
-```
-
-### From source
-```bash
-git clone https://github.com/jonas-fuchs/MSAexplorer
-cd MSAexplorer
-pip install .  # or pip install .[process]
-```
-
-## Quick Start
-
-### As a Web Application
-
-Launch the interactive shiny app:
-```bash
-msaexplorer --run
-```
-
-Or use the web version (no installation): [GitHub Pages](https://jonas-fuchs.github.io/MSAexplorer/app/)
-
-Export as a static site:
-```bash
-pip install shinylive
-shinylive export ./ site/
-```
-
-### As a Python Package
-
-#### Basic Analysis
 ```python
+from pathlib import Path
 from msaexplorer import explore
 
-# Load alignment (supports FASTA, CLUSTAL, PHYLIP, STOCKHOLM, NEXUS)
-msa = explore.MSA('alignment.fasta')
+base = Path('example_alignments')
+aln = explore.MSA(str(base / 'DNA.fasta'))
 
-# Or from a Biopython object
-from Bio import AlignIO
-bio_alignment = AlignIO.read('alignment.fasta', 'fasta')
-msa = explore.MSA(bio_alignment)
+# set reference and zoom window (start inclusive, end exclusive)
+aln.reference_id = aln.sequence_ids[0]
+aln.zoom = (0, 300)
 
-# Get basic statistics
-print(f"Sequences: {len(msa.alignment)}")
-print(f"Length: {msa.length} bp")
-print(f"Type: {msa.aln_type}")  # DNA, RNA, or AA
-
-# Compute statistics
-entropy = msa.calc_entropy()
-gc_content = msa.calc_gc()
-coverage = msa.calc_coverage()
-pairwise_identity = msa.calc_pairwise_identity_matrix()
+print(aln.aln_type)        # 'DNA'
+print(len(aln), aln.length)
+print(aln.get_reference_coords())
 ```
 
-#### With Annotations
+### Biopython Interoperability
+
 ```python
+from pathlib import Path
+from Bio import AlignIO, SeqIO
 from msaexplorer import explore
 
-# Load alignment
-msa = explore.MSA('alignment.fasta')
+base = Path('example_alignments')
 
-# Load annotation (GenBank, GFF3, or BED format)
-annotation = explore.Annotation(msa, 'annotation.gb')
+# alignment from Bio.Align.MultipleSeqAlignment
+bio_aln = AlignIO.read(str(base / 'DNA.fasta'), 'fasta')
+aln = explore.MSA(bio_aln, reference_id=bio_aln[0].id, zoom_range=(0, 200))
 
-# Or from a Biopython GenBank iterator
-from Bio import SeqIO
-gb_iterator = SeqIO.parse('annotation.gb', 'genbank')
-annotation = explore.Annotation(msa, gb_iterator)
-
-# Access annotation features
-print(annotation.features.keys())
-print(f"Annotation type: {annotation.ann_type}")
+# annotation from Bio.SeqIO GenBank iterator
+gb_iter = SeqIO.parse(str(base / 'DNA_RNA.gb'), 'genbank')
+ann = explore.Annotation(aln, gb_iter)
+print(ann.ann_type, list(ann.features.keys())[:3])
 ```
 
-#### Advanced Analysis
+### Working with Downstream Dataclasses
+
 ```python
+from pathlib import Path
 from msaexplorer import explore
 
-msa = explore.MSA('alignment.fasta')
+aln = explore.MSA(str(Path('example_alignments') / 'DNA.fasta'), zoom_range=(0, 300))
+aln.reference_id = aln.sequence_ids[0]
 
-# Set reference and zoom range
-msa.reference_id = 'seq1'
-msa.zoom = (0, 1000)
+entropy = aln.calc_entropy()                              # AlignmentStats
+length_stats = aln.calc_length_stats()                    # LengthStats
+dist_to_ref = aln.calc_pairwise_distance_to_reference()   # PairwiseDistance
+variants = aln.get_snps()                                 # VariantCollection
+orfs = aln.get_non_overlapping_conserved_orfs(90)         # OrfCollection
 
-# Statistical analyses
-length_stats = msa.calc_length_stats()
-snps = msa.get_snps(include_ambig=False)
-consensus = msa.get_consensus(threshold=0.7, use_ambig_nt=True)
-
-# For nucleotide alignments
-identity_matrix = msa.calc_identity_alignment()
-similarity_matrix = msa.calc_similarity_alignment()
-position_matrix = msa.calc_position_matrix(matrix_type='PWM')
-
-# For DNA/RNA alignments
-reverse_complement = msa.calc_reverse_complement_alignment()
-conserved_orfs = msa.get_conserved_orfs(min_length=100)
-ts_tv_score = msa.calc_transition_transversion_score()
-
-# Recovery statistics
-recovery = msa.calc_percent_recovery()
-char_frequencies = msa.calc_character_frequencies()
+print(entropy.stat_name, entropy.positions[:3], entropy.values[:3])
+print(length_stats.mean_length, length_stats.std_length)
+print(dist_to_ref.reference_id, dist_to_ref.sequence_ids[:2], dist_to_ref.distances[:2])
+print(variants.chrom, len(variants))
+print(orfs.keys()[:3])
 ```
 
-### Plotting and Visualization
+## Plotting (`draw`)
 
-#### Basic Identity Plot
+All plotting functions return a matplotlib `Axes`.
+You can either:
+
+1. pass an existing axis (best for multi-panel figures), or
+2. pass only an alignment/path for a one-liner plot.
+
+### One-Liner Examples (path input)
+
 ```python
+from msaexplorer import draw
 import matplotlib.pyplot as plt
-from msaexplorer import explore, draw
 
-# Load and prepare alignment
-aln = explore.MSA('alignment.fasta', reference_id='seq1')
-
-# Create identity visualization
-fig, ax = plt.subplots(figsize=(14, 8))
-draw.identity_alignment(
-    aln,
-    ax,
-    show_gaps=False,
-    show_mask=True,
-    show_mismatches=True,
-    color_scheme='purine_pyrimidine',
-    show_seq_names=True,
-    show_legend=True
-)
-plt.tight_layout()
+draw.identity_alignment('example_alignments/DNA.fasta')
+plt.show()
+draw.stat_plot('example_alignments/DNA.fasta', stat_type='entropy', rolling_average=5)
 plt.show()
 ```
 
-#### Statistical Plots
+### Multi-Panel Figure with Main Plot Types
+
 ```python
+# import necessary packages
+from pathlib import Path
 import matplotlib.pyplot as plt
 from msaexplorer import explore, draw
 
-aln = explore.MSA('alignment.fasta')
+# Example 1
+# load DNA alignment
+base = Path('example_alignments')
+aln = explore.MSA(str(base / 'DNA.fasta'), zoom_range=(0, 100))
 
-fig, axes = plt.subplots(nrows=4, figsize=(14, 10), sharex=True)
+# ini figure
+fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(14, 15), height_ratios=[1, 1, 10])
+# plot
+draw.stat_plot(aln, ax=ax[0], stat_type='coverage', rolling_average=1, show_title=True)
+draw.sequence_logo(aln, ax=ax[1], plot_type='logo')
+draw.identity_alignment(aln, ax=ax[2], show_consensus=True, show_seq_names=True, fancy_gaps=True, show_legend=True, color_scheme='standard', show_identity_sequence=True)
 
-# Entropy plot
-draw.stat_plot(aln, axes[0], stat_type='entropy', rolling_average=5)
-axes[0].set_ylabel('Entropy')
+plt.tight_layout()
+plt.show()
 
-# GC content plot
-draw.stat_plot(aln, axes[1], stat_type='gc', rolling_average=5)
-axes[1].set_ylabel('GC Content')
+# Example 2
+# load AA alignment
+aln = explore.MSA(str(base / 'AS.fasta'))
+# ini figure
+fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), height_ratios=[1, 2])
 
-# Coverage plot
-draw.stat_plot(aln, axes[2], stat_type='coverage', rolling_average=5)
-axes[2].set_ylabel('Coverage')
-
-# SNP frequency
-snps = aln.get_snps()
-draw.snp_plot(aln, axes[3], snps=snps)
-axes[3].set_ylabel('SNP Count')
+draw.stat_plot(aln, ax=ax[0], stat_type='entropy', rolling_average=5, show_title=True)
+draw.identity_alignment(aln, ax=ax[1], show_consensus=True, show_seq_names=True, fancy_gaps=True, show_legend=True, color_scheme='hydrophobicity')
 
 plt.tight_layout()
 plt.show()
 ```
 
-#### Similarity Heatmaps
-```python
-import matplotlib.pyplot as plt
-from msaexplorer import explore, draw
-
-aln = explore.MSA('alignment.fasta', reference_id='seq1')
-
-fig, ax = plt.subplots(figsize=(10, 8))
-draw.similarity_alignment(
-    aln,
-    ax,
-    matrix_type='similarity'  # or 'identity', 'numerical'
-)
-plt.tight_layout()
-plt.show()
-```
-
-#### Comparison Plots
-```python
-import matplotlib.pyplot as plt
-from msaexplorer import explore, draw
-
-aln1 = explore.MSA('alignment1.fasta', reference_id='seq1')
-aln2 = explore.MSA('alignment2.fasta', reference_id='seq1')
-
-fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(16, 6))
-
-draw.identity_alignment(aln1, ax1)
-draw.identity_alignment(aln2, ax2)
-
-ax1.set_title('Alignment 1')
-ax2.set_title('Alignment 2')
-
-plt.tight_layout()
-plt.show()
-```
-
-### Data Export and Processing
+## Export (`export`)
 
 ```python
+from pathlib import Path
 from msaexplorer import explore, export
 
-msa = explore.MSA('alignment.fasta')
+aln = explore.MSA(str(Path('example_alignments') / 'DNA.fasta'), zoom_range=(0, 300))
+aln.reference_id = aln.sequence_ids[0]
 
-# Export to different formats
-export.to_fasta(msa, 'output.fasta')
-export.to_phylip(msa, 'output.phy')
-export.to_nexus(msa, 'output.nex')
+variants = aln.get_snps()
+entropy = aln.calc_entropy()
+consensus = aln.get_consensus()
 
-# Export statistics
-stats = msa.calc_length_stats()
-# Process statistics as needed
+# return as strings
+vcf_text = export.snps(variants, format_type='vcf')
+stats_text = export.stats(entropy)
+fasta_text = export.fasta(consensus, header='consensus_dna')
 
-# Get alignment data
-alignment_dict = msa.alignment  # dict[seq_id: sequence]
-consensus = msa.get_consensus()
-identity_matrix = msa.calc_pairwise_identity_matrix()
+# or write to disk (path argument)
+# export.snps(variants, format_type='tabular', path='results/snps')
+# export.stats(entropy, path='results/entropy.tsv')
 ```
 
-## Input Format Support
+## Notes
 
-### Alignments
-Automatically detects format or specify explicitly:
-- **FASTA** - Most common, widely supported
-- **CLUSTAL** - From CLUSTAL/MUSCLE alignments
-- **PHYLIP** - PHYLIP sequential format
-- **STOCKHOLM** - Pfam/HMMER format
-- **NEXUS** - PAUP/MrBayes format
-- **Bio.Align.MultipleSeqAlignment** - Direct Biopython objects
+- `zoom` can be reset with `aln.zoom = None`.
+- If no `reference_id` is set, methods that need a reference use the consensus.
+- For API-level details, inspect module/class docstrings in `explore`, `draw`, and `export`.
 
-### Annotations
-Supports standard bioinformatics formats:
-- **GenBank** (.gb, .gbk) - Feature-rich annotation format
-- **GFF3** - General Feature Format v3
-- **BED** - Browser Extensible Data format
-- **Bio.SeqIO.GenBankIterator** - Direct Biopython iterators
-
-## Configuration and Customization
-
-### Set Reference and Zoom
-```python
-from msaexplorer import explore
-
-msa = explore.MSA('alignment.fasta')
-
-# Set reference sequence for identity calculations
-msa.reference_id = 'my_reference'
-
-# Focus on a region
-msa.zoom = (100, 500)  # or just start position
-msa.zoom = 100  # equals (100, alignment_end)
-
-# Reset zoom
-msa.zoom = None
-```
-
-### Color Schemes
-Available color schemes for plotting:
-- `purine_pyrimidine` - Distinguishes chemical properties
-- `nucleotide` - Standard ATCG coloring
-- `clustalx` - ClustalX color scheme
-- `taylor` - Taylor amino acid coloring
-- And more...
-
-## Workflow Examples
-
-### Pipeline: Analyze and Visualize
-```python
-from msaexplorer import explore, draw
-import matplotlib.pyplot as plt
-
-# Load data
-msa = explore.MSA('alignment.fasta')
-annotation = explore.Annotation(msa, 'annotation.gff3')
-
-# Set parameters
-msa.reference_id = next(iter(msa))
-msa.zoom = (0, 2000)
-
-# Compute statistics
-stats = {
-    'entropy': msa.calc_entropy(),
-    'gc': msa.calc_gc(),
-    'coverage': msa.calc_coverage(),
-    'snps': msa.get_snps(),
-    'identity': msa.calc_pairwise_identity_matrix()
-}
-
-# Create comprehensive figure
-fig = plt.figure(figsize=(16, 12))
-gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
-
-# Plot 1: Entropy
-ax1 = fig.add_subplot(gs[0, :])
-draw.stat_plot(msa, ax1, stat_type='entropy')
-ax1.set_ylabel('Entropy')
-
-# Plot 2: Identity alignment
-ax2 = fig.add_subplot(gs[1:, :])
-draw.identity_alignment(msa, ax2, show_seq_names=True)
-
-plt.tight_layout()
-plt.show()
-```
-
-### Pipeline: Comparative Genomics
-```python
-from msaexplorer import explore
-
-# Load multiple alignments
-alignments = {
-    'gene_a': explore.MSA('gene_a.fasta'),
-    'gene_b': explore.MSA('gene_b.fasta'),
-    'gene_c': explore.MSA('gene_c.fasta'),
-}
-
-# Compute comparative statistics
-results = {}
-for gene_name, msa in alignments.items():
-    results[gene_name] = {
-        'length_stats': msa.calc_length_stats(),
-        'entropy': msa.calc_entropy(),
-        'snps': msa.get_snps(),
-        'pairwise_identity': msa.calc_pairwise_identity_matrix()
-    }
-
-# Use results for downstream analysis
-for gene_name, stats in results.items():
-    print(f"{gene_name}:")
-    print(f"  Mean length: {stats['length_stats']['mean length']:.0f} bp")
-    print(f"  SNP count: {len(stats['snps']['POS'])}")
-```
-
-## Documentation
-
-For detailed API documentation, use Python's built-in help:
-```python
-from msaexplorer import explore, draw, export
-
-help(explore.MSA)
-help(explore.Annotation)
-help(draw.identity_alignment)
-help(export.to_fasta)
-```
-
-Or view the full documentation at the [GitHub repository](https://github.com/jonas-fuchs/MSAexplorer).
-
-## Citation
-
-If you use MSAexplorer in your research, please cite:
-```
-[Citation information to be added]
-```
-
-## License
-
-MIT License - See LICENSE file for details.
 """
 
 from importlib.metadata import version, PackageNotFoundError
