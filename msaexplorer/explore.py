@@ -17,7 +17,6 @@ from typing import Callable, Dict
 # installed
 import numpy as np
 from numpy import ndarray
-from Bio import AlignIO
 from Bio import SeqIO
 from Bio.Align import MultipleSeqAlignment
 from Bio.SeqIO.InsdcIO import GenBankIterator
@@ -884,7 +883,7 @@ class MSA:
 
         return similarity_array
 
-    def calc_position_matrix(self, matrix_type:str='PWM') -> None | ndarray | ValueError:
+    def calc_position_matrix(self, matrix_type:str='PWM') -> None | ndarray:
         """
         Calculates a position matrix of the specified type for the given alignment. The function
         supports generating matrices of types Position Frequency Matrix (PFM), Position Probability
