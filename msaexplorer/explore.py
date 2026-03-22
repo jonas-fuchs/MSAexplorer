@@ -27,7 +27,7 @@ from msaexplorer import config
 from msaexplorer._data_classes import PairwiseDistance, AlignmentStats, LengthStats, OpenReadingFrame, OrfCollection, SingleNucleotidePolymorphism, VariantCollection
 from msaexplorer._helpers import _get_line_iterator, _create_distance_calculation_function_mapping, _read_alignment
 
-#TODO: Move outputs to dataclasses
+
 class MSA:
     """
     An alignment class that allows computation of several stats. Supported inputs are file paths to alignments in "fasta",
